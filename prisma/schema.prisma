@@ -1,0 +1,175 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String        @id @default(cuid())
+  fullName       String
+  email          String        @unique
+  phone          String?
+  country        String?       @default("Ghana")
+  roleType       String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  profile        UserProfile?
+  resumes        Resume[]
+  fitAnalyses    FitAnalysis[]
+  coverLetters   CoverLetter[]
+  savedJobs      SavedJob[]
+  applications   Application[]
+}
+
+model UserProfile {
+  id                  String   @id @default(cuid())
+  userId              String   @unique
+  headline            String?
+  summary             String?
+  educationLevel      String?
+  yearsExperience     Int?
+  currentRole         String?
+  desiredRoles        String[]
+  preferredLocations  String[]
+  workModePreferences String[]
+  readinessScore      Float?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Resume {
+  id              String             @id @default(cuid())
+  userId          String
+  originalFileUrl String?
+  parsedText      String?
+  versionLabel    String?
+  isPrimary       Boolean            @default(false)
+  createdAt       DateTime           @default(now())
+  user            User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  experiences     ResumeExperience[]
+  education       ResumeEducation[]
+  skills          ResumeSkill[]
+}
+
+model ResumeExperience {
+  id           String   @id @default(cuid())
+  resumeId     String
+  title        String
+  company      String?
+  startDate    DateTime?
+  endDate      DateTime?
+  description  String?
+  achievements String?
+  resume       Resume   @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+}
+
+model ResumeEducation {
+  id           String   @id @default(cuid())
+  resumeId     String
+  institution  String
+  degree       String?
+  fieldOfStudy String?
+  startDate    DateTime?
+  endDate      DateTime?
+  resume       Resume   @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+}
+
+model ResumeSkill {
+  id              String   @id @default(cuid())
+  resumeId        String
+  skillName       String
+  confidenceScore Float?
+  source          String?
+  resume          Resume   @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+}
+
+model Job {
+  id              String        @id @default(cuid())
+  externalSource  String?
+  externalJobId   String?
+  title           String
+  companyName     String?
+  location        String?
+  country         String?
+  workMode        String?
+  seniorityLevel  String?
+  employmentType  String?
+  description     String?
+  requirementsText String?
+  applicationUrl  String?
+  postedAt        DateTime?
+  expiresAt       DateTime?
+  status          String?
+  fitAnalyses     FitAnalysis[]
+  jobSkills       JobSkill[]
+  savedJobs       SavedJob[]
+  applications    Application[]
+  coverLetters    CoverLetter[]
+}
+
+model JobSkill {
+  id            String   @id @default(cuid())
+  jobId         String
+  skillName     String
+  requiredLevel String?
+  job           Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+}
+
+model FitAnalysis {
+  id               String       @id @default(cuid())
+  userId           String
+  jobId            String
+  fitScore         Float
+  verdict          String
+  strengthsSummary String?
+  gapsSummary      String?
+  riskSummary      String?
+  createdAt        DateTime     @default(now())
+  user             User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job              Job          @relation(fields: [jobId], references: [id], onDelete: Cascade)
+}
+
+model CoverLetter {
+  id           String   @id @default(cuid())
+  userId       String
+  jobId        String
+  content      String
+  versionLabel String?
+  createdAt    DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job          Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+}
+
+model SavedJob {
+  id        String   @id @default(cuid())
+  userId    String
+  jobId     String
+  savedAt   DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job       Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, jobId])
+}
+
+model Application {
+  id        String   @id @default(cuid())
+  userId    String
+  jobId     String
+  status    String
+  appliedAt DateTime?
+  notes     String?
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job       Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+}
+
+model Waitlist {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  source    String?
+  createdAt DateTime @default(now())
+}
