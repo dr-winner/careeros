@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { promises as fs } from "fs";
 import path from "path";
+import { sendWaitlistNotification } from "@/lib/email";
 
 const DATA_FILE = path.join(process.cwd(), "data", "waitlist.json");
 
@@ -60,6 +61,10 @@ export async function POST(request: NextRequest) {
     await saveWaitlist(waitlist);
 
     console.log(`[Waitlist] New signup: ${normalizedEmail}`);
+
+    sendWaitlistNotification(normalizedEmail).catch((err) => {
+      console.error("[Waitlist] Failed to send notification:", err);
+    });
 
     return NextResponse.json(
       { message: "You're on the list!", id: entry.id },
