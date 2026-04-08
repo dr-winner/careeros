@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sendWaitlistNotification, addToResend } from "@/lib/email";
+import { sendWaitlistNotification, sendConfirmationEmail, addToResend } from "@/lib/email";
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,6 +20,9 @@ export async function POST(request: NextRequest) {
 
     // Send admin notification
     await sendWaitlistNotification(normalizedEmail);
+
+    // Send confirmation email to the user
+    await sendConfirmationEmail(normalizedEmail);
 
     return NextResponse.json(
       { message: "You're on the list!" },
