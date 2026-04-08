@@ -29,20 +29,20 @@ export async function sendWaitlistNotification(email: string) {
   }
 }
 
-export async function addToResendAudience(email: string) {
+export async function addToResend(email: string) {
   try {
     await resend.contacts.create({
-      audienceId: process.env.RESEND_AUDIENCE_ID || "",
       email,
       unsubscribed: false,
     });
     return { success: true };
   } catch (error: unknown) {
     const err = error as { message?: string };
-    if (err?.message?.includes("already exists")) {
+    // Contact might already exist - that's fine
+    if (err?.message?.includes("already exists") || err?.message?.includes("already taken")) {
       return { success: true, alreadyExists: true };
     }
-    console.error("Failed to add to Resend audience:", error);
+    console.error("Failed to add contact:", error);
     return { success: false, error };
   }
 }
