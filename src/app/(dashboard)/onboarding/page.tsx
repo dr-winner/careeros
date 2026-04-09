@@ -2,19 +2,37 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth, UserButton } from "@clerk/nextjs";
+import { useAuth, useUser, UserButton } from "@clerk/nextjs";
 import Link from "next/link";
+import { toast } from "sonner";
+import Image from "next/image";
+
+const POPULAR_SKILLS = [
+  "JavaScript", "TypeScript", "React", "Node.js", "Python", "Java",
+  "SQL", "PostgreSQL", "AWS", "Docker", "Git", "Figma",
+  "Excel", "PowerPoint", "Communication", "Leadership"
+];
+
+const ROLE_SUGGESTIONS = [
+  "Software Developer", "Frontend Developer", "Backend Developer",
+  "Full Stack Developer", "Data Analyst", "Data Scientist",
+  "UX/UI Designer", "Product Manager", "DevOps Engineer",
+  "Business Analyst", "Marketing Manager", "Sales Representative"
+];
 
 export default function OnboardingPage() {
   const router = useRouter();
   const { userId, isLoaded } = useAuth();
+  const { user } = useUser();
   const [step, setStep] = useState(1);
+  const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     fullName: "",
     headline: "",
     country: "Ghana",
     experience: "",
     desiredRole: "",
+    roleType: "",
   });
 
   const [isLoading, setIsLoading] = useState(false);
@@ -23,14 +41,30 @@ export default function OnboardingPage() {
     if (isLoaded && !userId) {
       router.push("/");
     }
-  }, [isLoaded, userId, router]);
+    if (user) {
+      setFormData(prev => ({
+        ...prev,
+        fullName: user.firstName && user.lastName 
+          ? `${user.firstName} ${user.lastName}` 
+          : user.firstName || prev.fullName,
+      }));
+    }
+  }, [isLoaded, userId, router, user]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const toggleSkill = (skill: string) => {
+    setSelectedSkills(prev =>
+      prev.includes(skill)
+        ? prev.filter(s => s !== skill)
+        : [...prev, skill]
+    );
+  };
+
   const handleNext = () => {
-    if (step < 3) setStep(step + 1);
+    if (step < 4) setStep(step + 1);
   };
 
   const handleBack = () => {
@@ -43,7 +77,10 @@ export default function OnboardingPage() {
       const response = await fetch("/api/user/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          experience: selectedSkills.length > 0 ? selectedSkills.join(", ") : formData.experience,
+        }),
       });
 
       if (!response.ok) {
@@ -51,65 +88,78 @@ export default function OnboardingPage() {
       }
 
       localStorage.setItem("onboardingComplete", "true");
+      toast.success("Profile created! Let's get started.");
       router.push("/dashboard");
     } catch (error) {
       console.error("Error saving profile:", error);
-      alert("Failed to save your profile. Please try again.");
+      toast.error("Failed to save your profile. Please try again.");
     } finally {
       setIsLoading(false);
     }
   };
 
+  const steps = [
+    { num: 1, label: "Profile" },
+    { num: 2, label: "Skills" },
+    { num: 3, label: "Experience" },
+    { num: 4, label: "Goals" },
+  ];
+
   return (
-    <div className="min-h-screen bg-amber-50">
-      <nav className="border-b border-amber-200 bg-white">
+    <div className="min-h-screen bg-gradient-to-b from-amber-50 to-white">
+      <nav className="border-b border-amber-200/50 bg-white/80 backdrop-blur-sm">
         <div className="mx-auto flex h-16 max-w-3xl items-center justify-between px-6">
-          <Link href="/" className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-800">
-              <span className="text-sm font-bold text-white">C</span>
-            </div>
-            <span className="text-lg font-semibold text-emerald-900">CareerOS</span>
-          </Link>
+          <div className="flex items-center gap-2">
+            <Image src="/cs_logo.png" alt="CareerOS" width={40} height={40} />
+            <span className="text-lg font-bold text-emerald-900">CareerOS</span>
+          </div>
           <UserButton />
         </div>
       </nav>
 
       <div className="mx-auto max-w-xl px-6 py-12">
         <div className="mb-8">
-          <div className="flex items-center justify-between">
-            {[1, 2, 3].map((s) => (
-              <div key={s} className="flex items-center">
+          <div className="mb-4 flex items-center justify-between">
+            {steps.map((s, i) => (
+              <div key={s.num} className="flex items-center">
                 <div
-                  className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium ${
-                    s <= step
-                      ? "bg-emerald-800 text-white"
+                  className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold transition-all ${
+                    s.num < step
+                      ? "bg-emerald-600 text-white"
+                      : s.num === step
+                      ? "bg-emerald-800 text-white shadow-lg shadow-emerald-200"
                       : "bg-emerald-100 text-emerald-600"
                   }`}
                 >
-                  {s}
+                  {s.num < step ? "✓" : s.num}
                 </div>
-                {s < 3 && (
-                  <div className={`h-0.5 w-16 ${s < step ? "bg-emerald-800" : "bg-emerald-100"}`} />
+                {i < steps.length - 1 && (
+                  <div className={`h-1 w-12 ${s.num < step ? "bg-emerald-600" : "bg-emerald-100"}`} />
                 )}
               </div>
             ))}
           </div>
-          <div className="mt-2 flex justify-between text-xs text-emerald-700/60">
-            <span>Profile</span>
-            <span className="pr-8">Experience</span>
-            <span>Goals</span>
+          <div className="mt-4 flex justify-between text-sm font-medium">
+            {steps.map(s => (
+              <span
+                key={s.num}
+                className={s.num === step ? "text-emerald-800" : "text-emerald-500"}
+              >
+                {s.label}
+              </span>
+            ))}
           </div>
         </div>
 
-        <div className="rounded-2xl border border-emerald-100 bg-white p-8 shadow-sm">
+        <div className="rounded-2xl border border-emerald-100 bg-white p-8 shadow-lg">
           {step === 1 && (
             <div>
-              <h2 className="text-2xl font-bold text-emerald-950">Tell us about yourself</h2>
-              <p className="mt-2 text-emerald-700/70">
-                This helps us personalize your experience.
+              <h2 className="text-2xl font-bold text-emerald-950">Welcome to CareerOS! 👋</h2>
+              <p className="mt-2 text-emerald-700">
+                Let's set up your profile in a few quick steps.
               </p>
 
-              <div className="mt-6 space-y-4">
+              <div className="mt-8 space-y-5">
                 <div>
                   <label className="block text-sm font-medium text-emerald-800">Full Name</label>
                   <input
@@ -118,21 +168,19 @@ export default function OnboardingPage() {
                     value={formData.fullName}
                     onChange={handleChange}
                     placeholder="e.g. Kwame Asante"
-                    className="mt-1 w-full rounded-lg border border-emerald-200 px-4 py-3 text-emerald-900 placeholder:text-emerald-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                    className="mt-1 w-full rounded-xl border-2 border-emerald-200 px-4 py-3 text-emerald-900 placeholder:text-emerald-400 focus:border-emerald-500 focus:outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-emerald-800">
-                    Professional Headline
-                  </label>
+                  <label className="block text-sm font-medium text-emerald-800">Professional Headline</label>
                   <input
                     type="text"
                     name="headline"
                     value={formData.headline}
                     onChange={handleChange}
-                    placeholder="e.g. Junior Software Developer"
-                    className="mt-1 w-full rounded-lg border border-emerald-200 px-4 py-3 text-emerald-900 placeholder:text-emerald-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                    placeholder="e.g. Junior Software Developer at TechHub"
+                    className="mt-1 w-full rounded-xl border-2 border-emerald-200 px-4 py-3 text-emerald-900 placeholder:text-emerald-400 focus:border-emerald-500 focus:outline-none"
                   />
                 </div>
 
@@ -142,13 +190,13 @@ export default function OnboardingPage() {
                     name="country"
                     value={formData.country}
                     onChange={handleChange}
-                    className="mt-1 w-full rounded-lg border border-emerald-200 px-4 py-3 text-emerald-900 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                    className="mt-1 w-full rounded-xl border-2 border-emerald-200 px-4 py-3 text-emerald-900 focus:border-emerald-500 focus:outline-none"
                   >
-                    <option value="Ghana">Ghana</option>
-                    <option value="Nigeria">Nigeria</option>
-                    <option value="Kenya">Kenya</option>
-                    <option value="South Africa">South Africa</option>
-                    <option value="Other">Other</option>
+                    <option value="Ghana">🇬🇭 Ghana</option>
+                    <option value="Nigeria">🇳🇬 Nigeria</option>
+                    <option value="Kenya">🇰🇪 Kenya</option>
+                    <option value="South Africa">🇿🇦 South Africa</option>
+                    <option value="Other">🌍 Other</option>
                   </select>
                 </div>
               </div>
@@ -156,49 +204,52 @@ export default function OnboardingPage() {
               <button
                 onClick={handleNext}
                 disabled={!formData.fullName || !formData.headline}
-                className="mt-6 w-full rounded-lg bg-emerald-800 py-3 font-medium text-white transition hover:bg-emerald-700 disabled:opacity-50"
+                className="mt-8 w-full rounded-xl bg-emerald-800 py-4 font-semibold text-white shadow-lg shadow-emerald-200 transition hover:bg-emerald-700 disabled:opacity-50"
               >
-                Continue
+                Let's Go →
               </button>
             </div>
           )}
 
           {step === 2 && (
             <div>
-              <h2 className="text-2xl font-bold text-emerald-950">Your experience level</h2>
-              <p className="mt-2 text-emerald-700/70">
-                This helps us recommend the right opportunities.
+              <h2 className="text-2xl font-bold text-emerald-950">What are your skills?</h2>
+              <p className="mt-2 text-emerald-700">
+                Select the skills you have. We'll match you with relevant jobs.
               </p>
 
-              <div className="mt-6 space-y-3">
-                {["Student / Just graduated", "0-2 years experience", "3-5 years experience", "5+ years experience"].map((exp) => (
+              <div className="mt-6 flex flex-wrap gap-2">
+                {POPULAR_SKILLS.map((skill) => (
                   <button
-                    key={exp}
-                    onClick={() => setFormData({ ...formData, experience: exp })}
-                    className={`w-full rounded-lg border p-4 text-left transition ${
-                      formData.experience === exp
-                        ? "border-emerald-500 bg-emerald-50"
-                        : "border-emerald-200 hover:border-emerald-300"
+                    key={skill}
+                    onClick={() => toggleSkill(skill)}
+                    className={`rounded-full px-4 py-2 text-sm font-medium transition-all ${
+                      selectedSkills.includes(skill)
+                        ? "bg-emerald-600 text-white shadow-lg"
+                        : "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
                     }`}
                   >
-                    <span className="font-medium text-emerald-900">{exp}</span>
+                    {skill}
                   </button>
                 ))}
               </div>
 
-              <div className="mt-6 flex gap-3">
+              <p className="mt-4 text-sm text-emerald-600">
+                {selectedSkills.length} skill{selectedSkills.length !== 1 ? "s" : ""} selected
+              </p>
+
+              <div className="mt-8 flex gap-3">
                 <button
                   onClick={handleBack}
-                  className="flex-1 rounded-lg border border-emerald-200 py-3 font-medium text-emerald-800 transition hover:bg-emerald-50"
+                  className="flex-1 rounded-xl border-2 border-emerald-200 py-4 font-semibold text-emerald-700 transition hover:bg-emerald-50"
                 >
                   Back
                 </button>
                 <button
                   onClick={handleNext}
-                  disabled={!formData.experience}
-                  className="flex-1 rounded-lg bg-emerald-800 py-3 font-medium text-white transition hover:bg-emerald-700 disabled:opacity-50"
+                  className="flex-1 rounded-xl bg-emerald-800 py-4 font-semibold text-white shadow-lg shadow-emerald-200 transition hover:bg-emerald-700"
                 >
-                  Continue
+                  Continue →
                 </button>
               </div>
             </div>
@@ -206,40 +257,104 @@ export default function OnboardingPage() {
 
           {step === 3 && (
             <div>
-              <h2 className="text-2xl font-bold text-emerald-950">What role are you targeting?</h2>
-              <p className="mt-2 text-emerald-700/70">
-                We&apos;ll prioritize jobs that match your goals.
+              <h2 className="text-2xl font-bold text-emerald-950">Experience Level</h2>
+              <p className="mt-2 text-emerald-700">
+                Where are you in your career journey?
               </p>
 
-              <div className="mt-6 space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-emerald-800">
-                    Desired Role / Job Title
-                  </label>
-                  <input
-                    type="text"
-                    name="desiredRole"
-                    value={formData.desiredRole}
-                    onChange={handleChange}
-                    placeholder="e.g. Frontend Developer, Data Analyst"
-                    className="mt-1 w-full rounded-lg border border-emerald-200 px-4 py-3 text-emerald-900 placeholder:text-emerald-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-                  />
-                </div>
+              <div className="mt-6 space-y-3">
+                {[
+                  { value: "Student / Just graduated", icon: "🎓", desc: "Still in school or recently graduated" },
+                  { value: "0-2 years experience", icon: "🌱", desc: "Early career, building skills" },
+                  { value: "3-5 years experience", icon: "🚀", desc: "Mid-level, ready for bigger challenges" },
+                  { value: "5+ years experience", icon: "⭐", desc: "Senior level, leadership roles" },
+                ].map((exp) => (
+                  <button
+                    key={exp.value}
+                    onClick={() => setFormData({ ...formData, experience: exp.value })}
+                    className={`w-full rounded-xl border-2 p-4 text-left transition-all ${
+                      formData.experience === exp.value
+                        ? "border-emerald-500 bg-emerald-50 shadow-lg"
+                        : "border-emerald-200 hover:border-emerald-300"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">{exp.icon}</span>
+                      <div>
+                        <span className="block font-semibold text-emerald-900">{exp.value}</span>
+                        <span className="text-sm text-emerald-600">{exp.desc}</span>
+                      </div>
+                    </div>
+                  </button>
+                ))}
               </div>
 
-              <div className="mt-6 flex gap-3">
+              <div className="mt-8 flex gap-3">
                 <button
                   onClick={handleBack}
-                  className="flex-1 rounded-lg border border-emerald-200 py-3 font-medium text-emerald-800 transition hover:bg-emerald-50"
+                  className="flex-1 rounded-xl border-2 border-emerald-200 py-4 font-semibold text-emerald-700 transition hover:bg-emerald-50"
+                >
+                  Back
+                </button>
+                <button
+                  onClick={handleNext}
+                  disabled={!formData.experience}
+                  className="flex-1 rounded-xl bg-emerald-800 py-4 font-semibold text-white shadow-lg shadow-emerald-200 transition hover:bg-emerald-700 disabled:opacity-50"
+                >
+                  Continue →
+                </button>
+              </div>
+            </div>
+          )}
+
+          {step === 4 && (
+            <div>
+              <h2 className="text-2xl font-bold text-emerald-950">What's your target role?</h2>
+              <p className="mt-2 text-emerald-700">
+                We'll prioritize jobs that match your career goals.
+              </p>
+
+              <div className="mt-6 grid grid-cols-2 gap-3">
+                {ROLE_SUGGESTIONS.map((role) => (
+                  <button
+                    key={role}
+                    onClick={() => setFormData({ ...formData, desiredRole: role })}
+                    className={`rounded-xl border-2 p-3 text-sm font-medium transition-all ${
+                      formData.desiredRole === role
+                        ? "border-emerald-500 bg-emerald-50 text-emerald-800"
+                        : "border-emerald-200 text-emerald-700 hover:border-emerald-300"
+                    }`}
+                  >
+                    {role}
+                  </button>
+                ))}
+              </div>
+
+              <div className="mt-6">
+                <label className="block text-sm font-medium text-emerald-800">Or type your own</label>
+                <input
+                  type="text"
+                  name="desiredRole"
+                  value={formData.desiredRole}
+                  onChange={handleChange}
+                  placeholder="e.g. Senior Product Manager"
+                  className="mt-1 w-full rounded-xl border-2 border-emerald-200 px-4 py-3 text-emerald-900 placeholder:text-emerald-400 focus:border-emerald-500 focus:outline-none"
+                />
+              </div>
+
+              <div className="mt-8 flex gap-3">
+                <button
+                  onClick={handleBack}
+                  className="flex-1 rounded-xl border-2 border-emerald-200 py-4 font-semibold text-emerald-700 transition hover:bg-emerald-50"
                 >
                   Back
                 </button>
                 <button
                   onClick={handleComplete}
                   disabled={isLoading || !formData.desiredRole}
-                  className="flex-1 rounded-lg bg-emerald-800 py-3 font-medium text-white transition hover:bg-emerald-700 disabled:opacity-50"
+                  className="flex-1 rounded-xl bg-emerald-800 py-4 font-semibold text-white shadow-lg shadow-emerald-200 transition hover:bg-emerald-700 disabled:opacity-50"
                 >
-                  {isLoading ? "Saving..." : "Complete Setup"}
+                  {isLoading ? "Setting up..." : "Complete Setup 🎉"}
                 </button>
               </div>
             </div>

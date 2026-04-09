@@ -1,13 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { INTERVIEW_QUESTIONS, QUESTION_CATEGORIES, ROLE_TYPES } from "@/lib/interview-questions";
+import { INTERVIEW_QUESTIONS, QUESTION_CATEGORIES, ROLE_TYPES, ROLE_SPECIFIC_QUESTIONS } from "@/lib/interview-questions";
+
+const ALL_QUESTIONS = [...INTERVIEW_QUESTIONS, ...ROLE_SPECIFIC_QUESTIONS];
 
 export default function InterviewPrepPage() {
   const [category, setCategory] = useState("all");
   const [roleType, setRoleType] = useState("all");
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [shuffledQuestions, setShuffledQuestions] = useState(INTERVIEW_QUESTIONS);
+  const [shuffledQuestions, setShuffledQuestions] = useState(ALL_QUESTIONS);
 
   const filteredQuestions = shuffledQuestions.filter((q) => {
     const categoryMatch = category === "all" || q.category === category;
@@ -20,7 +22,7 @@ export default function InterviewPrepPage() {
   });
 
   const shuffleQuestions = () => {
-    const shuffled = [...INTERVIEW_QUESTIONS].sort(() => Math.random() - 0.5);
+    const shuffled = [...ALL_QUESTIONS].sort(() => Math.random() - 0.5);
     setShuffledQuestions(shuffled);
     setExpandedId(null);
   };

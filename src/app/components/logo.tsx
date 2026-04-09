@@ -9,10 +9,10 @@ interface LogoProps {
 }
 
 const IMAGE_SIZES = {
-    sm: { width: 60, height: 60 },
-    md: { width: 80, height: 80 },
-    lg: { width: 100, height: 100 },
-    xl: { width: 120, height: 120 },
+    sm: { width: 36, height: 36 },
+    md: { width: 48, height: 48 },
+    lg: { width: 64, height: 64 },
+    xl: { width: 80, height: 80 },
 };
 
 const TEXT_SIZES = {
@@ -26,13 +26,15 @@ export default function Logo({
     size = "md",
     variant = "full",
     className = "",
+    theme = "dark",
 }: LogoProps) {
     const imageDimensions = IMAGE_SIZES[size];
     const textSize = TEXT_SIZES[size];
+    const textColor = theme === "light" ? "text-white" : "text-emerald-900";
 
     const iconComponent = (
         <Image
-            src="/cs_logo.png"
+            src="/logo.svg"
             alt="CareerOS Logo"
             width={imageDimensions.width}
             height={imageDimensions.height}
@@ -46,9 +48,9 @@ export default function Logo({
     }
 
     return (
-        <div className={`flex items-center gap-0 ${className}`}>
+        <div className={`flex items-center gap-2 ${className}`}>
             {iconComponent}
-            <span className="font-bold tracking-tight text-slate-950" style={{ fontSize: textSize, lineHeight: 1 }}>
+            <span className={`font-bold tracking-tight ${textColor}`} style={{ fontSize: textSize, lineHeight: 1 }}>
                 CareerOS
             </span>
         </div>
