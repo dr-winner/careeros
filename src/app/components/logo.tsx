@@ -8,11 +8,18 @@ interface LogoProps {
     theme?: "light" | "dark";
 }
 
-const SIZES = {
+const IMAGE_SIZES = {
     sm: { width: 200, height: 200 },
     md: { width: 250, height: 250 },
     lg: { width: 320, height: 320 },
     xl: { width: 400, height: 400 },
+};
+
+const TEXT_SIZES = {
+    sm: "14px",
+    md: "16px",
+    lg: "20px",
+    xl: "24px",
 };
 
 export default function Logo({
@@ -20,14 +27,15 @@ export default function Logo({
     variant = "full",
     className = "",
 }: LogoProps) {
-    const dimensions = SIZES[size];
+    const imageDimensions = IMAGE_SIZES[size];
+    const textSize = TEXT_SIZES[size];
 
     const iconComponent = (
         <Image
             src="/cs_logo.png"
             alt="CareerOS Logo"
-            width={dimensions.width}
-            height={dimensions.height}
+            width={imageDimensions.width}
+            height={imageDimensions.height}
             className="flex-shrink-0"
             priority
         />
@@ -41,12 +49,9 @@ export default function Logo({
         <div className={`flex items-center gap-2 ${className}`}>
             {iconComponent}
             <div>
-                <div className="font-bold tracking-tight text-slate-950" style={{ fontSize: `${dimensions.width / 2}px`, lineHeight: 1.1 }}>
-                    careeros
+                <div className="font-bold tracking-tight text-slate-950" style={{ fontSize: textSize, lineHeight: 1.1 }}>
+                    CareerOS
                 </div>
-                {/* <div className="font-semibold bg-gradient-to-r from-cyan-500 to-blue-500 bg-clip-text text-transparent" style={{ fontSize: `${dimensions.width / 4}px`, lineHeight: 1 }}>
-                    
-                </div> */}
             </div>
         </div>
     );
