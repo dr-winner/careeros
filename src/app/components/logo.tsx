@@ -11,8 +11,8 @@ interface LogoProps {
 const SIZES = {
     sm: { width: 32, height: 32 },
     md: { width: 48, height: 48 },
-    lg: { width: 64, height: 64 },
-    xl: { width: 96, height: 96 },
+    lg: { width: 80, height: 80 },
+    xl: { width: 120, height: 120 },
 };
 
 export default function Logo({
@@ -24,7 +24,7 @@ export default function Logo({
 
     const iconComponent = (
         <Image
-            src="/logo.svg"
+            src="/cs_logo.png"
             alt="CareerOS Logo"
             width={dimensions.width}
             height={dimensions.height}

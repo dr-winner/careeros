@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import "./globals.css";
 import Nav from "./components/nav";
 import Hero from "./components/hero";
@@ -44,7 +45,7 @@ export default function Home() {
       <footer className="border-t border-amber-200 bg-emerald-900 py-12">
         <div className="mx-auto max-w-6xl px-6 text-center">
           <div className="mb-4 flex items-center justify-center gap-2">
-            <div className="h-6 w-6 rounded bg-amber-500" />
+            <Image src="/cs_logo.png" alt="CareerOS" width={40} height={40} className="rounded-lg" />
             <span className="font-semibold text-white">CareerOS</span>
           </div>
           <p className="text-sm text-emerald-300">
