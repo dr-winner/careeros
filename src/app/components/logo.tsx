@@ -9,10 +9,10 @@ interface LogoProps {
 }
 
 const IMAGE_SIZES = {
-    sm: { width: 40, height: 40 },
-    md: { width: 48, height: 48 },
-    lg: { width: 64, height: 64 },
-    xl: { width: 80, height: 80 },
+    sm: { width: 60, height: 60 },
+    md: { width: 80, height: 80 },
+    lg: { width: 100, height: 100 },
+    xl: { width: 120, height: 120 },
 };
 
 const TEXT_SIZES = {
