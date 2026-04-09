@@ -4,19 +4,21 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 model User {
   id             String        @id @default(cuid())
-  fullName       String
+  clerkId        String        @unique
+  fullName       String?
   email          String        @unique
   phone          String?
   country        String?       @default("Ghana")
   roleType       String?
+  headline       String?
+  experience     String?
+  desiredRole    String?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
-  profile        UserProfile?
   resumes        Resume[]
   fitAnalyses    FitAnalysis[]
   coverLetters   CoverLetter[]
@@ -24,32 +26,17 @@ model User {
   applications   Application[]
 }
 
-model UserProfile {
-  id                  String   @id @default(cuid())
-  userId              String   @unique
-  headline            String?
-  summary             String?
-  educationLevel      String?
-  yearsExperience     Int?
-  currentRole         String?
-  desiredRoles        String[]
-  preferredLocations  String[]
-  workModePreferences String[]
-  readinessScore      Float?
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
-  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
 model Resume {
   id              String             @id @default(cuid())
   userId          String
-  originalFileUrl String?
+  filename        String?
+  originalName    String?
+  fileUrl         String?
   parsedText      String?
   versionLabel    String?
-  isPrimary       Boolean            @default(false)
-  createdAt       DateTime           @default(now())
-  user            User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isPrimary       Boolean           @default(false)
+  createdAt       DateTime          @default(now())
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   experiences     ResumeExperience[]
   education       ResumeEducation[]
   skills          ResumeSkill[]
@@ -164,12 +151,4 @@ model Application {
   notes     String?
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   job       Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
-}
-
-model Waitlist {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  source    String?
-  createdAt DateTime @default(now())
 }

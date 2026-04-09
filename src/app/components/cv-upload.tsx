@@ -3,9 +3,11 @@
 import { useState, useRef } from "react";
 
 interface UploadedFile {
+  id: string;
   filename: string;
   originalName: string;
   size: number;
+  versionLabel: string;
 }
 
 export default function CVUpload() {
@@ -32,9 +34,11 @@ export default function CVUpload() {
 
       if (response.ok) {
         setFile({
+          id: data.id,
           filename: data.filename,
           originalName: data.originalName,
           size: data.size,
+          versionLabel: data.versionLabel,
         });
       } else {
         setError(data.error || "Upload failed");
@@ -78,7 +82,12 @@ export default function CVUpload() {
             </svg>
           </div>
           <div className="flex-1">
-            <p className="font-medium text-emerald-900">{file.originalName}</p>
+            <div className="flex items-center gap-2">
+              <p className="font-medium text-emerald-900">{file.originalName}</p>
+              <span className="rounded-full bg-emerald-200 px-2 py-0.5 text-xs font-medium text-emerald-800">
+                {file.versionLabel}
+              </span>
+            </div>
             <p className="text-sm text-emerald-700/60">{formatSize(file.size)}</p>
           </div>
           <button

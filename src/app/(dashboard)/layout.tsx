@@ -2,8 +2,9 @@
 
 import { useAuth, UserButton } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { Toaster } from "sonner";
 
 export default function DashboardLayout({
   children,
@@ -12,12 +13,21 @@ export default function DashboardLayout({
 }) {
   const { userId, isLoaded } = useAuth();
   const router = useRouter();
+  const [synced, setSynced] = useState(false);
 
   useEffect(() => {
     if (isLoaded && !userId) {
       router.push("/");
     }
   }, [isLoaded, userId, router]);
+
+  useEffect(() => {
+    if (userId && !synced) {
+      fetch("/api/user/sync", { method: "POST" })
+        .then(() => setSynced(true))
+        .catch(console.error);
+    }
+  }, [userId, synced]);
 
   if (!isLoaded) {
     return (
@@ -33,6 +43,7 @@ export default function DashboardLayout({
 
   return (
     <div className="min-h-screen bg-amber-50">
+      <Toaster position="top-center" />
       <nav className="fixed top-0 left-0 right-0 z-50 border-b border-amber-200 bg-white">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
           <Link href="/dashboard" className="flex items-center gap-3">
