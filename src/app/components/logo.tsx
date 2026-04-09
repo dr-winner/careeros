@@ -9,10 +9,10 @@ interface LogoProps {
 }
 
 const SIZES = {
-    sm: { width: 80, height: 80 },
-    md: { width: 100, height: 100 },
-    lg: { width: 140, height: 140 },
-    xl: { width: 180, height: 180 },
+    sm: { width: 200, height: 200 },
+    md: { width: 250, height: 250 },
+    lg: { width: 320, height: 320 },
+    xl: { width: 400, height: 400 },
 };
 
 export default function Logo({
@@ -42,11 +42,11 @@ export default function Logo({
             {iconComponent}
             <div>
                 <div className="font-bold tracking-tight text-slate-950" style={{ fontSize: `${dimensions.width / 2}px`, lineHeight: 1.1 }}>
-                    CareerOS
+                    careeros
                 </div>
-                <div className="font-semibold bg-gradient-to-r from-cyan-500 to-blue-500 bg-clip-text text-transparent" style={{ fontSize: `${dimensions.width / 4}px`, lineHeight: 1 }}>
-                    Know Before
-                </div>
+                {/* <div className="font-semibold bg-gradient-to-r from-cyan-500 to-blue-500 bg-clip-text text-transparent" style={{ fontSize: `${dimensions.width / 4}px`, lineHeight: 1 }}>
+                    
+                </div> */}
             </div>
         </div>
     );
