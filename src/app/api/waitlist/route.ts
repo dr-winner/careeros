@@ -15,13 +15,19 @@ export async function POST(request: NextRequest) {
 
     const normalizedEmail = email.toLowerCase().trim();
 
-    // Add to Resend contacts
-    await addToResend(normalizedEmail);
+    // Add to Resend contacts (checks for duplicates)
+    const result = await addToResend(normalizedEmail);
 
-    // Send admin notification
+    if (result.alreadyExists) {
+      // Email already on waitlist - don't send emails again
+      return NextResponse.json(
+        { message: "You're already on the list!" },
+        { status: 200 }
+      );
+    }
+
+    // New signup - send emails
     await sendWaitlistNotification(normalizedEmail);
-
-    // Send confirmation email to the user
     await sendConfirmationEmail(normalizedEmail);
 
     return NextResponse.json(
