@@ -45,7 +45,7 @@ export default function Home() {
       <footer className="border-t border-amber-200 bg-emerald-900 py-12">
         <div className="mx-auto max-w-6xl px-6 text-center">
           <div className="mb-4 flex items-center justify-center gap-2">
-            <Image src="/cs_logo.png" alt="CareerOS" width={40} height={40} className="rounded-lg" />
+            <Image src="/cs_logo.png" alt="CareerOS" width={64} height={64} className="rounded-lg" />
             <span className="font-semibold text-white">CareerOS</span>
           </div>
           <p className="text-sm text-emerald-300">
