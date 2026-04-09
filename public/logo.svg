@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#059669;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#047857;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background circle -->
+  <circle cx="60" cy="60" r="56" fill="url(#grad)"/>
+  
+  <!-- C letter -->
+  <text x="60" y="78" 
+        font-family="system-ui, -apple-system, sans-serif" 
+        font-size="52" 
+        font-weight="700" 
+        fill="white" 
+        text-anchor="middle">C</text>
+  
+  <!-- Career path / growth arrow -->
+  <path d="M85 35 L95 45 L88 45 L88 75 L95 75 L95 85 L82 85 L82 45 L75 45 Z" 
+        fill="#fbbf24" 
+        stroke="#f59e0b" 
+        stroke-width="1"
+        opacity="0.9"/>
+</svg>

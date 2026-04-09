@@ -17,6 +17,8 @@ export default function OnboardingPage() {
     desiredRole: "",
   });
 
+  const [isLoading, setIsLoading] = useState(false);
+
   useEffect(() => {
     if (isLoaded && !userId) {
       router.push("/");
@@ -35,9 +37,27 @@ export default function OnboardingPage() {
     if (step > 1) setStep(step - 1);
   };
 
-  const handleComplete = () => {
-    localStorage.setItem("onboardingComplete", "true");
-    router.push("/dashboard");
+  const handleComplete = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch("/api/user/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to save profile");
+      }
+
+      localStorage.setItem("onboardingComplete", "true");
+      router.push("/dashboard");
+    } catch (error) {
+      console.error("Error saving profile:", error);
+      alert("Failed to save your profile. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -216,9 +236,10 @@ export default function OnboardingPage() {
                 </button>
                 <button
                   onClick={handleComplete}
-                  className="flex-1 rounded-lg bg-emerald-800 py-3 font-medium text-white transition hover:bg-emerald-700"
+                  disabled={isLoading || !formData.desiredRole}
+                  className="flex-1 rounded-lg bg-emerald-800 py-3 font-medium text-white transition hover:bg-emerald-700 disabled:opacity-50"
                 >
-                  Complete Setup
+                  {isLoading ? "Saving..." : "Complete Setup"}
                 </button>
               </div>
             </div>

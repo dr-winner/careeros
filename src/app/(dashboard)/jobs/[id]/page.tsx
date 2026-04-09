@@ -22,6 +22,14 @@ interface Job {
   applicationUrl: string;
 }
 
+interface FitAnalysis {
+  fitScore: number;
+  verdict: string;
+  strengthsSummary: string;
+  gapsSummary: string;
+  riskSummary: string;
+}
+
 export default function JobDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -30,6 +38,8 @@ export default function JobDetailPage() {
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState(false);
   const [hasApplied, setHasApplied] = useState(false);
+  const [fitAnalysis, setFitAnalysis] = useState<FitAnalysis | null>(null);
+  const [analyzingFit, setAnalyzingFit] = useState(false);
 
   useEffect(() => {
     fetchJob();
@@ -42,11 +52,36 @@ export default function JobDetailPage() {
       const data = await response.json();
       if (data.jobs && data.jobs.length > 0) {
         setJob(data.jobs[0]);
+        analyzeFit(data.jobs[0]);
       }
     } catch (error) {
       console.error("Error fetching job:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const analyzeFit = async (jobData: Job) => {
+    if (!userId) return;
+    setAnalyzingFit(true);
+    try {
+      const response = await fetch("/api/fit-analysis", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jobId: jobData.id,
+          jobTitle: jobData.title,
+          companyName: jobData.companyName,
+        }),
+      });
+      const data = await response.json();
+      if (data.fitAnalysis) {
+        setFitAnalysis(data.fitAnalysis);
+      }
+    } catch (error) {
+      console.error("Error analyzing fit:", error);
+    } finally {
+      setAnalyzingFit(false);
     }
   };
 
@@ -221,6 +256,44 @@ export default function JobDetailPage() {
             ))}
           </ul>
         </div>
+
+        {fitAnalysis && (
+          <div className="mt-8 rounded-xl bg-emerald-50 p-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-emerald-950">Job Fit Analysis</h2>
+              <div className={`rounded-full px-4 py-1 text-sm font-medium ${
+                fitAnalysis.fitScore >= 80 ? "bg-emerald-200 text-emerald-800" :
+                fitAnalysis.fitScore >= 60 ? "bg-amber-100 text-amber-800" :
+                "bg-red-100 text-red-800"
+              }`}>
+                {fitAnalysis.fitScore}% Match
+              </div>
+            </div>
+            <div className="mt-4">
+              <div className="h-3 w-full overflow-hidden rounded-full bg-emerald-200">
+                <div
+                  className="h-full rounded-full bg-emerald-600 transition-all duration-500"
+                  style={{ width: `${fitAnalysis.fitScore}%` }}
+                />
+              </div>
+            </div>
+            <p className="mt-4 text-lg font-medium text-emerald-800">{fitAnalysis.verdict}</p>
+            <div className="mt-4 grid gap-3 text-sm">
+              <p><span className="font-medium text-emerald-900">Strengths:</span> {fitAnalysis.strengthsSummary}</p>
+              <p><span className="font-medium text-emerald-900">Gaps:</span> {fitAnalysis.gapsSummary}</p>
+              <p><span className="font-medium text-emerald-900">Advice:</span> {fitAnalysis.riskSummary}</p>
+            </div>
+          </div>
+        )}
+
+        {analyzingFit && (
+          <div className="mt-8 flex items-center justify-center rounded-xl bg-emerald-50 p-6">
+            <div className="flex items-center gap-3 text-emerald-700">
+              <div className="h-5 w-5 animate-spin rounded-full border-2 border-emerald-300 border-t-emerald-600" />
+              <span>Analyzing your fit for this role...</span>
+            </div>
+          </div>
+        )}
 
         <div className="mt-8 border-t border-emerald-100 pt-6">
           <p className="text-sm text-emerald-500">

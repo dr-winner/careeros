@@ -2,128 +2,22 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 
-const SAMPLE_JOBS = [
-  {
-    title: "Frontend Developer",
-    companyName: "TechHub Ghana",
-    location: "Accra, Ghana",
-    country: "Ghana",
-    workMode: "Hybrid",
-    seniorityLevel: "Mid-Level",
-    employmentType: "Full-time",
-    description: "We're looking for a skilled Frontend Developer to build responsive web applications using React and Next.js. You'll collaborate with our design team to create beautiful, user-friendly interfaces.",
-    requirements: "React, TypeScript, CSS, Git, 2+ years experience",
-    postedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    title: "Software Engineer",
-    companyName: "Andela",
-    location: "Remote",
-    country: "Nigeria",
-    workMode: "Remote",
-    seniorityLevel: "Senior",
-    employmentType: "Full-time",
-    description: "Join our engineering team to build scalable backend systems. You'll work with global clients on impactful projects.",
-    requirements: "Node.js, Python, PostgreSQL, AWS, 4+ years experience",
-    postedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    title: "Data Analyst",
-    companyName: "MTN Ghana",
-    location: "Accra, Ghana",
-    country: "Ghana",
-    workMode: "On-site",
-    seniorityLevel: "Entry-Level",
-    employmentType: "Full-time",
-    description: "Analyze large datasets to drive business decisions. Create reports and dashboards for stakeholders.",
-    requirements: "Excel, SQL, Python, Tableau, degree in related field",
-    postedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    title: "UX Designer",
-    companyName: "Paystack",
-    location: "Lagos, Nigeria",
-    country: "Nigeria",
-    workMode: "Hybrid",
-    seniorityLevel: "Mid-Level",
-    employmentType: "Full-time",
-    description: "Design intuitive user experiences for our payment platform. Conduct user research and create wireframes and prototypes.",
-    requirements: "Figma, user research, prototyping, 3+ years experience",
-    postedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    title: "Product Manager",
-    companyName: "Flutterwave",
-    location: "Nairobi, Kenya",
-    country: "Kenya",
-    workMode: "Hybrid",
-    seniorityLevel: "Senior",
-    employmentType: "Full-time",
-    description: "Lead product development for our African payments ecosystem. Define roadmap and work closely with engineering teams.",
-    requirements: "Product management, agile, fintech experience, MBA preferred",
-    postedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    title: "Backend Developer",
-    companyName: "Jumia",
-    location: "Lagos, Nigeria",
-    country: "Nigeria",
-    workMode: "On-site",
-    seniorityLevel: "Mid-Level",
-    employmentType: "Full-time",
-    description: "Build and maintain scalable backend services for Africa's largest e-commerce platform.",
-    requirements: "Java, Spring Boot, microservices, PostgreSQL, 3+ years",
-    postedAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    title: "Digital Marketing Specialist",
-    companyName: "Kobo360",
-    location: "Accra, Ghana",
-    country: "Ghana",
-    workMode: "Hybrid",
-    seniorityLevel: "Entry-Level",
-    employmentType: "Full-time",
-    description: "Drive digital marketing campaigns and manage social media presence for our logistics platform.",
-    requirements: "SEO, Google Ads, social media, analytics, 1+ years experience",
-    postedAt: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    title: "DevOps Engineer",
-    companyName: "GhanaWater",
-    location: "Accra, Ghana",
-    country: "Ghana",
-    workMode: "On-site",
-    seniorityLevel: "Senior",
-    employmentType: "Full-time",
-    description: "Manage infrastructure and deployment pipelines. Ensure high availability of critical services.",
-    requirements: "AWS, Docker, Kubernetes, Terraform, CI/CD, 5+ years",
-    postedAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    title: "Mobile Developer (Flutter)",
-    companyName: "Carbon",
-    location: "Lagos, Nigeria",
-    country: "Nigeria",
-    workMode: "Remote",
-    seniorityLevel: "Mid-Level",
-    employmentType: "Full-time",
-    description: "Build mobile banking apps used by millions across Africa. Focus on performance and user experience.",
-    requirements: "Flutter, Dart, iOS, Android, Firebase, 3+ years",
-    postedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    title: "Business Analyst",
-    companyName: "Ghana Revenue Authority",
-    location: "Accra, Ghana",
-    country: "Ghana",
-    workMode: "On-site",
-    seniorityLevel: "Entry-Level",
-    employmentType: "Full-time",
-    description: "Analyze business processes and recommend improvements. Work with stakeholders to implement solutions.",
-    requirements: "Business analysis, Excel, PowerPoint, degree in business/IT",
-    postedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-];
+const ADZUNA_APP_ID = process.env.ADZUNA_APP_ID;
+const ADZUNA_APP_KEY = process.env.ADZUNA_APP_KEY;
+
+interface AdzunaJob {
+  id: string;
+  title: string;
+  company: { display_name: string };
+  location: { display_name: string };
+  description: string;
+  redirect_url: string;
+  created: string;
+  salary_min?: number;
+  salary_max?: number;
+  contract_time?: string;
+  category?: { tag: string; label: string };
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -131,42 +25,8 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
 
     const search = searchParams.get("search") || "";
-    const location = searchParams.get("location") || "";
-    const workMode = searchParams.get("workMode") || "";
-    const seniority = searchParams.get("seniority") || "";
+    const location = searchParams.get("location") || "Ghana";
     const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "10");
-
-    let jobs = SAMPLE_JOBS;
-
-    if (search) {
-      const searchLower = search.toLowerCase();
-      jobs = jobs.filter(
-        (job) =>
-          job.title.toLowerCase().includes(searchLower) ||
-          job.companyName.toLowerCase().includes(searchLower) ||
-          job.description.toLowerCase().includes(searchLower)
-      );
-    }
-
-    if (location) {
-      jobs = jobs.filter((job) =>
-        job.location.toLowerCase().includes(location.toLowerCase()) ||
-        job.country.toLowerCase().includes(location.toLowerCase())
-      );
-    }
-
-    if (workMode) {
-      jobs = jobs.filter((job) => job.workMode === workMode);
-    }
-
-    if (seniority) {
-      jobs = jobs.filter((job) => job.seniorityLevel === seniority);
-    }
-
-    const total = jobs.length;
-    const start = (page - 1) * limit;
-    const paginatedJobs = jobs.slice(start, start + limit);
 
     let savedJobIds: string[] = [];
     if (userId) {
@@ -174,30 +34,155 @@ export async function GET(request: NextRequest) {
         where: { userId },
         select: { jobId: true },
       });
-      savedJobIds = savedJobs.map((sj: { jobId: string }) => sj.jobId);
+      savedJobIds = savedJobs.map((sj) => sj.jobId);
     }
 
-    const jobsWithMeta = paginatedJobs.map((job, index) => {
-      const jobId = `sample-${index + 1}`;
-      return {
-        ...job,
-        id: jobId,
-        isSaved: savedJobIds.includes(jobId),
-        applicationUrl: `https://example.com/apply/${jobId}`,
-      };
-    });
+    if (ADZUNA_APP_ID && ADZUNA_APP_KEY) {
+      const country = location.toLowerCase().includes("nigeria")
+        ? "ng"
+        : location.toLowerCase().includes("kenya")
+        ? "ke"
+        : location.toLowerCase().includes("south africa")
+        ? "za"
+        : "gh";
 
+      const query = search || "software developer";
+      const url = `https://api.adzuna.com/v1/api/jobs/${country}/search/${page}?app_id=${ADZUNA_APP_ID}&app_key=${ADZUNA_APP_KEY}&what=${encodeURIComponent(query)}&where=${encodeURIComponent(location)}&results_per_page=20`;
+
+      const response = await fetch(url);
+      const data = await response.json();
+
+      if (data.results) {
+        const jobs = data.results.map((job: AdzunaJob) => ({
+          id: `adzuna-${job.id}`,
+          title: job.title,
+          companyName: job.company.display_name,
+          location: job.location.display_name,
+          country: country.toUpperCase(),
+          workMode: job.contract_time?.includes("contract") ? "Contract" : "Full-time",
+          seniorityLevel: "Not specified",
+          employmentType: job.contract_time || "Full-time",
+          description: job.description.replace(/<[^>]*>/g, "").substring(0, 500),
+          requirements: "See job posting for details",
+          postedAt: job.created,
+          salaryMin: job.salary_min,
+          salaryMax: job.salary_max,
+          isSaved: savedJobIds.includes(`adzuna-${job.id}`),
+          applicationUrl: job.redirect_url,
+          source: "adzuna",
+        }));
+
+        return NextResponse.json({
+          jobs,
+          pagination: {
+            page,
+            limit: 20,
+            total: data.count || 0,
+            totalPages: Math.ceil((data.count || 0) / 20),
+          },
+          source: "adzuna",
+        });
+      }
+    }
+
+    const sampleJobs = getSampleJobs(search, location, savedJobIds);
     return NextResponse.json({
-      jobs: jobsWithMeta,
+      jobs: sampleJobs,
       pagination: {
         page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
+        limit: 10,
+        total: sampleJobs.length,
+        totalPages: 1,
       },
+      source: "sample",
     });
   } catch (error) {
     console.error("Error fetching jobs:", error);
     return NextResponse.json({ error: "Failed to fetch jobs" }, { status: 500 });
   }
+}
+
+function getSampleJobs(search: string, location: string, savedJobIds: string[]) {
+  const SAMPLE_JOBS = [
+    {
+      title: "Frontend Developer",
+      companyName: "TechHub Ghana",
+      location: "Accra, Ghana",
+      country: "Ghana",
+      workMode: "Hybrid",
+      seniorityLevel: "Mid-Level",
+      employmentType: "Full-time",
+      description: "Looking for a skilled Frontend Developer to build responsive web applications using React and Next.js.",
+      requirements: "React, TypeScript, CSS, Git",
+      postedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+    },
+    {
+      title: "Software Engineer",
+      companyName: "Andela",
+      location: "Remote",
+      country: "Nigeria",
+      workMode: "Remote",
+      seniorityLevel: "Senior",
+      employmentType: "Full-time",
+      description: "Join our engineering team to build scalable backend systems for global clients.",
+      requirements: "Node.js, Python, PostgreSQL, AWS",
+      postedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+    },
+    {
+      title: "Data Analyst",
+      companyName: "MTN Ghana",
+      location: "Accra, Ghana",
+      country: "Ghana",
+      workMode: "On-site",
+      seniorityLevel: "Entry-Level",
+      employmentType: "Full-time",
+      description: "Analyze large datasets to drive business decisions and create reports for stakeholders.",
+      requirements: "Excel, SQL, Python, Tableau",
+      postedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+    },
+    {
+      title: "UX Designer",
+      companyName: "Paystack",
+      location: "Lagos, Nigeria",
+      country: "Nigeria",
+      workMode: "Hybrid",
+      seniorityLevel: "Mid-Level",
+      employmentType: "Full-time",
+      description: "Design intuitive user experiences for our payment platform.",
+      requirements: "Figma, user research, prototyping",
+      postedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+    },
+    {
+      title: "Backend Developer",
+      companyName: "Flutterwave",
+      location: "Nairobi, Kenya",
+      country: "Kenya",
+      workMode: "Hybrid",
+      seniorityLevel: "Mid-Level",
+      employmentType: "Full-time",
+      description: "Build and maintain scalable backend services for Africa's fintech ecosystem.",
+      requirements: "Java, Spring Boot, microservices, PostgreSQL",
+      postedAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
+    },
+  ];
+
+  let jobs = SAMPLE_JOBS;
+
+  if (search) {
+    const searchLower = search.toLowerCase();
+    jobs = jobs.filter(
+      (job) =>
+        job.title.toLowerCase().includes(searchLower) ||
+        job.companyName.toLowerCase().includes(searchLower) ||
+        job.description.toLowerCase().includes(searchLower)
+    );
+  }
+
+  return jobs.map((job, index) => ({
+    ...job,
+    id: `sample-${index + 1}`,
+    isSaved: savedJobIds.includes(`sample-${index + 1}`),
+    applicationUrl: `https://example.com/apply/${index + 1}`,
+    source: "sample",
+  }));
 }

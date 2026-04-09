@@ -24,6 +24,8 @@ model User {
   coverLetters   CoverLetter[]
   savedJobs      SavedJob[]
   applications   Application[]
+  savedSearches  SavedSearch[]
+  referrals      Referral[]
 }
 
 model Resume {
@@ -151,4 +153,36 @@ model Application {
   notes     String?
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   job       Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+}
+
+model SavedSearch {
+  id            String   @id @default(cuid())
+  userId        String
+  name          String
+  searchQuery   String
+  location      String?
+  workMode      String?
+  seniority     String?
+  alertEnabled  Boolean  @default(true)
+  alertFrequency String  @default("daily")
+  lastNotified  DateTime?
+  createdAt     DateTime @default(now())
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Referral {
+  id          String   @id @default(cuid())
+  referrerId  String
+  refereeEmail String
+  referralCode String  @unique
+  status      String   @default("pending")
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [referrerId], references: [id], onDelete: Cascade)
+}
+
+model WaitlistReferral {
+  id          String   @id @default(cuid())
+  referralCode String  @unique
+  referralCount Int     @default(0)
+  createdAt   DateTime @default(now())
 }

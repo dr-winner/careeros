@@ -56,58 +56,64 @@ export default function CoverLetterPage() {
 
     setGenerating(true);
 
+    try {
+      const response = await fetch("/api/ai/cover-letter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jobTitle: formData.jobTitle,
+          companyName: formData.companyName,
+          jobDescription: formData.jobDescription,
+          recipientName: formData.recipientName,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.coverLetter) {
+        setCoverLetter(data.coverLetter);
+        toast.success("Cover letter generated!");
+      } else if (data.error === "AI not configured") {
+        toast.error("AI not configured. Using template instead.");
+        generateTemplateCoverLetter();
+      } else {
+        toast.error(data.error || "Failed to generate cover letter");
+        generateTemplateCoverLetter();
+      }
+    } catch {
+      toast.error("Failed to generate cover letter");
+      generateTemplateCoverLetter();
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const generateTemplateCoverLetter = () => {
     const name = profile?.fullName || "Your Name";
     const headline = profile?.headline || profile?.experience || "professional";
     const phone = profile?.phone || "";
     const email = profile?.email || "";
 
-    const letter = `
-${name}
-${phone ? `${phone}` : ""}
+    const letter = `${name}
+${phone}
 ${email}
 
 ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
 
 ${formData.recipientName ? `Dear ${formData.recipientName},\n\n` : ""}I am writing to express my interest in the ${formData.jobTitle} position at ${formData.companyName}. With my background as a ${headline}, I am confident in my ability to contribute effectively to your team.
 
-${formData.jobDescription ? `I was excited to see the requirements for this role, particularly the focus on ${extractKeySkills(formData.jobDescription).slice(0, 3).join(", ")}. My experience has prepared me well to excel in these areas.` : "I am drawn to this opportunity because of your company's commitment to excellence and innovation."}
+${formData.jobDescription ? `I was excited to see the requirements for this role. My experience has prepared me well to excel in these areas.` : "I am drawn to this opportunity because of your company's commitment to excellence."}
 
-${getRelevantExperience(formData.jobDescription, profile)}
+Throughout my career, I have developed strong skills in problem-solving and collaboration. I am committed to continuous learning and staying current with industry best practices.
 
 I would welcome the opportunity to discuss how my skills and experience align with your needs. I am available for an interview at your earliest convenience and can be reached at ${phone || email}.
 
 Thank you for considering my application. I look forward to hearing from you soon.
 
 Sincerely,
-${name}
-`.trim();
+${name}`;
 
-    setTimeout(() => {
-      setCoverLetter(letter);
-      setGenerating(false);
-      toast.success("Cover letter generated!");
-    }, 500);
-  };
-
-  const extractKeySkills = (description: string): string[] => {
-    const commonSkills = [
-      "JavaScript", "TypeScript", "React", "Node.js", "Python", "Java",
-      "SQL", "PostgreSQL", "MongoDB", "AWS", "Azure", "Docker",
-      "leadership", "communication", "problem-solving", "teamwork",
-      "project management", "agile", "Git", "HTML", "CSS"
-    ];
-    const lowerDesc = description.toLowerCase();
-    return commonSkills.filter(skill => lowerDesc.includes(skill.toLowerCase()));
-  };
-
-  const getRelevantExperience = (jobDesc: string, profile: UserProfile | null): string => {
-    const skills = profile?.experience ? extractKeySkills(profile.experience) : [];
-    
-    if (skills.length === 0) {
-      return `Throughout my career, I have developed strong skills in problem-solving and collaboration. I am committed to continuous learning and staying current with industry best practices.`;
-    }
-
-    return `In my ${profile?.experience || "professional"} experience, I have developed strong expertise in ${skills.slice(0, 3).join(", ")}. These skills have enabled me to deliver impactful results and contribute meaningfully to team objectives.`;
+    setCoverLetter(letter);
   };
 
   const copyToClipboard = () => {
