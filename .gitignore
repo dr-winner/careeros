@@ -42,6 +42,7 @@ next-env.d.ts
 
 # data (contains user data)
 data/
+uploads/
 node_modules/
 .next/
 /.env

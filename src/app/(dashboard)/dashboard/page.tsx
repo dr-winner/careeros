@@ -1,9 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import { useAuth } from "@clerk/nextjs";
+import CVUpload from "@/app/components/cv-upload";
 
 export default function DashboardPage() {
   const { userId, isLoaded } = useAuth();
+  const [showUpload, setShowUpload] = useState(false);
 
   if (!isLoaded) {
     return (
@@ -22,6 +25,21 @@ export default function DashboardPage() {
         </p>
       </div>
 
+      {showUpload && (
+        <div className="mb-8">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-xl font-semibold text-emerald-950">Upload Your CV</h2>
+            <button
+              onClick={() => setShowUpload(false)}
+              className="text-sm text-emerald-600 hover:text-emerald-800"
+            >
+              Close
+            </button>
+          </div>
+          <CVUpload />
+        </div>
+      )}
+
       <div className="grid gap-6 md:grid-cols-3">
         <div className="rounded-2xl border border-emerald-100 bg-white p-6">
           <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100">
@@ -33,8 +51,11 @@ export default function DashboardPage() {
           <p className="mt-1 text-sm text-emerald-700/70">
             Upload and manage your CV for job fit analysis.
           </p>
-          <button className="mt-4 rounded-lg bg-emerald-800 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700">
-            Upload CV
+          <button
+            onClick={() => setShowUpload(!showUpload)}
+            className="mt-4 rounded-lg bg-emerald-800 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+          >
+            {showUpload ? "Cancel" : "Upload CV"}
           </button>
         </div>
 
