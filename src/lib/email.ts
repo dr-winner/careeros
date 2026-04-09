@@ -60,19 +60,36 @@ export async function sendConfirmationEmail(email: string) {
   }
 }
 
-export async function addToResend(email: string) {
+export async function checkContactExists(email: string): Promise<boolean> {
   try {
+    const { data } = await resend.contacts.list({
+     audienceId: process.env.RESEND_AUDIENCE_ID!,
+    });
+    
+    return data?.data?.some((contact) => contact.email === email.toLowerCase()) ?? false;
+  } catch (error) {
+    console.error("Failed to check contact:", error);
+    return false;
+  }
+}
+
+export async function addToResend(email: string): Promise<{ success: boolean; alreadyExists: boolean }> {
+  try {
+    const exists = await checkContactExists(email);
+    
+    if (exists) {
+      return { success: true, alreadyExists: true };
+    }
+
     await resend.contacts.create({
+      audienceId: process.env.RESEND_AUDIENCE_ID!,
       email,
       unsubscribed: false,
     });
-    return { success: true };
-  } catch (error: unknown) {
-    const err = error as { message?: string };
-    if (err?.message?.includes("already exists") || err?.message?.includes("already taken")) {
-      return { success: true, alreadyExists: true };
-    }
+    
+    return { success: true, alreadyExists: false };
+  } catch (error) {
     console.error("Failed to add contact:", error);
-    return { success: false, error };
+    return { success: false, alreadyExists: false };
   }
 }
