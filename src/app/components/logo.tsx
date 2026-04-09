@@ -46,13 +46,11 @@ export default function Logo({
     }
 
     return (
-        <div className={`flex items-center gap-1 ${className}`}>
+        <div className={`flex items-center gap-0 ${className}`}>
             {iconComponent}
-            <div className="flex items-center">
-                <div className="font-bold tracking-tight text-slate-950" style={{ fontSize: textSize, lineHeight: 1.1 }}>
-                    CareerOS
-                </div>
-            </div>
+            <span className="font-bold tracking-tight text-slate-950" style={{ fontSize: textSize, lineHeight: 1 }}>
+                CareerOS
+            </span>
         </div>
     );
 }
