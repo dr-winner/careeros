@@ -1,31 +1,21 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import AnimatedBackground from "./components/animated-background";
+import Nav from "./components/nav";
 import Hero from "./components/hero";
-import Features from "./components/features";
-import Stats from "./components/stats";
+import HowItWorks from "./components/how-it-works";
+import WhyItMatters from "./components/why-it-matters";
 import Audience from "./components/audience";
-import FinalCTA from "./components/final-cta";
+import CTA from "./components/cta";
 
 export const metadata: Metadata = {
-  title: "CareerOS - Your AI Career Operating System",
+  title: "CareerOS - Know Before You Apply",
   description:
-    "Stop applying blindly. CareerOS helps you discover opportunities, assess your job fit, fix your CV, prepare for interviews, and apply with confidence.",
-  keywords: [
-    "career",
-    "job search",
-    "AI career",
-    "CV optimization",
-    "interview prep",
-    "job fit",
-    "Ghana jobs",
-    "Africa jobs",
-  ],
+    "Stop applying to jobs you have no chance at. CareerOS shows you how well you fit before you spend time on applications.",
+  keywords: ["career", "job search", "CV", "interview prep", "job fit", "Africa"],
   authors: [{ name: "CareerOS" }],
   openGraph: {
-    title: "CareerOS - Your AI Career Operating System",
-    description:
-      "Stop applying blindly. Know which jobs fit you, what is holding you back, and how to improve before you apply.",
+    title: "CareerOS - Know Before You Apply",
+    description: "Stop applying to jobs you have no chance at.",
     url: "https://careeros.live",
     siteName: "CareerOS",
     locale: "en_US",
@@ -33,42 +23,38 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "CareerOS - Your AI Career Operating System",
-    description:
-      "Stop applying blindly. Know which jobs fit you, what is holding you back, and how to improve before you apply.",
-    creator: "@careeros",
-  },
-  robots: {
-    index: true,
-    follow: true,
+    title: "CareerOS - Know Before You Apply",
+    description: "Stop applying to jobs you have no chance at.",
   },
 };
 
 export default function Home() {
   return (
-    <div className="relative min-h-screen overflow-hidden">
-      <AnimatedBackground />
+    <div className="min-h-screen bg-amber-50">
+      <Nav />
 
-      <main className="relative z-10">
+      <main>
         <Hero />
-        <Features />
-        <Stats />
+        <HowItWorks />
+        <WhyItMatters />
         <Audience />
-        <FinalCTA />
-
-        <footer className="border-t border-white/5 py-12">
-          <div className="mx-auto max-w-6xl px-6 text-center">
-            <div className="mb-4 flex items-center justify-center gap-2">
-              <div className="h-2 w-2 rounded-full bg-cyan-400" />
-              <span className="text-sm text-slate-400">Launching 2026</span>
-            </div>
-            <p className="text-sm text-slate-500">
-              &copy; {new Date().getFullYear()} CareerOS. Built for ambitious
-              careers.
-            </p>
-          </div>
-        </footer>
+        <CTA />
       </main>
+
+      <footer className="border-t border-amber-200 bg-emerald-900 py-12">
+        <div className="mx-auto max-w-6xl px-6 text-center">
+          <div className="mb-4 flex items-center justify-center gap-2">
+            <div className="h-6 w-6 rounded bg-amber-500" />
+            <span className="font-semibold text-white">CareerOS</span>
+          </div>
+          <p className="text-sm text-emerald-300">
+            Built for African job seekers. Launching 2026.
+          </p>
+          <p className="mt-4 text-xs text-emerald-400">
+            &copy; {new Date().getFullYear()} CareerOS
+          </p>
+        </div>
+      </footer>
     </div>
   );
 }
