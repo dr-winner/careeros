@@ -9,7 +9,7 @@ export default function Nav() {
     <nav className="fixed top-0 left-0 right-0 z-50 border-b border-amber-200/50 bg-amber-50/80 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
         <Link href="/">
-          <Logo size="sm" />
+          <Logo size="sm" variant="icon-only" />
         </Link>
 
         <div className="flex items-center gap-4">
