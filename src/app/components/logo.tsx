@@ -9,10 +9,10 @@ interface LogoProps {
 }
 
 const IMAGE_SIZES = {
-    sm: { width: 200, height: 200 },
-    md: { width: 250, height: 250 },
-    lg: { width: 320, height: 320 },
-    xl: { width: 400, height: 400 },
+    sm: { width: 100, height: 100 },
+    md: { width: 125, height: 125 },
+    lg: { width: 160, height: 160 },
+    xl: { width: 200, height: 200 },
 };
 
 const TEXT_SIZES = {
@@ -46,9 +46,9 @@ export default function Logo({
     }
 
     return (
-        <div className={`flex items-center gap-2 ${className}`}>
+        <div className={`flex items-center gap-1 ${className}`}>
             {iconComponent}
-            <div>
+            <div className="flex items-center">
                 <div className="font-bold tracking-tight text-slate-950" style={{ fontSize: textSize, lineHeight: 1.1 }}>
                     CareerOS
                 </div>
