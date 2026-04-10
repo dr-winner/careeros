@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   title: "CareerOS - Know Before You Apply",
   description: "Stop applying to jobs you have no chance at. CareerOS shows you how well you fit before you spend time on applications.",
   icons: {
-    icon: "/cs_logo.png",
+    icon: "/logo.svg",
   },
 };
 
