@@ -23,12 +23,17 @@ interface Job {
 
 interface RawJob {
   id: string;
+  _id?: string;
+  slug?: string;
   title: string;
   company_name?: string;
   company?: { display_name: string };
+  owner?: { companyName?: string };
   location?: string;
   location_data?: { display_name?: string };
+  locationAddress?: string;
   description?: string;
+  descriptionBreakdown?: { oneSentenceJobSummary?: string };
   url?: string;
   redirect_url?: string;
   created?: string;
@@ -41,8 +46,8 @@ interface RawJob {
   remote?: boolean;
   candidate_required_location?: string;
   job_type?: string;
+  type?: string;
   tags?: string[];
-  slug?: string;
 }
 
 const REMOTIVE_CATEGORIES = [
@@ -97,11 +102,11 @@ function parseSalary(salary?: string): { min?: number; max?: number } {
 }
 
 function formatJob(raw: RawJob, sourceId: string, source: string, savedJobIds: string[]): Job {
-  const companyName = raw.company_name || raw.company?.display_name || "Unknown Company";
-  const location = raw.location || raw.location_data?.display_name || raw.candidate_required_location || "Not specified";
+  const companyName = raw.company_name || raw.company?.display_name || raw.owner?.companyName || "Unknown Company";
+  const location = raw.location || raw.location_data?.display_name || raw.candidate_required_location || raw.locationAddress || "Not specified";
   const appUrl = raw.url || raw.redirect_url || "#";
   const postedAt = raw.created || (raw.created_at ? new Date(raw.created_at * 1000).toISOString() : new Date().toISOString());
-  const description = raw.description?.replace(/<[^>]*>/g, "").substring(0, 500) || "";
+  const description = raw.description?.replace(/<[^>]*>/g, "").substring(0, 500) || raw.descriptionBreakdown?.oneSentenceJobSummary || "";
   
   let salaryMin = raw.salary_min;
   let salaryMax = raw.salary_max;
@@ -118,9 +123,9 @@ function formatJob(raw: RawJob, sourceId: string, source: string, savedJobIds: s
     companyName,
     location,
     country: getCountry(source, location),
-    workMode: raw.remote ? "Remote" : getWorkMode(raw.remote, raw.job_type || raw.contract_time),
+    workMode: raw.remote ? "Remote" : getWorkMode(raw.remote, raw.job_type || raw.type || raw.contract_time),
     seniorityLevel: detectSeniority(raw.title),
-    employmentType: raw.job_type || raw.contract_time || raw.contract_type || "Full-time",
+    employmentType: raw.job_type || raw.type || raw.contract_time || raw.contract_type || "Full-time",
     description,
     requirements: raw.tags?.join(", ") || "See job posting for details",
     postedAt,
@@ -268,6 +273,23 @@ async function fetchFromArbeitnow(savedJobIds: string[]): Promise<Job[]> {
   return jobs;
 }
 
+async function fetchFromRise(query: string, savedJobIds: string[]): Promise<Job[]> {
+  const jobs: Job[] = [];
+  
+  try {
+    const response = await fetch(`https://api.joinrise.io/api/v1/jobs/public?page=1&limit=50&search=${encodeURIComponent(query)}`);
+    const data = await response.json();
+    
+    if (data.success && data.result?.jobs) {
+      jobs.push(...data.result.jobs.map((j: RawJob) => formatJob(j, j._id || j.id, "rise", savedJobIds)));
+    }
+  } catch (error) {
+    console.error("Rise error:", error);
+  }
+  
+  return jobs;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const userId = await getDbUserId();
@@ -300,6 +322,7 @@ export async function GET(request: NextRequest) {
       fetchFromAdzuna(query, savedJobIds),
       fetchFromRemotive(query, savedJobIds),
       fetchFromArbeitnow(savedJobIds),
+      fetchFromRise(query, savedJobIds),
     ];
 
     const results = await Promise.allSettled(promises);
@@ -329,6 +352,7 @@ export async function GET(request: NextRequest) {
       adzuna: allJobs.filter(j => j.source === "adzuna").length,
       remotive: allJobs.filter(j => j.source === "remotive").length,
       arbeitnow: allJobs.filter(j => j.source === "arbeitnow").length,
+      rise: allJobs.filter(j => j.source === "rise").length,
     };
 
     return NextResponse.json({
