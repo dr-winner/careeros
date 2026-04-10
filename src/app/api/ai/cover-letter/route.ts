@@ -41,7 +41,10 @@ export async function POST(request: NextRequest) {
     const userExperience = user?.experience || "";
     const userHeadline = user?.headline || "";
     const parsedResume = user?.resumes[0]?.parsedText || "";
-    const resumeSkills = user?.resumes[0]?.skills?.map((s) => (s as { skillName: string }).skillName).join(", ") || "";
+    const skillsList = user?.resumes[0]?.skills || [];
+    const resumeSkills = skillsList
+      .map((s: { skillName: string }) => s.skillName)
+      .join(", ");
 
     const prompt = `Write a professional cover letter for a ${jobTitle} position at ${companyName}.
 
