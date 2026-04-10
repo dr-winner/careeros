@@ -1,35 +1,57 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
-
-interface JobAnalysis {
-  id: string;
-  userId: string;
-  jobId: string;
-  fitScore: number;
-  matchedSkills: string[];
-  missingSkills: string[];
-  strengths: string[];
-  gaps: string[];
-  verdict: "Strong Match" | "Good Fit" | "Partial Match" | "Reach Position";
-}
+import { getDbUserId } from "@/lib/auth";
 
 const SKILL_KEYWORDS: Record<string, string[]> = {
-  "JavaScript": ["javascript", "js", "ecmascript"],
+  "JavaScript": ["javascript", "js", "ecmascript", "jscript"],
   "TypeScript": ["typescript", "ts"],
-  "React": ["react", "reactjs", "react.js"],
-  "Node.js": ["node", "nodejs", "node.js", "express"],
-  "Python": ["python", "django", "flask"],
-  "Java": ["java", "spring", "springboot"],
-  "SQL": ["sql", "mysql", "postgresql", "postgres"],
-  "AWS": ["aws", "amazon web services", "ec2", "s3", "lambda"],
-  "Azure": ["azure", "microsoft azure"],
-  "Docker": ["docker", "container", "kubernetes", "k8s"],
-  "Git": ["git", "github", "gitlab", "version control"],
-  "Data Analysis": ["data analysis", "analytics", "pandas", "numpy"],
-  "Machine Learning": ["machine learning", "ml", "ai", "tensorflow", "pytorch"],
-  "Communication": ["communication", "stakeholder", "presentation"],
-  "Leadership": ["leadership", "team lead", "mentoring"],
+  "React": ["react", "reactjs", "react.js", "nextjs", "next.js"],
+  "Vue": ["vue", "vuejs", "vue.js", "nuxt"],
+  "Angular": ["angular", "angularjs"],
+  "Node.js": ["node", "nodejs", "node.js", "express", "expressjs"],
+  "Python": ["python", "django", "flask", "fastapi", "pandas", "numpy"],
+  "Java": ["java", "spring", "springboot", "spring boot", "jvm"],
+  "C#": ["c#", "csharp", ".net", "dotnet", "asp.net"],
+  "PHP": ["php", "laravel", "codeigniter", "wordpress"],
+  "Ruby": ["ruby", "ruby on rails", "rails"],
+  "Go": ["golang", "go programming"],
+  "Rust": ["rust", "rustlang"],
+  "Swift": ["swift", "ios", "swiftui"],
+  "Kotlin": ["kotlin", "android"],
+  "Flutter": ["flutter", "dart"],
+  "React Native": ["react native", "rn"],
+  "SQL": ["sql", "mysql", "postgresql", "postgres", "sqlite", "mssql", "database"],
+  "MongoDB": ["mongodb", "mongo", "nosql"],
+  "Redis": ["redis", "cache"],
+  "AWS": ["aws", "amazon web services", "ec2", "s3", "lambda", "cloudformation"],
+  "Azure": ["azure", "microsoft azure", "azure devops"],
+  "GCP": ["gcp", "google cloud", "google cloud platform"],
+  "Docker": ["docker", "container", "containerization"],
+  "Kubernetes": ["kubernetes", "k8s", "helm"],
+  "CI/CD": ["ci/cd", "jenkins", "gitlab ci", "github actions", "pipeline"],
+  "Git": ["git", "github", "gitlab", "bitbucket", "version control"],
+  "Linux": ["linux", "unix", "bash", "shell"],
+  "Data Analysis": ["data analysis", "analytics", "tableau", "power bi", "looker"],
+  "Machine Learning": ["machine learning", "ml", "ai", "tensorflow", "pytorch", "keras"],
+  "Deep Learning": ["deep learning", "neural network", "cnn", "rnn"],
+  "DevOps": ["devops", "sre", "site reliability"],
+  "Agile": ["agile", "scrum", "kanban", "jira"],
+  "Project Management": ["project management", "pmp", "prince2"],
+  "Communication": ["communication", "stakeholder", "presentation", "public speaking"],
+  "Leadership": ["leadership", "team lead", "mentoring", "management"],
+  "Marketing": ["marketing", "seo", "sem", "digital marketing", "content"],
+  "Sales": ["sales", "crm", "salesforce", "business development"],
+  "Finance": ["finance", "accounting", "financial analysis", "excel"],
+  "Graphic Design": ["graphic design", "photoshop", "illustrator", "figma", "canva"],
+  "UI/UX": ["ui/ux", "ui design", "ux design", "user experience", "user interface"],
+  "Accounting": ["accounting", "bookkeeping", "tax", "auditing"],
+  "HR": ["hr", "human resources", "recruitment", "talent acquisition"],
+  "Networking": ["networking", "cisco", "ccna", "network security", "firewall"],
+  "Cybersecurity": ["cybersecurity", "security", "penetration testing", "ethical hacking"],
+  "Cloud": ["cloud", "cloud computing", "serverless"],
+  "API": ["api", "rest api", "restful", "graphql", "grpc"],
+  "Microservices": ["microservices", "microservice", "service mesh"],
+  "Testing": ["testing", "qa", "quality assurance", "selenium", "jest", "unit test"],
 };
 
 function extractSkills(text: string): string[] {
@@ -78,7 +100,7 @@ function calculateFitScore(userSkills: string[], jobDescription: string): {
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId } = await auth();
+    const userId = await getDbUserId();
 
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -86,15 +108,15 @@ export async function POST(request: NextRequest) {
 
     const { jobId, jobDescription } = await request.json();
 
-    if (!jobId || !jobDescription) {
+    if (!jobId) {
       return NextResponse.json(
-        { error: "Job ID and description required" },
+        { error: "Job ID required" },
         { status: 400 }
       );
     }
 
     const user = await prisma.user.findUnique({
-      where: { clerkId: userId },
+      where: { id: userId },
       include: {
         resumes: {
           where: { isPrimary: true },
@@ -104,35 +126,41 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    const userSkills = [
-      ...(user?.headline ? extractSkills(user.headline) : []),
-      ...(user?.experience ? extractSkills(user.experience) : []),
-      ...(user?.resumes[0]?.skills?.map((s: { skillName: string }) => s.skillName) || []),
-    ];
-
+    const userSkills: string[] = [];
+    
+    if (user?.headline) {
+      userSkills.push(...extractSkills(user.headline));
+    }
+    if (user?.experience) {
+      userSkills.push(...extractSkills(user.experience));
+    }
+    if (user?.desiredRole) {
+      userSkills.push(...extractSkills(user.desiredRole));
+    }
+    if (user?.resumes[0]?.skills) {
+      userSkills.push(...user.resumes[0].skills.map((s: { skillName: string }) => s.skillName));
+    }
+    
     const uniqueSkills = [...new Set(userSkills)];
 
-    const { score, matched, missing, confidence } = calculateFitScore(uniqueSkills, jobDescription);
+    const jobDesc = jobDescription || "";
+    const { score, matched, missing, confidence } = calculateFitScore(uniqueSkills, jobDesc);
 
-    let verdict: JobAnalysis["verdict"];
+    let verdict: string;
     if (score >= 80) verdict = "Strong Match";
     else if (score >= 60) verdict = "Good Fit";
     else if (score >= 40) verdict = "Partial Match";
     else verdict = "Reach Position";
 
-    const analysis: Omit<JobAnalysis, "id"> & { confidence: string } = {
-      userId,
-      jobId,
-      fitScore: score,
-      matchedSkills: matched,
-      missingSkills: missing,
-      strengths: matched.map(s => `You have experience with ${s}`),
-      gaps: missing.map(s => `Consider learning ${s}`),
-      verdict,
-      confidence,
-    };
-
-    return NextResponse.json({ analysis });
+    return NextResponse.json({
+      analysis: {
+        fitScore: score,
+        matchedSkills: matched,
+        missingSkills: missing,
+        verdict,
+        confidence,
+      }
+    });
   } catch (error) {
     console.error("Error analyzing job fit:", error);
     return NextResponse.json(

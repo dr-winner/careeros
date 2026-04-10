@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -18,44 +18,50 @@ interface Job {
   description: string;
   requirements: string;
   postedAt: string;
+  salaryMin?: number;
+  salaryMax?: number;
   isSaved: boolean;
   applicationUrl: string;
 }
 
-interface FitAnalysis {
-  fitScore: number;
-  verdict: string;
-  strengthsSummary: string;
-  gapsSummary: string;
-  riskSummary: string;
-}
-
 export default function JobDetailPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const { userId } = useAuth();
   const [job, setJob] = useState<Job | null>(null);
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState(false);
   const [hasApplied, setHasApplied] = useState(false);
-  const [fitAnalysis, setFitAnalysis] = useState<FitAnalysis | null>(null);
-  const [analyzingFit, setAnalyzingFit] = useState(false);
+  const [fitScore, setFitScore] = useState<number | null>(null);
+  const [matchedSkills, setMatchedSkills] = useState<string[]>([]);
+  const [missingSkills, setMissingSkills] = useState<string[]>([]);
+  const [analyzing, setAnalyzing] = useState(false);
 
   useEffect(() => {
-    fetchJob();
-    checkApplication();
-  }, [params.id, userId]); // eslint-disable-line react-hooks/exhaustive-deps
+    const jobData = searchParams.get("data");
+    if (jobData) {
+      try {
+        const parsedJob = JSON.parse(decodeURIComponent(jobData));
+        setJob(parsedJob);
+        setLoading(false);
+        checkApplication(parsedJob.id);
+        analyzeFit(parsedJob);
+      } catch {
+        fetchJobFromAPI();
+      }
+    } else {
+      fetchJobFromAPI();
+    }
+  }, [params.id, userId]);
 
-  const fetchJob = async () => {
+  const fetchJobFromAPI = async () => {
     try {
       const response = await fetch(`/api/jobs?jobId=${params.id}`);
       const data = await response.json();
-      
       if (data.job) {
         setJob(data.job);
+        checkApplication(data.job.id);
         analyzeFit(data.job);
-      } else if (data.jobs && data.jobs.length > 0) {
-        setJob(data.jobs[0]);
-        analyzeFit(data.jobs[0]);
       }
     } catch (error) {
       console.error("Error fetching job:", error);
@@ -66,35 +72,36 @@ export default function JobDetailPage() {
 
   const analyzeFit = async (jobData: Job) => {
     if (!userId) return;
-    setAnalyzingFit(true);
+    setAnalyzing(true);
     try {
-      const response = await fetch("/api/fit-analysis", {
+      const response = await fetch("/api/jobs/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           jobId: jobData.id,
-          jobTitle: jobData.title,
-          companyName: jobData.companyName,
+          jobDescription: jobData.description,
         }),
       });
       const data = await response.json();
-      if (data.fitAnalysis) {
-        setFitAnalysis(data.fitAnalysis);
+      if (data.analysis) {
+        setFitScore(data.analysis.fitScore);
+        setMatchedSkills(data.analysis.matchedSkills || []);
+        setMissingSkills(data.analysis.missingSkills || []);
       }
     } catch (error) {
       console.error("Error analyzing fit:", error);
     } finally {
-      setAnalyzingFit(false);
+      setAnalyzing(false);
     }
   };
 
-  const checkApplication = async () => {
+  const checkApplication = async (jobId: string) => {
     if (!userId) return;
     try {
       const response = await fetch("/api/applications");
       const data = await response.json();
       const applied = data.applications?.some(
-        (app: { jobId: string }) => app.jobId === params.id
+        (app: { jobId: string }) => app.jobId === jobId
       );
       setHasApplied(applied);
     } catch (error) {
@@ -150,7 +157,9 @@ export default function JobDetailPage() {
       });
 
       if (response.ok) {
-        setJob({ ...job, isSaved: !job.isSaved });
+        const data = await response.json();
+        setJob({ ...job, isSaved: data.saved });
+        toast.success(data.saved ? "Job saved!" : "Job removed from saved");
       }
     } catch (error) {
       console.error("Error saving job:", error);
@@ -163,6 +172,28 @@ export default function JobDetailPage() {
       month: "long",
       day: "numeric",
     });
+  };
+
+  const formatSalary = (min?: number, max?: number) => {
+    if (!min && !max) return null;
+    const format = (n: number) => `R${(n / 1000).toFixed(0)}K`;
+    if (min && max) return `${format(min)} - ${format(max)}`;
+    if (min) return `From ${format(min)}`;
+    if (max) return `Up to ${format(max)}`;
+    return null;
+  };
+
+  const getFitVerdict = (score: number) => {
+    if (score >= 80) return "Strong Match";
+    if (score >= 60) return "Good Fit";
+    if (score >= 40) return "Partial Match";
+    return "Reach Position";
+  };
+
+  const getFitColor = (score: number) => {
+    if (score >= 80) return "emerald";
+    if (score >= 60) return "amber";
+    return "red";
   };
 
   if (loading) {
@@ -206,6 +237,11 @@ export default function JobDetailPage() {
           <div>
             <h1 className="text-3xl font-bold text-white">{job.title}</h1>
             <p className="mt-2 text-xl text-slate-400">{job.companyName}</p>
+            {job.salaryMin || job.salaryMax ? (
+              <p className="mt-1 text-lg font-medium text-emerald-400">
+                {formatSalary(job.salaryMin, job.salaryMax)}
+              </p>
+            ) : null}
           </div>
           {userId && (
             <button
@@ -249,62 +285,61 @@ export default function JobDetailPage() {
           </div>
         </div>
 
+        {analyzing && (
+          <div className="mt-6 flex items-center gap-3 text-slate-400">
+            <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-600 border-t-emerald-500" />
+            <span>Analyzing your fit for this role...</span>
+          </div>
+        )}
+
+        {fitScore !== null && !analyzing && (
+          <div className="mt-6 rounded-xl bg-slate-800 p-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-white">Your Fit for This Role</h2>
+              <div className={`rounded-full px-4 py-1 text-sm font-medium bg-${getFitColor(fitScore)}-500/20 text-${getFitColor(fitScore)}-400`}>
+                {fitScore}% Match
+              </div>
+            </div>
+            <div className="mt-4 h-3 w-full overflow-hidden rounded-full bg-slate-700">
+              <div
+                className={`h-full rounded-full bg-${getFitColor(fitScore)}-500 transition-all duration-500`}
+                style={{ width: `${fitScore}%` }}
+              />
+            </div>
+            <p className="mt-4 text-lg font-medium text-white">{getFitVerdict(fitScore)}</p>
+            
+            {matchedSkills.length > 0 && (
+              <div className="mt-4">
+                <p className="text-sm font-medium text-slate-300">Your matching skills:</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {matchedSkills.map((skill, i) => (
+                    <span key={i} className="rounded-full bg-emerald-500/20 px-3 py-1 text-sm text-emerald-400">
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {missingSkills.length > 0 && (
+              <div className="mt-4">
+                <p className="text-sm font-medium text-slate-300">Skills to develop:</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {missingSkills.map((skill, i) => (
+                    <span key={i} className="rounded-full bg-slate-700 px-3 py-1 text-sm text-slate-300">
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="mt-8">
           <h2 className="text-xl font-semibold text-white">About This Role</h2>
-          <p className="mt-4 leading-relaxed text-slate-300">{job.description}</p>
+          <p className="mt-4 leading-relaxed text-slate-300 whitespace-pre-wrap">{job.description}</p>
         </div>
-
-        <div className="mt-8">
-          <h2 className="text-xl font-semibold text-white">Requirements</h2>
-          <ul className="mt-4 space-y-2">
-            {job.requirements.split(", ").map((req, index) => (
-              <li key={index} className="flex items-start gap-2 text-slate-300">
-                <svg className="mt-1 h-5 w-5 flex-shrink-0 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-                {req}
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        {fitAnalysis && (
-          <div className="mt-8 rounded-xl bg-slate-800 p-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-white">Job Fit Analysis</h2>
-              <div className={`rounded-full px-4 py-1 text-sm font-medium ${
-                fitAnalysis.fitScore >= 80 ? "bg-emerald-500/20 text-emerald-400" :
-                fitAnalysis.fitScore >= 60 ? "bg-amber-500/20 text-amber-400" :
-                "bg-red-500/20 text-red-400"
-              }`}>
-                {fitAnalysis.fitScore}% Match
-              </div>
-            </div>
-            <div className="mt-4">
-              <div className="h-3 w-full overflow-hidden rounded-full bg-slate-700">
-                <div
-                  className="h-full rounded-full bg-emerald-500 transition-all duration-500"
-                  style={{ width: `${fitAnalysis.fitScore}%` }}
-                />
-              </div>
-            </div>
-            <p className="mt-4 text-lg font-medium text-white">{fitAnalysis.verdict}</p>
-            <div className="mt-4 grid gap-3 text-sm">
-              <p><span className="font-medium text-slate-300">Strengths:</span> {fitAnalysis.strengthsSummary}</p>
-              <p><span className="font-medium text-slate-300">Gaps:</span> {fitAnalysis.gapsSummary}</p>
-              <p><span className="font-medium text-slate-300">Advice:</span> {fitAnalysis.riskSummary}</p>
-            </div>
-          </div>
-        )}
-
-        {analyzingFit && (
-          <div className="mt-8 flex items-center justify-center rounded-xl bg-slate-800 p-6">
-            <div className="flex items-center gap-3 text-slate-400">
-              <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-600 border-t-emerald-500" />
-              <span>Analyzing your fit for this role...</span>
-            </div>
-          </div>
-        )}
 
         <div className="mt-8 border-t border-slate-700 pt-6">
           <p className="text-sm text-slate-500">
@@ -337,18 +372,6 @@ export default function JobDetailPage() {
           >
             Apply on Company Site
           </a>
-          {userId && (
-            <button
-              onClick={toggleSave}
-              className={`rounded-xl border-2 px-6 py-4 font-semibold ${
-                job.isSaved
-                  ? "border-amber-500/50 bg-amber-500/20 text-amber-400"
-                  : "border-slate-700 text-slate-400 hover:bg-slate-800"
-              }`}
-            >
-              {job.isSaved ? "Saved" : "Save"}
-            </button>
-          )}
         </div>
       </div>
     </div>
