@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@clerk/nextjs";
-import Link from "next/link";
 import { toast } from "sonner";
+import CVUpload from "@/app/components/cv-upload";
 
 interface Resume {
   id: string;
@@ -14,6 +14,7 @@ interface Resume {
   skills: { skillName: string }[];
   experiences: { title: string; company: string | null }[];
   education: { institution: string; degree: string | null }[];
+  parsedText: string | null;
 }
 
 export default function ResumesPage() {
@@ -21,12 +22,20 @@ export default function ResumesPage() {
   const [resumes, setResumes] = useState<Resume[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [showUpload, setShowUpload] = useState(false);
+  const [selectedResume, setSelectedResume] = useState<Resume | null>(null);
 
   useEffect(() => {
     if (userId) {
       fetchResumes();
     }
   }, [userId]);
+
+  useEffect(() => {
+    if (resumes.length > 0 && !selectedResume) {
+      setSelectedResume(resumes.find(r => r.isPrimary) || resumes[0]);
+    }
+  }, [resumes, selectedResume]);
 
   const fetchResumes = async () => {
     try {
@@ -70,7 +79,11 @@ export default function ResumesPage() {
       });
 
       if (response.ok) {
-        setResumes(resumes.filter(r => r.id !== id));
+        const newResumes = resumes.filter(r => r.id !== id);
+        setResumes(newResumes);
+        if (selectedResume?.id === id) {
+          setSelectedResume(newResumes[0] || null);
+        }
         toast.success("Resume deleted");
       }
     } catch {
@@ -88,34 +101,114 @@ export default function ResumesPage() {
     });
   };
 
+  const analyzeResume = (resume: Resume | null) => {
+    if (!resume) return [];
+
+    const suggestions: { category: string; issue: string; suggestion: string; priority: "high" | "medium" | "low" }[] = [];
+
+    if (!resume.parsedText || resume.parsedText.length < 200) {
+      suggestions.push({
+        category: "Content",
+        issue: "Limited resume content detected",
+        suggestion: "Add more details about your work experience, achievements, and responsibilities.",
+        priority: "high",
+      });
+    }
+
+    if (resume.skills.length < 5) {
+      suggestions.push({
+        category: "Skills",
+        issue: "Fewer than 5 skills listed",
+        suggestion: "Add more relevant technical and soft skills.",
+        priority: "high",
+      });
+    }
+
+    if (resume.experiences.length < 2) {
+      suggestions.push({
+        category: "Experience",
+        issue: "Limited work experience entries",
+        suggestion: "Include all relevant positions, even internships or part-time roles.",
+        priority: "medium",
+      });
+    }
+
+    if (resume.education.length === 0) {
+      suggestions.push({
+        category: "Education",
+        issue: "No education entries found",
+        suggestion: "Add your educational background including degrees and certifications.",
+        priority: "high",
+      });
+    }
+
+    const hasActionVerbs = /^(Led|Managed|Developed|Created|Implemented|Increased|Reduced|Improved|Designed|Built|Analyzed)/.test(resume.parsedText || "");
+    if (!hasActionVerbs) {
+      suggestions.push({
+        category: "Writing",
+        issue: "Consider using action verbs",
+        suggestion: "Start bullet points with strong action verbs like 'Led', 'Developed', 'Increased'.",
+        priority: "low",
+      });
+    }
+
+    if (!suggestions.length) {
+      suggestions.push({
+        category: "Overall",
+        issue: "Looking good!",
+        suggestion: "Your resume appears well-structured. Consider tailoring it for specific job applications.",
+        priority: "low",
+      });
+    }
+
+    return suggestions;
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case "high": return "border-red-500/30 bg-red-500/10";
+      case "medium": return "border-amber-500/30 bg-amber-500/10";
+      default: return "border-emerald-500/30 bg-emerald-500/10";
+    }
+  };
+
+  const suggestions = analyzeResume(selectedResume);
+
   if (!isLoaded) {
     return (
-      <div className="mx-auto max-w-4xl px-6 py-8">
-        <div className="text-slate-400">Loading...</div>
+      <div className="flex items-center justify-center py-20">
+        <div className="text-emerald-400">Loading...</div>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-4xl px-6 py-8">
+    <div className="max-w-6xl mx-auto">
       <div className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-white">My Resumes</h1>
           <p className="mt-2 text-slate-400">
-            Manage your CV versions and track applications.
+            Upload, manage, and optimize your CVs for job applications.
           </p>
         </div>
-        <Link
-          href="/dashboard"
+        <button
+          onClick={() => setShowUpload(!showUpload)}
           className="rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-400 px-4 py-2 text-sm font-medium text-white hover:opacity-90"
         >
-          Upload New CV
-        </Link>
+          {showUpload ? "Cancel" : "Upload CV"}
+        </button>
       </div>
+
+      {showUpload && (
+        <div className="mb-8 rounded-xl glass-card p-6">
+          <h2 className="mb-4 text-lg font-semibold text-white">Upload Your CV</h2>
+          <CVUpload />
+        </div>
+      )}
 
       {loading ? (
         <div className="space-y-4">
-          {[1, 2, 3].map((i) => (
+          {[1, 2].map((i) => (
             <div key={i} className="animate-pulse rounded-xl glass-card p-6">
               <div className="h-6 w-1/3 rounded bg-slate-700"></div>
             </div>
@@ -132,143 +225,144 @@ export default function ResumesPage() {
           <p className="mt-2 text-slate-400">
             Upload your CV to get started with job applications.
           </p>
-          <Link
-            href="/dashboard"
-            className="mt-4 inline-block text-emerald-400 hover:text-emerald-300"
+          <button
+            onClick={() => setShowUpload(true)}
+            className="mt-4 inline-block rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-400 px-4 py-2 text-white hover:opacity-90"
           >
-            Upload your first CV →
-          </Link>
+            Upload your first CV
+          </button>
         </div>
       ) : (
-        <div className="space-y-4">
-          {resumes.map((resume) => (
-            <div
-              key={resume.id}
-              className={`rounded-xl glass-card p-6 transition ${
-                resume.isPrimary
-                  ? "border-emerald-500/50 shadow-lg shadow-emerald-500/10"
-                  : ""
-              }`}
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex items-start gap-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/20">
-                    <svg className="h-6 w-6 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
+        <div className="grid gap-6 lg:grid-cols-2">
+          <div className="space-y-4">
+            <h2 className="text-lg font-semibold text-white">Your Resumes ({resumes.length})</h2>
+            {resumes.map((resume) => (
+              <div
+                key={resume.id}
+                onClick={() => setSelectedResume(resume)}
+                className={`rounded-xl glass-card p-5 cursor-pointer transition ${
+                  selectedResume?.id === resume.id
+                    ? "border-emerald-500/50 shadow-lg shadow-emerald-500/10"
+                    : "hover:border-slate-600"
+                }`}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-500/20">
+                      <svg className="h-5 w-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-medium text-white">{resume.originalName}</h3>
+                        {resume.isPrimary && (
+                          <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-xs font-medium text-emerald-400">
+                            Primary
+                          </span>
+                        )}
+                      </div>
+                      <p className="mt-0.5 text-xs text-slate-500">
+                        Uploaded {formatDate(resume.createdAt)} • {resume.skills.length} skills
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-lg font-semibold text-white">
-                        {resume.originalName}
-                      </h3>
-                      {resume.isPrimary && (
-                        <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-xs font-medium text-emerald-400">
-                          Primary
-                        </span>
-                      )}
-                      {resume.versionLabel && (
-                        <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-xs font-medium text-amber-400">
-                          {resume.versionLabel}
-                        </span>
-                      )}
-                    </div>
-                    <p className="mt-1 text-sm text-slate-400">
-                      Uploaded {formatDate(resume.createdAt)}
-                    </p>
+                  <div className="flex items-center gap-2">
+                    {!resume.isPrimary && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setPrimary(resume.id); }}
+                        className="rounded-lg border border-emerald-500/50 px-2 py-1 text-xs font-medium text-emerald-400 hover:bg-emerald-500/10"
+                      >
+                        Set Primary
+                      </button>
+                    )}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); deleteResume(resume.id); }}
+                      disabled={deleting === resume.id}
+                      className="rounded-lg border border-red-500/50 px-2 py-1 text-xs font-medium text-red-400 hover:bg-red-500/10 disabled:opacity-50"
+                    >
+                      {deleting === resume.id ? "..." : "Delete"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
 
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {resume.skills.slice(0, 5).map((skill) => (
-                        <span
-                          key={skill.skillName}
-                          className="rounded-full bg-slate-700 px-2 py-0.5 text-xs text-slate-300"
-                        >
-                          {skill.skillName}
-                        </span>
-                      ))}
-                      {resume.skills.length > 5 && (
-                        <span className="text-xs text-slate-500">
-                          +{resume.skills.length - 5} more
-                        </span>
-                      )}
-                    </div>
+          {selectedResume && (
+            <div className="space-y-4">
+              <div className="rounded-xl glass-card p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold text-white">Optimization Tips</h2>
+                  <span className="rounded-full bg-slate-700 px-2 py-0.5 text-xs text-slate-400">
+                    Based on {selectedResume.originalName}
+                  </span>
+                </div>
+
+                <div className="mb-4 grid grid-cols-3 gap-3">
+                  <div className="rounded-lg bg-emerald-500/10 p-3 text-center">
+                    <p className="text-xl font-bold text-emerald-400">{selectedResume.skills.length}</p>
+                    <p className="text-xs text-slate-400">Skills</p>
+                  </div>
+                  <div className="rounded-lg bg-amber-500/10 p-3 text-center">
+                    <p className="text-xl font-bold text-amber-400">{selectedResume.experiences.length}</p>
+                    <p className="text-xs text-slate-400">Experiences</p>
+                  </div>
+                  <div className="rounded-lg bg-purple-500/10 p-3 text-center">
+                    <p className="text-xl font-bold text-purple-400">{selectedResume.education.length}</p>
+                    <p className="text-xs text-slate-400">Education</p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  {!resume.isPrimary && (
-                    <button
-                      onClick={() => setPrimary(resume.id)}
-                      className="rounded-lg border border-emerald-500/50 px-3 py-1.5 text-sm font-medium text-emerald-400 hover:bg-emerald-500/10"
+                <div className="space-y-3">
+                  {suggestions.map((item, index) => (
+                    <div
+                      key={index}
+                      className={`rounded-lg border p-4 ${getPriorityColor(item.priority)}`}
                     >
-                      Set Primary
-                    </button>
-                  )}
-                  <button
-                    onClick={() => deleteResume(resume.id)}
-                    disabled={deleting === resume.id}
-                    className="rounded-lg border border-red-500/50 px-3 py-1.5 text-sm font-medium text-red-400 hover:bg-red-500/10 disabled:opacity-50"
-                  >
-                    {deleting === resume.id ? "Deleting..." : "Delete"}
-                  </button>
+                      <div className="flex items-start gap-3">
+                        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                          item.priority === "high" ? "bg-red-500/20 text-red-300" :
+                          item.priority === "medium" ? "bg-amber-500/20 text-amber-300" :
+                          "bg-emerald-500/20 text-emerald-300"
+                        }`}>
+                          {item.priority}
+                        </span>
+                        <div>
+                          <p className="font-medium text-white">{item.issue}</p>
+                          <p className="mt-1 text-sm text-slate-400">{item.suggestion}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
 
-              {(resume.experiences.length > 0 || resume.education.length > 0) && (
-                <div className="mt-4 border-t border-slate-700 pt-4">
-                  <div className="grid gap-4 md:grid-cols-2">
-                    {resume.experiences.length > 0 && (
-                      <div>
-                        <p className="text-xs font-medium text-slate-500 uppercase">Experience</p>
-                        <div className="mt-1 space-y-1">
-                          {resume.experiences.slice(0, 2).map((exp, i) => (
-                            <p key={i} className="text-sm text-slate-300">
-                              {exp.title}
-                              {exp.company && (
-                                <span className="text-slate-500"> at {exp.company}</span>
-                              )}
-                            </p>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {resume.education.length > 0 && (
-                      <div>
-                        <p className="text-xs font-medium text-slate-500 uppercase">Education</p>
-                        <div className="mt-1 space-y-1">
-                          {resume.education.slice(0, 2).map((edu, i) => (
-                            <p key={i} className="text-sm text-slate-300">
-                              {edu.degree || edu.institution}
-                            </p>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
+              <div className="rounded-xl glass-card p-6">
+                <h3 className="mb-3 font-medium text-white">Best Practices</h3>
+                <ul className="space-y-2 text-sm text-slate-400">
+                  <li className="flex items-start gap-2">
+                    <span className="text-emerald-400">✓</span>
+                    Keep it to 1-2 pages
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-emerald-400">✓</span>
+                    Use keywords from job postings
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-emerald-400">✓</span>
+                    Quantify achievements with numbers
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-emerald-400">✓</span>
+                    Proofread for errors
+                  </li>
+                </ul>
+              </div>
             </div>
-          ))}
+          )}
         </div>
       )}
-
-      <div className="mt-8 rounded-xl glass-card p-6">
-        <h3 className="font-semibold text-white">Tips for Multiple Resumes</h3>
-        <ul className="mt-3 space-y-2 text-sm text-slate-400">
-          <li className="flex items-start gap-2">
-            <span className="text-emerald-400">•</span>
-            Keep different versions for different job types (e.g., technical vs. management)
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="text-emerald-400">•</span>
-            Set your most versatile CV as the primary
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="text-emerald-400">•</span>
-            Use cover letters to highlight role-specific achievements
-          </li>
-        </ul>
-      </div>
     </div>
   );
 }

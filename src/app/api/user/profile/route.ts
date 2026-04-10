@@ -30,7 +30,7 @@ export async function PATCH(request: Request) {
     }
 
     const body = await request.json();
-    const { fullName, phone, headline, country, experience, desiredRole } = body;
+    const { fullName, phone, headline, country, experience, desiredRole, roleType } = body;
 
     const user = await prisma.user.update({
       where: { clerkId: userId },
@@ -41,6 +41,7 @@ export async function PATCH(request: Request) {
         ...(country !== undefined && { country }),
         ...(experience !== undefined && { experience }),
         ...(desiredRole !== undefined && { desiredRole }),
+        ...(roleType !== undefined && { roleType }),
       },
     });
 
