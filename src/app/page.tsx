@@ -8,6 +8,7 @@ import Audience from "./components/audience";
 import CTA from "./components/cta";
 import Logo from "./components/logo";
 import SocialLinks from "./components/social-links";
+import AuthCheck from "./components/auth-check";
 
 export const metadata: Metadata = {
   title: "CareerOS - Know Before You Apply",
@@ -35,13 +36,15 @@ export default function Home() {
     <div className="min-h-screen bg-slate-950">
       <Nav />
 
-      <main>
-        <Hero />
-        <HowItWorks />
-        <WhyItMatters />
-        <Audience />
-        <CTA />
-      </main>
+      <AuthCheck>
+        <main>
+          <Hero />
+          <HowItWorks />
+          <WhyItMatters />
+          <Audience />
+          <CTA />
+        </main>
+      </AuthCheck>
 
       <footer className="relative border-t border-slate-800 bg-slate-950 py-16">
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent" />
