@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
     const userSkills = [
       ...(user?.headline ? extractSkills(user.headline) : []),
       ...(user?.experience ? extractSkills(user.experience) : []),
-      ...(user?.resumes[0]?.skills.map(s => s.skillName) || []),
+      ...(user?.resumes[0]?.skills?.map((s: { skillName: string }) => s.skillName) || []),
     ];
 
     const uniqueSkills = [...new Set(userSkills)];

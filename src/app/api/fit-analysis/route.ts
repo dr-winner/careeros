@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
           take: 1,
         });
 
-    const userSkills = allResumes.flatMap((r) => {
+    const userSkills = allResumes.flatMap((r: typeof primaryResume) => {
       const skills = r?.skills || [];
       return skills.map((s: { skillName: string }) => s.skillName);
     });
