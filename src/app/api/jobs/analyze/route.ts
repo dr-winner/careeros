@@ -49,8 +49,13 @@ function calculateFitScore(userSkills: string[], jobDescription: string): {
   score: number;
   matched: string[];
   missing: string[];
+  confidence: "high" | "medium" | "low";
 } {
   const jobSkills = extractSkills(jobDescription);
+  
+  if (jobSkills.length === 0) {
+    return { score: 50, matched: [], missing: [], confidence: "low" };
+  }
   
   const matched = userSkills.filter(skill =>
     jobSkills.some(jobSkill =>
@@ -64,11 +69,11 @@ function calculateFitScore(userSkills: string[], jobDescription: string): {
     !matched.some(m => m.toLowerCase() === skill.toLowerCase())
   );
 
-  const score = jobSkills.length > 0
-    ? Math.round((matched.length / jobSkills.length) * 100)
-    : 50;
+  const score = Math.round((matched.length / jobSkills.length) * 100);
+  
+  const confidence = jobSkills.length >= 5 ? "high" : jobSkills.length >= 3 ? "medium" : "low";
 
-  return { score, matched, missing };
+  return { score, matched, missing, confidence };
 }
 
 export async function POST(request: NextRequest) {
@@ -107,7 +112,7 @@ export async function POST(request: NextRequest) {
 
     const uniqueSkills = [...new Set(userSkills)];
 
-    const { score, matched, missing } = calculateFitScore(uniqueSkills, jobDescription);
+    const { score, matched, missing, confidence } = calculateFitScore(uniqueSkills, jobDescription);
 
     let verdict: JobAnalysis["verdict"];
     if (score >= 80) verdict = "Strong Match";
@@ -115,7 +120,7 @@ export async function POST(request: NextRequest) {
     else if (score >= 40) verdict = "Partial Match";
     else verdict = "Reach Position";
 
-    const analysis: Omit<JobAnalysis, "id"> = {
+    const analysis: Omit<JobAnalysis, "id"> & { confidence: string } = {
       userId,
       jobId,
       fitScore: score,
@@ -124,6 +129,7 @@ export async function POST(request: NextRequest) {
       strengths: matched.map(s => `You have experience with ${s}`),
       gaps: missing.map(s => `Consider learning ${s}`),
       verdict,
+      confidence,
     };
 
     return NextResponse.json({ analysis });
