@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
+import { getDbUserId } from "@/lib/auth";
 
 const ADZUNA_APP_ID = process.env.ADZUNA_APP_ID;
 const ADZUNA_APP_KEY = process.env.ADZUNA_APP_KEY;
@@ -21,7 +21,7 @@ interface AdzunaJob {
 
 export async function GET(request: NextRequest) {
   try {
-    const { userId } = await auth();
+    const userId = await getDbUserId();
     const { searchParams } = new URL(request.url);
 
     const search = searchParams.get("search") || "";

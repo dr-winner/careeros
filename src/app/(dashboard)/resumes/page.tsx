@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { toast } from "sonner";
 import CVUpload from "@/app/components/cv-upload";
@@ -25,31 +25,37 @@ export default function ResumesPage() {
   const [showUpload, setShowUpload] = useState(false);
   const [selectedResume, setSelectedResume] = useState<Resume | null>(null);
 
-  useEffect(() => {
-    if (userId) {
-      fetchResumes();
-    }
-  }, [userId]);
-
-  useEffect(() => {
-    if (resumes.length > 0 && !selectedResume) {
-      setSelectedResume(resumes.find(r => r.isPrimary) || resumes[0]);
-    }
-  }, [resumes, selectedResume]);
-
-  const fetchResumes = async () => {
+  const fetchResumes = useCallback(async () => {
+    if (!userId) return;
+    
     try {
+      setLoading(true);
       const response = await fetch("/api/user/resumes");
       if (response.ok) {
         const data = await response.json();
         setResumes(data.resumes || []);
+        if (data.resumes?.length > 0) {
+          const primary = data.resumes.find((r: Resume) => r.isPrimary) || data.resumes[0];
+          setSelectedResume(primary);
+        } else {
+          setSelectedResume(null);
+        }
       }
     } catch (error) {
       console.error("Error fetching resumes:", error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId]);
+
+  useEffect(() => {
+    fetchResumes();
+  }, [fetchResumes]);
+
+  const handleUploadSuccess = useCallback(() => {
+    setShowUpload(false);
+    fetchResumes();
+  }, [fetchResumes]);
 
   const setPrimary = async (id: string) => {
     try {
@@ -62,6 +68,7 @@ export default function ResumesPage() {
           ...r,
           isPrimary: r.id === id,
         })));
+        setSelectedResume(resumes.find(r => r.id === id) || null);
         toast.success("Primary resume updated!");
       }
     } catch {
@@ -202,7 +209,7 @@ export default function ResumesPage() {
       {showUpload && (
         <div className="mb-8 rounded-xl glass-card p-6">
           <h2 className="mb-4 text-lg font-semibold text-white">Upload Your CV</h2>
-          <CVUpload />
+          <CVUpload onUploadSuccess={handleUploadSuccess} />
         </div>
       )}
 
@@ -214,7 +221,7 @@ export default function ResumesPage() {
             </div>
           ))}
         </div>
-      ) : resumes.length === 0 ? (
+      ) : resumes.length === 0 && !showUpload ? (
         <div className="rounded-xl glass-card p-12 text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/20">
             <svg className="h-8 w-8 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -232,10 +239,18 @@ export default function ResumesPage() {
             Upload your first CV
           </button>
         </div>
-      ) : (
+      ) : resumes.length > 0 ? (
         <div className="grid gap-6 lg:grid-cols-2">
           <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-white">Your Resumes ({resumes.length})</h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-white">Your Resumes ({resumes.length})</h2>
+              <button
+                onClick={() => setShowUpload(true)}
+                className="text-sm text-emerald-400 hover:text-emerald-300"
+              >
+                + Add another
+              </button>
+            </div>
             {resumes.map((resume) => (
               <div
                 key={resume.id}
@@ -295,7 +310,7 @@ export default function ResumesPage() {
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-semibold text-white">Optimization Tips</h2>
                   <span className="rounded-full bg-slate-700 px-2 py-0.5 text-xs text-slate-400">
-                    Based on {selectedResume.originalName}
+                    {selectedResume.originalName}
                   </span>
                 </div>
 
@@ -362,7 +377,7 @@ export default function ResumesPage() {
             </div>
           )}
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

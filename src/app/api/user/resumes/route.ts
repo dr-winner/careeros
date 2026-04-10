@@ -10,8 +10,16 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const dbUser = await prisma.user.findUnique({
+      where: { clerkId: userId },
+    });
+
+    if (!dbUser) {
+      return NextResponse.json({ resumes: [] });
+    }
+
     const resumes = await prisma.resume.findMany({
-      where: { userId },
+      where: { userId: dbUser.id },
       include: {
         skills: {
           select: { skillName: true },

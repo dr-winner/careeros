@@ -4,10 +4,18 @@ import { prisma } from "@/lib/db";
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId } = await auth();
+    const { userId: clerkId } = await auth();
 
-    if (!userId) {
+    if (!clerkId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const dbUser = await prisma.user.findUnique({
+      where: { clerkId },
+    });
+
+    if (!dbUser) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     const { jobId, notes } = await request.json();
@@ -18,7 +26,7 @@ export async function POST(request: NextRequest) {
 
     const existing = await prisma.application.findFirst({
       where: {
-        userId,
+        userId: dbUser.id,
         jobId,
       },
     });
@@ -32,7 +40,7 @@ export async function POST(request: NextRequest) {
 
     const application = await prisma.application.create({
       data: {
-        userId,
+        userId: dbUser.id,
         jobId,
         status: "Applied",
         appliedAt: new Date(),
@@ -52,14 +60,22 @@ export async function POST(request: NextRequest) {
 
 export async function GET() {
   try {
-    const { userId } = await auth();
+    const { userId: clerkId } = await auth();
 
-    if (!userId) {
+    if (!clerkId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const dbUser = await prisma.user.findUnique({
+      where: { clerkId },
+    });
+
+    if (!dbUser) {
+      return NextResponse.json({ applications: [] });
+    }
+
     const applications = await prisma.application.findMany({
-      where: { userId },
+      where: { userId: dbUser.id },
       orderBy: { appliedAt: "desc" },
     });
 

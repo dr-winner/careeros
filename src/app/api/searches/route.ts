@@ -4,14 +4,22 @@ import { prisma } from "@/lib/db";
 
 export async function GET() {
   try {
-    const { userId } = await auth();
+    const { userId: clerkId } = await auth();
 
-    if (!userId) {
+    if (!clerkId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const dbUser = await prisma.user.findUnique({
+      where: { clerkId },
+    });
+
+    if (!dbUser) {
+      return NextResponse.json({ searches: [] });
+    }
+
     const searches = await prisma.savedSearch.findMany({
-      where: { userId },
+      where: { userId: dbUser.id },
       orderBy: { createdAt: "desc" },
     });
 
@@ -24,10 +32,18 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId } = await auth();
+    const { userId: clerkId } = await auth();
 
-    if (!userId) {
+    if (!clerkId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const dbUser = await prisma.user.findUnique({
+      where: { clerkId },
+    });
+
+    if (!dbUser) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     const { name, searchQuery, location, workMode, seniority, alertEnabled, alertFrequency } = await request.json();
@@ -41,7 +57,7 @@ export async function POST(request: NextRequest) {
 
     const search = await prisma.savedSearch.create({
       data: {
-        userId,
+        userId: dbUser.id,
         name,
         searchQuery,
         location: location || null,

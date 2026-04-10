@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
+import { toast } from "sonner";
 
 interface UploadedFile {
   id: string;
@@ -10,14 +11,17 @@ interface UploadedFile {
   versionLabel: string;
 }
 
-export default function CVUpload() {
+interface CVUploadProps {
+  onUploadSuccess?: () => void;
+}
+
+export default function CVUpload({ onUploadSuccess }: CVUploadProps) {
   const [uploading, setUploading] = useState(false);
-  const [file, setFile] = useState<UploadedFile | null>(null);
   const [error, setError] = useState("");
   const [dragging, setDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFile = async (selectedFile: File) => {
+  const handleFile = useCallback(async (selectedFile: File) => {
     setError("");
     setUploading(true);
 
@@ -33,86 +37,37 @@ export default function CVUpload() {
       const data = await response.json();
 
       if (response.ok) {
-        setFile({
-          id: data.id,
-          filename: data.filename,
-          originalName: data.originalName,
-          size: data.size,
-          versionLabel: data.versionLabel,
-        });
+        toast.success("CV uploaded successfully!");
+        if (onUploadSuccess) {
+          onUploadSuccess();
+        }
       } else {
         setError(data.error || "Upload failed");
+        toast.error(data.error || "Upload failed");
       }
     } catch {
       setError("Upload failed. Try again.");
+      toast.error("Upload failed. Try again.");
     } finally {
       setUploading(false);
     }
-  };
+  }, [onUploadSuccess]);
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setDragging(false);
     const droppedFile = e.dataTransfer.files[0];
     if (droppedFile) {
       handleFile(droppedFile);
     }
-  };
+  }, [handleFile]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
       handleFile(selectedFile);
     }
-  };
-
-  const formatSize = (bytes: number) => {
-    if (bytes < 1024) return bytes + " B";
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
-    return (bytes / (1024 * 1024)).toFixed(1) + " MB";
-  };
-
-  if (file) {
-    return (
-      <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-6">
-        <div className="flex items-center gap-4">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/20">
-            <svg className="h-6 w-6 text-emerald-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-          <div className="flex-1">
-            <div className="flex items-center gap-2">
-              <p className="font-medium text-white">{file.originalName}</p>
-              <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-xs font-medium text-emerald-400 border border-emerald-500/30">
-                {file.versionLabel}
-              </span>
-            </div>
-            <p className="text-sm text-slate-400">{formatSize(file.size)}</p>
-          </div>
-          <button
-            onClick={() => setFile(null)}
-            className="text-sm text-slate-400 hover:text-white transition-colors"
-          >
-            Remove
-          </button>
-        </div>
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          className="mt-4 w-full rounded-lg border border-dashed border-slate-600 py-3 text-sm text-slate-400 hover:border-emerald-500/50 hover:text-emerald-400 transition-colors"
-        >
-          Upload a different file
-        </button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".pdf,.doc,.docx"
-          onChange={handleChange}
-          className="hidden"
-        />
-      </div>
-    );
-  }
+  }, [handleFile]);
 
   return (
     <div
@@ -131,7 +86,7 @@ export default function CVUpload() {
       <input
         ref={fileInputRef}
         type="file"
-        accept=".pdf,.doc,.docx"
+        accept=".docx,.doc"
         onChange={handleChange}
         className="hidden"
       />
@@ -153,7 +108,7 @@ export default function CVUpload() {
         </button>
       </p>
       <p className="mt-2 text-xs text-slate-500">
-        PDF, DOC, DOCX up to 5MB
+        Word documents (DOCX) up to 5MB
       </p>
 
       {uploading && (

@@ -7,16 +7,24 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { userId } = await auth();
+    const { userId: clerkId } = await auth();
 
-    if (!userId) {
+    if (!clerkId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const dbUser = await prisma.user.findUnique({
+      where: { clerkId },
+    });
+
+    if (!dbUser) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     const { id } = await params;
 
     await prisma.resume.updateMany({
-      where: { userId },
+      where: { userId: dbUser.id },
       data: { isPrimary: false },
     });
 
@@ -37,10 +45,18 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { userId } = await auth();
+    const { userId: clerkId } = await auth();
 
-    if (!userId) {
+    if (!clerkId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const dbUser = await prisma.user.findUnique({
+      where: { clerkId },
+    });
+
+    if (!dbUser) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     const { id } = await params;
@@ -49,7 +65,7 @@ export async function DELETE(
       where: { id },
     });
 
-    if (!resume || resume.userId !== userId) {
+    if (!resume || resume.userId !== dbUser.id) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
@@ -59,7 +75,7 @@ export async function DELETE(
 
     if (resume.isPrimary) {
       const nextResume = await prisma.resume.findFirst({
-        where: { userId },
+        where: { userId: dbUser.id },
         orderBy: { createdAt: "desc" },
       });
 
