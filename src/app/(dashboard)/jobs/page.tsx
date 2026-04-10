@@ -127,6 +127,8 @@ export default function JobsPage() {
             className="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2.5 text-white focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
           >
             <option value="">All Work Modes</option>
+            <option value="Full-time">Full-time</option>
+            <option value="Contract">Contract</option>
             <option value="Remote">Remote</option>
             <option value="Hybrid">Hybrid</option>
             <option value="On-site">On-site</option>
