@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { jobId, jobTitle, companyName } = body;
+    const { jobId, jobTitle } = body;
 
     if (!jobId || !jobTitle) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -140,9 +140,8 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    let fitAnalysis;
     if (existingAnalysis) {
-      fitAnalysis = await prisma.fitAnalysis.update({
+      await prisma.fitAnalysis.update({
         where: { id: existingAnalysis.id },
         data: {
           fitScore: result.fitScore,
@@ -153,7 +152,7 @@ export async function POST(request: NextRequest) {
         },
       });
     } else {
-      fitAnalysis = await prisma.fitAnalysis.create({
+      await prisma.fitAnalysis.create({
         data: {
           userId: user.id,
           jobId,

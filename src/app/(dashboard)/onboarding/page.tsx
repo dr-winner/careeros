@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth, useUser, UserButton } from "@clerk/nextjs";
-import Link from "next/link";
 import { toast } from "sonner";
 import Image from "next/image";
 

@@ -5,10 +5,6 @@ import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-function generateReferralCode(): string {
-  return Math.random().toString(36).substring(2, 10).toUpperCase();
-}
-
 export async function GET() {
   try {
     const { userId } = await auth();

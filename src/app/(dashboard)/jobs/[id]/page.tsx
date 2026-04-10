@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -32,8 +32,7 @@ interface FitAnalysis {
 
 export default function JobDetailPage() {
   const params = useParams();
-  const router = useRouter();
-  const { userId, isLoaded } = useAuth();
+  const { userId } = useAuth();
   const [job, setJob] = useState<Job | null>(null);
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState(false);
@@ -44,7 +43,7 @@ export default function JobDetailPage() {
   useEffect(() => {
     fetchJob();
     checkApplication();
-  }, [params.id, userId]);
+  }, [params.id, userId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchJob = async () => {
     try {
@@ -121,7 +120,7 @@ export default function JobDetailPage() {
         const data = await response.json();
         toast.error(data.error || "Failed to track application");
       }
-    } catch (error) {
+    } catch {
       toast.error("Failed to track application");
     } finally {
       setApplying(false);

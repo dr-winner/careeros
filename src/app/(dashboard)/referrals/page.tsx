@@ -6,7 +6,6 @@ import { toast } from "sonner";
 
 export default function ReferralPage() {
   const { userId, isLoaded } = useAuth();
-  const [referralCode, setReferralCode] = useState("");
   const [referralUrl, setReferralUrl] = useState("");
   const [refereeEmail, setRefereeEmail] = useState("");
   const [sending, setSending] = useState(false);
@@ -23,7 +22,6 @@ export default function ReferralPage() {
       const response = await fetch("/api/referrals");
       if (response.ok) {
         const data = await response.json();
-        setReferralCode(data.referralCode);
         setReferralUrl(data.referralUrl);
       }
     } catch (error) {

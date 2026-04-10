@@ -6,7 +6,7 @@ import Link from "next/link";
 import CVUpload from "@/app/components/cv-upload";
 
 export default function DashboardPage() {
-  const { userId, isLoaded } = useAuth();
+  const { isLoaded } = useAuth();
   const [showUpload, setShowUpload] = useState(false);
 
   if (!isLoaded) {

@@ -33,7 +33,7 @@ export default function JobsPage() {
 
   useEffect(() => {
     fetchJobs();
-  }, [search, location, workMode, seniority, page, userId]);
+  }, [search, location, workMode, seniority, page, userId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchJobs = async () => {
     setLoading(true);

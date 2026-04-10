@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "AI not configured" }, { status: 500 });
     }
 
-    const { jobTitle, companyName, jobDescription, recipientName, resumeText } = await request.json();
+    const { jobTitle, companyName, jobDescription, recipientName } = await request.json();
 
     if (!jobTitle || !companyName) {
       return NextResponse.json(

@@ -55,7 +55,7 @@ export default function ResumesPage() {
         })));
         toast.success("Primary resume updated!");
       }
-    } catch (error) {
+    } catch {
       toast.error("Failed to update primary resume");
     }
   };
@@ -73,7 +73,7 @@ export default function ResumesPage() {
         setResumes(resumes.filter(r => r.id !== id));
         toast.success("Resume deleted");
       }
-    } catch (error) {
+    } catch {
       toast.error("Failed to delete resume");
     } finally {
       setDeleting(null);
