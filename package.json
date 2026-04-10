@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit --pretty",
+    "check": "npm run typecheck && npm run lint && npm run build"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.0.12",
