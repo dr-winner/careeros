@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getDbUserId } from "@/lib/auth";
+import { generateWithFallback } from "@/lib/ai";
 
 const SKILL_KEYWORDS: Record<string, string[]> = {
   "JavaScript": ["javascript", "js", "ecmascript", "jscript"],
@@ -31,27 +32,25 @@ const SKILL_KEYWORDS: Record<string, string[]> = {
   "CI/CD": ["ci/cd", "jenkins", "gitlab ci", "github actions", "pipeline"],
   "Git": ["git", "github", "gitlab", "bitbucket", "version control"],
   "Linux": ["linux", "unix", "bash", "shell"],
-  "Data Analysis": ["data analysis", "analytics", "tableau", "power bi", "looker"],
   "Machine Learning": ["machine learning", "ml", "ai", "tensorflow", "pytorch", "keras"],
-  "Deep Learning": ["deep learning", "neural network", "cnn", "rnn"],
-  "DevOps": ["devops", "sre", "site reliability"],
+  "Data Analysis": ["data analysis", "analytics", "tableau", "power bi"],
   "Agile": ["agile", "scrum", "kanban", "jira"],
-  "Project Management": ["project management", "pmp", "prince2"],
-  "Communication": ["communication", "stakeholder", "presentation", "public speaking"],
   "Leadership": ["leadership", "team lead", "mentoring", "management"],
-  "Marketing": ["marketing", "seo", "sem", "digital marketing", "content"],
+  "Communication": ["communication", "stakeholder", "presentation"],
+  "Project Management": ["project management", "pmp"],
+  "Marketing": ["marketing", "seo", "sem", "digital marketing"],
   "Sales": ["sales", "crm", "salesforce", "business development"],
-  "Finance": ["finance", "accounting", "financial analysis", "excel"],
-  "Graphic Design": ["graphic design", "photoshop", "illustrator", "figma", "canva"],
-  "UI/UX": ["ui/ux", "ui design", "ux design", "user experience", "user interface"],
+  "Finance": ["finance", "accounting", "financial analysis"],
   "Accounting": ["accounting", "bookkeeping", "tax", "auditing"],
-  "HR": ["hr", "human resources", "recruitment", "talent acquisition"],
-  "Networking": ["networking", "cisco", "ccna", "network security", "firewall"],
-  "Cybersecurity": ["cybersecurity", "security", "penetration testing", "ethical hacking"],
+  "HR": ["hr", "human resources", "recruitment"],
+  "Graphic Design": ["graphic design", "photoshop", "illustrator", "figma"],
+  "UI/UX": ["ui/ux", "ui design", "ux design", "user experience"],
+  "Networking": ["networking", "cisco", "ccna", "network security"],
+  "Cybersecurity": ["cybersecurity", "security", "penetration testing"],
+  "API": ["api", "rest api", "restful", "graphql"],
+  "Testing": ["testing", "qa", "selenium", "jest", "unit test"],
+  "Microservices": ["microservices", "service mesh"],
   "Cloud": ["cloud", "cloud computing", "serverless"],
-  "API": ["api", "rest api", "restful", "graphql", "grpc"],
-  "Microservices": ["microservices", "microservice", "service mesh"],
-  "Testing": ["testing", "qa", "quality assurance", "selenium", "jest", "unit test"],
 };
 
 function extractSkills(text: string): string[] {
@@ -67,37 +66,6 @@ function extractSkills(text: string): string[] {
   return foundSkills;
 }
 
-function calculateFitScore(userSkills: string[], jobDescription: string): {
-  score: number;
-  matched: string[];
-  missing: string[];
-  confidence: "high" | "medium" | "low";
-} {
-  const jobSkills = extractSkills(jobDescription);
-  
-  if (jobSkills.length === 0) {
-    return { score: 50, matched: [], missing: [], confidence: "low" };
-  }
-  
-  const matched = userSkills.filter(skill =>
-    jobSkills.some(jobSkill =>
-      jobSkill.toLowerCase() === skill.toLowerCase() ||
-      skill.toLowerCase().includes(jobSkill.toLowerCase()) ||
-      jobSkill.toLowerCase().includes(skill.toLowerCase())
-    )
-  );
-
-  const missing = jobSkills.filter(skill =>
-    !matched.some(m => m.toLowerCase() === skill.toLowerCase())
-  );
-
-  const score = Math.round((matched.length / jobSkills.length) * 100);
-  
-  const confidence = jobSkills.length >= 5 ? "high" : jobSkills.length >= 3 ? "medium" : "low";
-
-  return { score, matched, missing, confidence };
-}
-
 export async function POST(request: NextRequest) {
   try {
     const userId = await getDbUserId();
@@ -106,13 +74,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { jobId, jobDescription } = await request.json();
+    const { jobId, jobDescription, jobTitle } = await request.json();
 
     if (!jobId) {
-      return NextResponse.json(
-        { error: "Job ID required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Job ID required" }, { status: 400 });
     }
 
     const user = await prisma.user.findUnique({
@@ -121,30 +86,44 @@ export async function POST(request: NextRequest) {
         resumes: {
           where: { isPrimary: true },
           take: 1,
-          include: { skills: true },
+          include: { 
+            skills: true,
+            experiences: true,
+            education: true,
+          },
         },
       },
     });
 
-    const userSkills: string[] = [];
-    
-    if (user?.headline) {
-      userSkills.push(...extractSkills(user.headline));
-    }
-    if (user?.experience) {
-      userSkills.push(...extractSkills(user.experience));
-    }
-    if (user?.desiredRole) {
-      userSkills.push(...extractSkills(user.desiredRole));
-    }
-    if (user?.resumes[0]?.skills) {
-      userSkills.push(...user.resumes[0].skills.map((s: { skillName: string }) => s.skillName));
-    }
-    
-    const uniqueSkills = [...new Set(userSkills)];
+    const profileSkills = extractSkills([
+      user?.headline || "",
+      user?.experience || "",
+      user?.desiredRole || "",
+    ].join(" "));
 
-    const jobDesc = jobDescription || "";
-    const { score, matched, missing, confidence } = calculateFitScore(uniqueSkills, jobDesc);
+    const resumeSkills = user?.resumes[0]?.skills?.map((s: { skillName: string }) => s.skillName) || [];
+    
+    const experiences = user?.resumes[0]?.experiences || [];
+    const education = user?.resumes[0]?.education || [];
+
+    const allUserSkills = [...new Set([...profileSkills, ...resumeSkills])];
+    const jobSkills = extractSkills(jobDescription || "");
+
+    const matched = allUserSkills.filter(skill =>
+      jobSkills.some(js => 
+        js.toLowerCase() === skill.toLowerCase() ||
+        skill.toLowerCase().includes(js.toLowerCase()) ||
+        js.toLowerCase().includes(skill.toLowerCase())
+      )
+    );
+
+    const missing = jobSkills.filter(skill =>
+      !matched.some(m => m.toLowerCase() === skill.toLowerCase())
+    );
+
+    const score = jobSkills.length > 0
+      ? Math.round((matched.length / jobSkills.length) * 100)
+      : 50;
 
     let verdict: string;
     if (score >= 80) verdict = "Strong Match";
@@ -152,13 +131,56 @@ export async function POST(request: NextRequest) {
     else if (score >= 40) verdict = "Partial Match";
     else verdict = "Reach Position";
 
+    let cvAdvice = "";
+    if (missing.length > 0 && process.env.OPENAI_API_KEY || process.env.DEEPSEEK_API_KEY) {
+      try {
+        const prompt = `You are a career coach helping someone optimize their CV for a specific job.
+
+JOB TITLE: ${jobTitle || "This position"}
+JOB REQUIREMENTS: ${jobDescription.substring(0, 2000)}
+
+CANDIDATE'S CURRENT CV HIGHLIGHTS:
+- Headline: ${user?.headline || "Not set"}
+- Experience: ${user?.experience || "Not provided"}
+- Skills found in CV: ${allUserSkills.join(", ") || "Limited skills detected"}
+- Work History: ${experiences.map(e => `${e.title} at ${e.company || "Unknown Company"}`).join("; ") || "Not provided"}
+- Education: ${education.map(e => `${e.degree || "Degree"} in ${e.fieldOfStudy || "Field"}`).join("; ") || "Not provided"}
+
+MISSING SKILLS FOR THIS JOB: ${missing.join(", ")}
+
+Generate 3-4 specific, actionable suggestions for how this candidate can UPDATE THEIR CV to better match this job. Focus on:
+1. Keywords to add to their skills section
+2. Phrases to include in their work experience descriptions
+3. Specific achievements they could highlight
+4. Any certifications or quick wins to mention
+
+Keep suggestions practical and specific to African job market context. Max 150 words.`;
+
+        const systemPrompt = "You are a professional career coach specializing in helping African job seekers. Give practical, actionable CV advice.";
+
+        const { text } = await generateWithFallback(prompt, systemPrompt, {
+          maxTokens: 300,
+          temperature: 0.5,
+        });
+        
+        cvAdvice = text;
+      } catch (error) {
+        console.error("AI CV advice error:", error);
+        cvAdvice = `Consider adding these skills to your CV: ${missing.slice(0, 5).join(", ")}`;
+      }
+    } else if (missing.length > 0) {
+      cvAdvice = `Key skills to add to your CV: ${missing.slice(0, 5).join(", ")}`;
+    }
+
     return NextResponse.json({
       analysis: {
         fitScore: score,
         matchedSkills: matched,
         missingSkills: missing,
         verdict,
-        confidence,
+        hasResume: !!user?.resumes[0],
+        hasProfile: !!user?.headline || !!user?.experience,
+        cvAdvice,
       }
     });
   } catch (error) {
