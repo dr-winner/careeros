@@ -95,7 +95,6 @@ model Job {
   status          String?
   fitAnalyses     FitAnalysis[]
   jobSkills       JobSkill[]
-  savedJobs       SavedJob[]
   applications    Application[]
   coverLetters    CoverLetter[]
 }
@@ -134,14 +133,19 @@ model CoverLetter {
 }
 
 model SavedJob {
-  id        String   @id @default(cuid())
-  userId    String
-  jobId     String
-  savedAt   DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  job       Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  id           String   @id @default(cuid())
+  userId       String
+  externalJobId String  @unique @default(cuid())
+  title        String
+  companyName  String?
+  location     String?
+  country      String?
+  workMode     String?
+  applicationUrl String?
+  savedAt      DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, jobId])
+  @@unique([userId, externalJobId])
 }
 
 model Application {

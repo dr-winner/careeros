@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { jobId } = await request.json();
+    const { jobId, title, companyName, location, country, workMode, applicationUrl } = await request.json();
 
     if (!jobId) {
       return NextResponse.json({ error: "Job ID required" }, { status: 400 });
@@ -18,19 +18,28 @@ export async function POST(request: NextRequest) {
 
     const existing = await prisma.savedJob.findUnique({
       where: {
-        userId_jobId: { userId, jobId },
+        userId_externalJobId: { userId, externalJobId: jobId },
       },
     });
 
     if (existing) {
       await prisma.savedJob.delete({
-        where: { userId_jobId: { userId, jobId } },
+        where: { userId_externalJobId: { userId, externalJobId: jobId } },
       });
       return NextResponse.json({ saved: false });
     }
 
     await prisma.savedJob.create({
-      data: { userId, jobId },
+      data: {
+        userId,
+        externalJobId: jobId,
+        title: title || "Unknown Position",
+        companyName,
+        location,
+        country,
+        workMode,
+        applicationUrl,
+      },
     });
 
     return NextResponse.json({ saved: true });

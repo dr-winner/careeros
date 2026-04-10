@@ -32,9 +32,9 @@ export async function GET(request: NextRequest) {
     if (userId) {
       const savedJobs = await prisma.savedJob.findMany({
         where: { userId },
-        select: { jobId: true },
+        select: { externalJobId: true },
       });
-      savedJobIds = savedJobs.map((sj: { jobId: string }) => sj.jobId);
+      savedJobIds = savedJobs.map((sj: { externalJobId: string }) => sj.externalJobId);
     }
 
     if (ADZUNA_APP_ID && ADZUNA_APP_KEY) {
