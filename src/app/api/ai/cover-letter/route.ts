@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import OpenAI from "openai";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
+import { generateWithFallback } from "@/lib/ai";
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (!process.env.OPENAI_API_KEY) {
+    if (!process.env.OPENAI_API_KEY && !process.env.DEEPSEEK_API_KEY) {
       return NextResponse.json({ error: "AI not configured" }, { status: 500 });
     }
 
@@ -69,31 +69,17 @@ ${recipientName ? `6. Address to: ${recipientName}` : ""}
 
 Write ONLY the cover letter content, no preamble.`;
 
-    const openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
+    const systemPrompt = "You are a professional career coach and cover letter writer. Write compelling, personalized cover letters.";
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "system",
-          content: "You are a professional career coach and cover letter writer. Write compelling, personalized cover letters.",
-        },
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
-      max_tokens: 800,
+    const { text: coverLetter, model } = await generateWithFallback(prompt, systemPrompt, {
+      maxTokens: 800,
       temperature: 0.7,
     });
-
-    const coverLetter = completion.choices[0]?.message?.content || "";
 
     return NextResponse.json({
       success: true,
       coverLetter,
+      model,
     });
   } catch (error) {
     console.error("Error generating cover letter:", error);
