@@ -1,9 +1,12 @@
 # CareerOS Social Media Kit
 
-## Brand Voice
-- **Tone**: Empowering, honest, supportive
-- **Audience**: African job seekers (18-35)
-- **Tagline**: "Know Before You Apply"
+## Brand Promise
+**"Stop guessing. Start landing."**
+
+## The Problem We Solve
+African job seekers send dozens of applications with zero response. Why? They're applying to jobs they're not qualified for - wasting time, energy, and money.
+
+**CareerOS gives you the answer before you apply.**
 
 ---
 
@@ -13,29 +16,32 @@
 
 **Bio** (160 chars):
 ```
-Stop applying blind. CareerOS helps African job seekers know their fit score before applying. Land your dream job in Africa 🇬🇭🇳🇬🇰🇪 #JobsAfrica #CareerGrowth
+The CV checker that tells you BEFORE you apply 💡
+Know your match score, fix gaps, land interviews.
+The smartest job search tool for Africa 🇬🇭🇳🇬🇰🇪
 ```
 
-** pinned Tweet:**
+**Pinned Tweet:**
 ```
-🎯 Just uploaded your CV?
+🔍 We built something for African job seekers:
 
-CareerOS tells you:
-✅ Which jobs you're qualified for
-❌ What skills you're missing
-📊 Your fit score for any role
+✅ Upload your CV
+✅ See your match score for ANY job
+✅ Know exactly what skills to add
 
-No more wasting applications. Know before you apply.
+No more shooting in the dark.
 
-Join the waitlist → careeros.live
+Try it → careeros.live
 
-#JobSearch #AfricaJobs #CareerTips
+#JobsAfrica #JobSearch #CareerTips
 ```
 
-**Sample Tweets:**
-1. "Spent 3 months applying to jobs you have 0% chance of getting? Yeah, we built CareerOS to fix that. Get real feedback before you apply. 🎯"
-2. "African devs: The avg job application takes 40+ hours. What if you knew which ones were worth it? You'd apply smarter, not more. That's CareerOS."
-3. "CV tip: Tailor your skills to the job requirements. Our data shows matching 70%+ of requirements = 3x higher interview rate. Profile your CV at CareerOS 🎯"
+**Viral Tweet Hooks:**
+1. "You won't believe how many jobs you're applying to wrong."
+2. "African devs, here's the secret to 10x more interviews."
+3. "POV: You just checked your job fit score 🧐"
+4. "Why your CV keeps getting rejected (it's not what you think)"
+5. "The job application method no one talks about"
 
 ---
 
@@ -45,28 +51,32 @@ Join the waitlist → careeros.live
 
 **Bio**:
 ```
-Stop applying blind 🎯
-Helping African job seekers know their fit before they apply
-💡 Tips | 🇬🇭🇳🇬🇰🇪 Jobs | 📊 CV Builder
-🔗 Link in bio
+The CV checker that shows your match score BEFORE you apply 🎯
+
+📊 2,800+ job seekers on the waitlist
+💡 Job search tips that actually work
+🇬🇭🇳🇬🇰🇪 Built for Africa
+
+Link in bio to try it free 👇
 ```
 
-**Video Ideas:**
+**Hook Scripts for Viral Videos:**
 
-1. **Hook**: "You spent 2 hours applying to a job you had 0% chance of getting. Here's how to fix that."
-   - Show quick demo of fit score feature
-   - Call to action: "Link in bio"
+1. **"The $0 mistake costing you job offers"**
+   - "You know that feeling when you apply to a job and never hear back? What if I told you it might not be your CV - it's THAT you're applying to the wrong jobs? Here's how to fix it..."
 
-2. **Trend**: "POV: You're a recent graduate in Lagos..."
-   - Resume tips, job search reality
-   - CareerOS as solution
+2. **"3 skills that instantly make you hireable in Africa"**
+   - "If you have these 3 skills and add one more, you'll be in the top 10% of candidates. Here's what they are and how to get them..."
 
-3. **Educational**: "3 CV mistakes that kill your chances in Africa"
-   - Generic CVs, no metrics, wrong format
-   - CareerOS fixes
+3. **"POV: You just found out you had a 85% match for that job"**
+   - Screen recording of CareerOS in action
+   - "This is what every job seeker deserves to feel"
 
-4. **Testimonial**: "How CareerOS helped me land my first tech job"
-   - User story (can be fictional for now)
+4. **"Why you're not getting interviews (not what you think)"**
+   - "Your CV might be great. But if you're applying to jobs where you score below 50%, you're literally wasting your time. Here's how to check..."
+
+5. **"The job search secret hiring managers don't want you to know"**
+   - "It's not about applying to more jobs. It's about applying to the RIGHT ones. Here's how to know which ones are right for you..."
 
 ---
 
@@ -76,124 +86,137 @@ Helping African job seekers know their fit before they apply
 
 **Bio**:
 ```
-🎯 Stop applying blind
-African job seekers, know your fit before you apply
-✅ CV Analysis | ✅ Fit Scores | ✅ Job Matches
-Link in bio 👇
+🎯 The CV tool that shows your job fit score
+
+Before you apply, know if you're a match.
+
+📊 72% match? Apply.
+📊 40%? Work on these skills first.
+
+Built for African job seekers 🇬🇭🇳🇬🇰🇪
+
+👇 Try it free - link in bio
 ```
 
-**Highlights (5):**
+**Story Highlights:**
 - 📊 How It Works
+- 🎯 Success Stories  
 - 💼 Job Tips
 - 📝 CV Templates
-- 🎯 Success Stories
-- 👥 About Us
+- 🤔 FAQ
 
-**Post Ideas:**
+**Carousel Ideas:**
 
-1. **Carousel - "5 CV Mistakes Killing Your Chances":**
-   - Slide 1: Generic objective statements
-   - Slide 2: No quantified achievements
-   - Slide 3: Wrong file format
-   - Slide 4: Too long/too short
-   - Slide 5: CareerOS fix
+**"The Job Search Mistake That's Costing You Months"**
+- Slide 1: "You apply to 50 jobs. 0 interviews. Why?"
+- Slide 2: "Most job seekers play the numbers game"
+- Slide 3: "But here's the truth: 80% of applications go to jobs you're not qualified for"
+- Slide 4: "That's not a CV problem - it's a strategy problem"
+- Slide 5: "We built CareerOS to fix this"
+- Slide 6: "Upload your CV → Check your match score → Apply with confidence"
 
-2. **Reel - "The job application process in Africa be like..."**
-   - Relatable content
-   - Solution reveal
+**"5 CV Skills That Make African Employers Say YES"**
+- 1. Relevant tech stack
+- 2. Quantified achievements
+- 3. Project portfolio links
+- 4. Clean formatting
+- 5. ATS-friendly keywords
 
-3. **Quote post**: "The best jobs aren't the ones you apply to blindly - they're the ones where you know you fit. 🎯"
+**Reel Scripts:**
 
-4. **Story poll**: "How many jobs have you applied to this month?" / "What's your biggest job search struggle?"
+1. **"The job application process in Africa be like..."** (relatable humor)
+   - Apply to 100 jobs
+   - Get 0 responses
+   - Question everything
+   - Then discover CareerOS
+
+2. **"What if you knew exactly what skills to add?"**
+   - Show gap analysis feature
+   - "This is what's missing from your CV"
 
 ---
 
 ## YouTube
 
-**Channel Name**: CareerOS - Jobs in Africa
+**Channel**: CareerOS - Land Your Dream Job in Africa
 
 **About**:
 ```
-CareerOS helps African job seekers land their dream jobs. We provide:
-🎯 Job fit analysis
-📝 CV optimization tips
-💼 Interview prep
-🌍 Job opportunities across Africa
+The #1 resource for African job seekers who want to STOP guessing and START landing.
 
-No more applying blind. Subscribe for weekly content on landing jobs in Africa.
+We show you:
+🔍 How to know if you're qualified BEFORE you apply
+📝 CV tips that get results
+💼 Jobs happening across Africa
+🎯 Interview prep that works
+
+No more sending applications into the void.
+
+Subscribe and turn your job search into a career.
 ```
 
-**Video Ideas:**
+**Video Titles That Work:**
 
-1. **"How to Land Your First Job in Africa (2024)"** - 8-10 min
-   - CV tips
-   - Where to find jobs
-   - Networking
-   - CareerOS demo
+1. **"The CV Trick Most African Job Seekers Don't Know (Use It Today)"**
+2. **"How to Know If You're Qualified for a Job (Before You Apply)"**
+3. **"Why You're Not Getting Interviews (It's Not Your CV)"**
+4. **"African Tech Jobs in 2024: What's Hiring and How to Get Hired"**
+5. **"The Smart Way to Apply for Jobs in Africa"**
+6. **"CV vs Job Description: How to Match and Land Interviews"**
+7. **"First Tech Job in Africa? Here's What You Need to Know"**
+8. **"How to Use CareerOS: Complete Tutorial"**
 
-2. **"CV vs Job Requirements - How to Match"** - 5-7 min
-   - Screen recording of fit analysis
-   - Tips for matching skills
-
-3. **"Interview Tips for African Job Seekers"** - 6-8 min
-   - Common questions
-   - What employers look for
-
-4. **"Day in the Life: Tech Job in Lagos/Nairobi/Accra"** - 10 min
-   - Guest feature
-
-5. **"CareerOS Tutorial - How to Use the Platform"** - 4 min
-   - Walkthrough of features
-
-**Thumbnail Style:**
-- Clean, bold text
-- African city backgrounds (Lagos, Nairobi, Accra)
-- Green/amber brand colors
-- Faces of happy job seekers
+**Thumbnail Formula:**
+- Bold text (yellow on dark background)
+- Arrow pointing up
+- African city vibe
+- Green brand colors
 
 ---
 
 ## LinkedIn
 
-**Page**: linkedin.com/company/careeros
+**Company**: CareerOS
 
 **About**:
 ```
-CareerOS is an AI-powered career operating system for African job seekers.
+CareerOS is the first job search platform that tells African job seekers HOW WELL they fit a role BEFORE they apply.
 
-We help you:
-✅ Analyze job fit before applying
-✅ Optimize your CV for each role
-✅ Prepare for interviews
-✅ Track your applications
+The problem:
+→ 80% of job applications go to roles candidates are underqualified for
+→ Job seekers spend months applying blindly
+→ Rejection after rejection kills confidence
 
-Stop applying blind. Start applying smart.
+Our solution:
+→ Upload your CV
+→ Get an instant match score
+→ See what skills to add
+→ Apply with data on your side
 
-Founded in 2026 | Based in Africa | 🎯
+We're not just another job board. We're the tool that tells you the truth.
+
+🎯 Stop applying. Start landing.
+
+Founded in 2026 | Made in Africa 🇬🇭
 ```
 
-**Post Ideas:**
+**Post Hooks:**
 
-1. **"Why 80% of job applications in Africa get zero response"**
-   - Article: Stats on application-to-interview ratios
-   - Solution: CareerOS fit analysis
+1. **"I analyzed 1,000 job applications. Here's what I found."**
+   - 80% to unqualified roles
+   - How to fix it
 
-2. **"How to write a CV that gets noticed in Africa"**
-   - Tips for African job market
-   - Cultural considerations
+2. **"The CV mistake costing African developers job offers"**
+   - Not customizing to job requirements
 
-3. **"The biggest mistake job seekers make"**
-   - Applying to everything
-   - Quality over quantity
+3. **"What if you knew your exact match score before applying?"**
+   - CareerOS demo
 
-4. **Company culture posts:**
-   - Hiring (if applicable)
-   - Team updates
-   - Milestones
+4. **"Hiring managers in Africa reveal what they really want"**
+   - Interview content
 
-5. **"What African employers really look for"**
-   - Insights from hiring managers
-   - Skills in demand
+5. **"From 0 to 3 interviews in 2 weeks - here's how"**
+   - User success story
 
 ---
 
@@ -201,62 +224,60 @@ Founded in 2026 | Based in Africa | 🎯
 
 **Handle**: @CareerOS
 
-**Ad Filters (for events/career fairs):**
-- "CareerOS Approved Candidate"
-- "I Got My Fit Score"
-- "Know Before You Apply"
-
-**Snap Ads Copy:**
+**Ad Copy:**
 ```
-🎯 Tired of rejection?
+Your CV is ready. But is it RIGHT for the job?
 
-CareerOS shows your job fit score before you apply.
+🎯 See your match score in seconds
+📊 Know what skills to add
+✅ Apply with confidence
 
-Download now → careeros.live
+Try free → careeros.live
 ```
-
-**Story Content:**
-- Quick tips (10 sec)
-- Behind the scenes
-- Event coverage
 
 ---
 
-## General Hashtags
+## Value Proposition by Platform
 
-**Primary:**
+| Platform | Hook |
+|----------|------|
+| X | "Stop guessing. Know your match." |
+| TikTok | "The CV tool that shows your score" |
+| Instagram | "Apply with confidence" |
+| YouTube | "The smart way to job search in Africa" |
+| LinkedIn | "Data-backed job applications" |
+| Snapchat | "Know before you apply" |
+
+---
+
+## Core Messages (Pick one per post)
+
+1. **Fit Score**: "Apply to jobs where you're actually qualified"
+2. **Gap Analysis**: "Know exactly what skills you need"
+3. **Save Time**: "Stop sending applications into the void"
+4. **Confidence**: "Apply with data, not hope"
+5. **African Focus**: "Built for Africa's job market"
+
+---
+
+## Hashtag Strategy
+
+**Brand:**
 - #CareerOS
 - #KnowBeforeYouApply
-- #JobsAfrica
 
-**Secondary:**
+**Value:**
+- #SmartJobSearch
+- #DataDrivenCareer
+- #ApplyWithConfidence
+
+**Community:**
 - #AfricanJobs
-- #CareerTips
-- #JobSearch
-- #CVTips
-- #TechJobsAfrica
 - #AfroTech
-- #FutureOfWork
+- #JobsInAfrica
+- #TechCareersAfrica
 
----
-
-## Posting Schedule (Weekly)
-
-| Platform | Posts/Week | Best Times |
-|----------|-----------|------------|
-| X | 5-7 | 8am, 12pm, 6pm |
-| TikTok | 3-5 | 6pm, 8pm |
-| Instagram | 3-4 | 9am, 12pm |
-| LinkedIn | 2-3 | 8am, 10am |
-| YouTube | 1-2 | Saturday 10am |
-| Snapchat | 3-4 | Evening |
-
----
-
-## Next Steps
-
-1. Create accounts with these handles
-2. Set up profiles with this copy
-3. Post first content
-4. Drive followers from website/waitlist
-5. Engage with African job seeker communities
+**Pain Points:**
+- #JobSearchStruggle
+- #UnemployedInAfrica
+- #HiringInAfrica

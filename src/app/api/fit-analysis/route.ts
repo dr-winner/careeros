@@ -110,9 +110,10 @@ export async function POST(request: NextRequest) {
           take: 1,
         });
 
-    const userSkills = allResumes.flatMap((r) =>
-      r.skills.map((s) => s.skillName)
-    );
+    const userSkills = allResumes.flatMap((r) => {
+      const skills = r?.skills || [];
+      return skills.map((s: { skillName: string }) => s.skillName);
+    });
 
     const jobReqs = jobTitle.toLowerCase().includes("frontend")
       ? ["react", "typescript", "css", "javascript", "git"]
