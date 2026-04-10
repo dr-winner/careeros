@@ -156,7 +156,7 @@ export default function OnboardingPage() {
             <div>
               <h2 className="text-2xl font-bold text-emerald-950">Welcome to CareerOS! 👋</h2>
               <p className="mt-2 text-emerald-700">
-                Let's set up your profile in a few quick steps.
+                Let&apos;s set up your profile in a few quick steps.
               </p>
 
               <div className="mt-8 space-y-5">
@@ -206,7 +206,7 @@ export default function OnboardingPage() {
                 disabled={!formData.fullName || !formData.headline}
                 className="mt-8 w-full rounded-xl bg-emerald-800 py-4 font-semibold text-white shadow-lg shadow-emerald-200 transition hover:bg-emerald-700 disabled:opacity-50"
               >
-                Let's Go →
+                Let&apos;s Go →
               </button>
             </div>
           )}
@@ -215,7 +215,7 @@ export default function OnboardingPage() {
             <div>
               <h2 className="text-2xl font-bold text-emerald-950">What are your skills?</h2>
               <p className="mt-2 text-emerald-700">
-                Select the skills you have. We'll match you with relevant jobs.
+                Select the skills you have. We&apos;ll match you with relevant jobs.
               </p>
 
               <div className="mt-6 flex flex-wrap gap-2">
@@ -309,9 +309,9 @@ export default function OnboardingPage() {
 
           {step === 4 && (
             <div>
-              <h2 className="text-2xl font-bold text-emerald-950">What's your target role?</h2>
+              <h2 className="text-2xl font-bold text-emerald-950">What&apos;s your target role?</h2>
               <p className="mt-2 text-emerald-700">
-                We'll prioritize jobs that match your career goals.
+                We&apos;ll prioritize jobs that match your career goals.
               </p>
 
               <div className="mt-6 grid grid-cols-2 gap-3">

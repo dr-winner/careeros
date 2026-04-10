@@ -104,7 +104,7 @@ export default function ReferralPage() {
             </button>
           </div>
           <p className="mt-2 text-sm text-emerald-600">
-            Share this link with friends. They'll get priority access when they sign up!
+            Share this link with friends. They&apos;ll get priority access when they sign up!
           </p>
         </div>
 
@@ -113,7 +113,7 @@ export default function ReferralPage() {
           <div className="space-y-4">
             <div>
               <label className="mb-1 block text-sm font-medium text-emerald-700">
-                Friend's Email
+                Friend&apos;s Email
               </label>
               <input
                 type="email"

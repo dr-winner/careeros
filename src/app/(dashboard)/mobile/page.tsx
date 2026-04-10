@@ -73,7 +73,7 @@ export default function MobileAppPage() {
       <div className="mt-6 rounded-xl border border-emerald-100 bg-amber-50 p-6 text-center">
         <p className="font-medium text-amber-800">Want early access?</p>
         <p className="mt-1 text-sm text-amber-700">
-          Join the waitlist and we'll notify you when the app launches.
+          Join the waitlist and we&apos;ll notify you when the app launches.
         </p>
         <Link
           href="/alerts"

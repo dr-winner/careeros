@@ -39,7 +39,7 @@ export default function Audience() {
       <div className="relative mx-auto max-w-6xl">
         <div className="mb-20 text-center">
           <span className="inline-block px-4 py-2 rounded-full bg-emerald-500/10 text-emerald-400 text-sm font-medium mb-6">
-            Who it's for
+            Who it&apos;s for
           </span>
           <h2 className="text-4xl font-bold tracking-tight text-white sm:text-5xl md:text-6xl">
             Built for{" "}

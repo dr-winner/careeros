@@ -305,7 +305,7 @@ export default function AlertsPage() {
         <h3 className="font-semibold text-amber-800">How Job Alerts Work</h3>
         <ul className="mt-2 space-y-1 text-sm text-amber-700">
           <li>• We check for new jobs matching your criteria daily</li>
-          <li>• You'll receive an email when new matching jobs are found</li>
+          <li>• You&apos;ll receive an email when new matching jobs are found</li>
           <li>• Toggle alerts on/off without losing your saved search</li>
         </ul>
       </div>
