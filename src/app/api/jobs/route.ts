@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getDbUserId } from "@/lib/auth";
+import { scrapeJobsForAPI } from "@/lib/scraper";
 
 interface Job {
   id: string;
@@ -323,6 +324,7 @@ export async function GET(request: NextRequest) {
       fetchFromRemotive(query, savedJobIds),
       fetchFromArbeitnow(savedJobIds),
       fetchFromRise(query, savedJobIds),
+      scrapeJobsForAPI(query).then(jobs => jobs.map(j => ({ ...j, isSaved: savedJobIds.includes(j.id) }))),
     ];
 
     const results = await Promise.allSettled(promises);
@@ -353,6 +355,7 @@ export async function GET(request: NextRequest) {
       remotive: allJobs.filter(j => j.source === "remotive").length,
       arbeitnow: allJobs.filter(j => j.source === "arbeitnow").length,
       rise: allJobs.filter(j => j.source === "rise").length,
+      scraped: allJobs.filter(j => j.source.startsWith("scraped-")).length,
     };
 
     return NextResponse.json({
