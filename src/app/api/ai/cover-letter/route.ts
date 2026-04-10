@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
+import type { ResumeSkill } from "@prisma/client";
 
 export async function POST(request: NextRequest) {
   try {
@@ -41,7 +42,7 @@ export async function POST(request: NextRequest) {
     const userExperience = user?.experience || "";
     const userHeadline = user?.headline || "";
     const parsedResume = user?.resumes[0]?.parsedText || "";
-    const resumeSkills = user?.resumes[0]?.skills?.map((s) => s.skillName).join(", ") || "";
+    const resumeSkills = user?.resumes[0]?.skills?.map((s: ResumeSkill) => s.skillName).join(", ") || "";
 
     const prompt = `Write a professional cover letter for a ${jobTitle} position at ${companyName}.
 
