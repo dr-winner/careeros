@@ -5,21 +5,6 @@ import { getDbUserId } from "@/lib/auth";
 const ADZUNA_APP_ID = process.env.ADZUNA_APP_ID;
 const ADZUNA_APP_KEY = process.env.ADZUNA_APP_KEY;
 
-interface AdzunaJob {
-  id: string;
-  title: string;
-  company: { display_name: string };
-  location: { display_name: string };
-  description: string;
-  redirect_url: string;
-  created: string;
-  salary_min?: number;
-  salary_max?: number;
-  contract_time?: string;
-  contract_type?: string;
-  category?: { tag: string; label: string };
-}
-
 interface Job {
   id: string;
   title: string;
@@ -39,35 +24,26 @@ interface Job {
   source: string;
 }
 
-function getWorkMode(job: AdzunaJob): string {
-  if (job.contract_time?.includes("contract") || job.contract_type === "contract") {
-    return "Contract";
-  }
-  if (job.contract_time === "full_time") {
-    return "Full-time";
-  }
-  return "Not specified";
-}
-
-function formatJob(job: AdzunaJob, country: string, savedJobIds: string[]): Job {
-  return {
-    id: `adzuna-${job.id}`,
-    title: job.title,
-    companyName: job.company.display_name,
-    location: job.location.display_name,
-    country: country.toUpperCase(),
-    workMode: getWorkMode(job),
-    seniorityLevel: detectSeniority(job.title),
-    employmentType: job.contract_time || job.contract_type || "Full-time",
-    description: job.description.replace(/<[^>]*>/g, "").substring(0, 500),
-    requirements: "See job posting for details",
-    postedAt: job.created,
-    salaryMin: job.salary_min,
-    salaryMax: job.salary_max,
-    isSaved: savedJobIds.includes(`adzuna-${job.id}`),
-    applicationUrl: job.redirect_url,
-    source: "adzuna",
-  };
+interface ApiJob {
+  id: string;
+  slug?: string;
+  title: string;
+  company_name?: string;
+  company?: { display_name: string };
+  location?: string;
+  location_data?: { display_name?: string };
+  description: string;
+  url?: string;
+  redirect_url?: string;
+  created?: string;
+  created_at?: string;
+  salary_min?: number;
+  salary_max?: number;
+  contract_time?: string;
+  contract_type?: string;
+  remote?: boolean;
+  candidate_required_location?: string;
+  job_type?: string;
 }
 
 function detectSeniority(title: string): string {
@@ -84,14 +60,70 @@ function detectSeniority(title: string): string {
   return "Mid-Level";
 }
 
+function getWorkMode(remote?: boolean, jobType?: string): string {
+  if (remote || jobType === "remote") return "Remote";
+  if (jobType?.includes("contract")) return "Contract";
+  return "Full-time";
+}
+
+function parseSalary(salary?: string): { min?: number; max?: number } {
+  if (!salary) return {};
+  
+  const numbers = salary.match(/\d+/g);
+  if (!numbers || numbers.length === 0) return {};
+  
+  const nums = numbers.map(n => parseInt(n) * 1000);
+  
+  if (nums.length === 2) {
+    return { min: Math.min(...nums), max: Math.max(...nums) };
+  }
+  return { min: nums[0] };
+}
+
+function formatJob(rawJob: ApiJob, sourceId: string, source: string, savedJobIds: string[]): Job {
+  const companyName = rawJob.company_name || rawJob.company?.display_name || "Unknown Company";
+  const location = rawJob.location || rawJob.location_data?.display_name || rawJob.candidate_required_location || "Not specified";
+  const appUrl = rawJob.url || rawJob.redirect_url || "#";
+  const postedAt = rawJob.created || rawJob.created_at || new Date().toISOString();
+  const description = rawJob.description?.replace(/<[^>]*>/g, "").substring(0, 500) || "";
+  
+  const salary = parseSalary(rawJob.salary_min || rawJob.salary_max ? String(rawJob.salary_min || rawJob.salary_max) : undefined);
+  
+  return {
+    id: `${source}-${sourceId}`,
+    title: rawJob.title,
+    companyName,
+    location,
+    country: source === "adzuna" ? "ZA" : source === "remotive" ? "GLOBAL" : "EU",
+    workMode: rawJob.remote ? "Remote" : getWorkMode(rawJob.remote, rawJob.job_type || rawJob.contract_time),
+    seniorityLevel: detectSeniority(rawJob.title),
+    employmentType: rawJob.job_type || rawJob.contract_time || rawJob.contract_type || "Full-time",
+    description,
+    requirements: "See job posting for details",
+    postedAt,
+    salaryMin: rawJob.salary_min || salary.min,
+    salaryMax: rawJob.salary_max || salary.max,
+    isSaved: savedJobIds.includes(`${source}-${sourceId}`),
+    applicationUrl: appUrl,
+    source,
+  };
+}
+
 function filterJobs(jobs: Job[], filters: {
   workMode?: string;
   seniority?: string;
   location?: string;
+  search?: string;
 }): Job[] {
   return jobs.filter(job => {
     if (filters.workMode && filters.workMode !== "") {
-      if (job.workMode !== filters.workMode && job.workMode !== "Not specified") {
+      if (filters.workMode === "Remote" && !job.workMode.toLowerCase().includes("remote")) {
+        return false;
+      }
+      if (filters.workMode === "Full-time" && job.workMode === "Remote") {
+        return true;
+      }
+      if (filters.workMode !== "Remote" && filters.workMode !== "Full-time" && job.workMode !== filters.workMode && job.workMode !== "Not specified") {
         return false;
       }
     }
@@ -110,8 +142,83 @@ function filterJobs(jobs: Job[], filters: {
       }
     }
     
+    if (filters.search && filters.search !== "") {
+      const search = filters.search.toLowerCase();
+      if (!job.title.toLowerCase().includes(search) && 
+          !job.companyName.toLowerCase().includes(search)) {
+        return false;
+      }
+    }
+    
     return true;
   });
+}
+
+async function fetchFromAdzuna(query: string, savedJobIds: string[]): Promise<Job[]> {
+  if (!ADZUNA_APP_ID || !ADZUNA_APP_KEY) return [];
+  
+  try {
+    const url = `https://api.adzuna.com/v1/api/jobs/za/search/1?app_id=${ADZUNA_APP_ID}&app_key=${ADZUNA_APP_KEY}&what=${encodeURIComponent(query)}&where=South+Africa&results_per_page=15`;
+    
+    const response = await fetch(url);
+    const data = await response.json();
+    
+    if (data.results && Array.isArray(data.results)) {
+      return data.results.map((job: ApiJob) => formatJob(job, job.id, "adzuna", savedJobIds));
+    }
+  } catch (error) {
+    console.error("Adzuna error:", error);
+  }
+  
+  return [];
+}
+
+async function fetchFromRemotive(query: string, savedJobIds: string[]): Promise<Job[]> {
+  try {
+    const searchTerm = encodeURIComponent(query);
+    const url = `https://remotive.com/api/remote-jobs?search=${searchTerm}&limit=20`;
+    
+    const response = await fetch(url);
+    const data = await response.json();
+    
+    if (data.jobs && Array.isArray(data.jobs)) {
+      return data.jobs.map((job: ApiJob) => formatJob(job, job.id, "remotive", savedJobIds));
+    }
+  } catch (error) {
+    console.error("Remotive error:", error);
+  }
+  
+  return [];
+}
+
+async function fetchFromArbeitnow(query: string, savedJobIds: string[]): Promise<Job[]> {
+  try {
+    const url = `https://www.arbeitnow.com/api/job-board-api`;
+    
+    const response = await fetch(url);
+    const data = await response.json();
+    
+    if (data.data && Array.isArray(data.data)) {
+      const jobs = data.data
+        .filter((job: ApiJob) => 
+          !query || job.title.toLowerCase().includes(query.toLowerCase())
+        )
+        .slice(0, 15)
+        .map((job: ApiJob) => formatJob(job, job.slug || job.id, "arbeitnow", savedJobIds));
+      return jobs;
+    } else if (Array.isArray(data)) {
+      return data
+        .filter((job: ApiJob) => 
+          !query || job.title.toLowerCase().includes(query.toLowerCase())
+        )
+        .slice(0, 15)
+        .map((job: ApiJob) => formatJob(job, job.slug || job.id, "arbeitnow", savedJobIds));
+    }
+  } catch (error) {
+    console.error("Arbeitnow error:", error);
+  }
+  
+  return [];
 }
 
 export async function GET(request: NextRequest) {
@@ -121,10 +228,11 @@ export async function GET(request: NextRequest) {
 
     const jobId = searchParams.get("jobId");
     const search = searchParams.get("search") || "";
-    const location = searchParams.get("location") || "South Africa";
+    const location = searchParams.get("location") || "";
     const workMode = searchParams.get("workMode") || "";
     const seniority = searchParams.get("seniority") || "";
     const page = parseInt(searchParams.get("page") || "1");
+    const sources = searchParams.get("sources") || "all";
 
     let savedJobIds: string[] = [];
     if (userId) {
@@ -136,91 +244,71 @@ export async function GET(request: NextRequest) {
     }
 
     if (jobId) {
-      return await fetchJobById(jobId, userId, savedJobIds);
+      const [source, id] = jobId.split("-").length > 2 
+        ? [jobId.split("-")[0], jobId.split("-").slice(1).join("-")]
+        : ["", ""];
+      
+      if (source === "remotive") {
+        try {
+          const response = await fetch(`https://remotive.com/api/remote-jobs/${id}`);
+          const data = await response.json();
+          if (data.jobs && data.jobs[0]) {
+            return NextResponse.json({ job: formatJob(data.jobs[0], id, "remotive", savedJobIds) });
+          }
+        } catch {}
+      }
+      return NextResponse.json({ error: "Job not found" }, { status: 404 });
     }
 
-    if (ADZUNA_APP_ID && ADZUNA_APP_KEY) {
-      const country = location.toLowerCase().includes("nigeria")
-        ? "ng"
-        : location.toLowerCase().includes("kenya")
-        ? "ke"
-        : location.toLowerCase().includes("south africa")
-        ? "za"
-        : location.toLowerCase().includes("ghana")
-        ? "gh"
-        : "za";
+    const query = search || "software developer";
+    const resultsPerPage = 20;
+    const allJobs: Job[] = [];
 
-      const query = search || "software developer";
-      const searchLocation = "South Africa";
-      
-      const resultsPerPage = 50;
-      const url = `https://api.adzuna.com/v1/api/jobs/${country}/search/${page}?app_id=${ADZUNA_APP_ID}&app_key=${ADZUNA_APP_KEY}&what=${encodeURIComponent(query)}&where=${encodeURIComponent(searchLocation)}&results_per_page=${resultsPerPage}`;
+    const fetchPromises: Promise<Job[]>[] = [];
+    
+    if (sources === "all" || sources === "adzuna") {
+      fetchPromises.push(fetchFromAdzuna(query, savedJobIds));
+    }
+    if (sources === "all" || sources === "remotive") {
+      fetchPromises.push(fetchFromRemotive(query, savedJobIds));
+    }
+    if (sources === "all" || sources === "arbeitnow") {
+      fetchPromises.push(fetchFromArbeitnow(query, savedJobIds));
+    }
 
-      try {
-        const response = await fetch(url);
-        const data = await response.json();
-
-        if (data.results && data.results.length > 0) {
-          let jobs = data.results.map((job: AdzunaJob) => formatJob(job, country, savedJobIds));
-          
-          jobs = filterJobs(jobs, { workMode, seniority, location });
-          
-          const totalResults = data.count || jobs.length;
-          const filteredTotal = jobs.length;
-          const actualTotalPages = Math.ceil(totalResults / resultsPerPage);
-
-          return NextResponse.json({
-            jobs: jobs.slice(0, 20),
-            pagination: {
-              page,
-              limit: 20,
-              total: filteredTotal,
-              totalPages: actualTotalPages,
-            },
-            source: "adzuna",
-            filters: { search, location, workMode, seniority },
-          });
-        }
-      } catch (error) {
-        console.error("Adzuna API error:", error);
+    const results = await Promise.allSettled(fetchPromises);
+    
+    for (const result of results) {
+      if (result.status === "fulfilled") {
+        allJobs.push(...result.value);
       }
     }
 
+    const filteredJobs = filterJobs(allJobs, { workMode, seniority, location, search });
+
+    const totalResults = filteredJobs.length;
+    const startIndex = (page - 1) * resultsPerPage;
+    const paginatedJobs = filteredJobs.slice(startIndex, startIndex + resultsPerPage);
+
+    const sourcesBreakdown = {
+      adzuna: allJobs.filter(j => j.source === "adzuna").length,
+      remotive: allJobs.filter(j => j.source === "remotive").length,
+      arbeitnow: allJobs.filter(j => j.source === "arbeitnow").length,
+    };
+
     return NextResponse.json({
-      jobs: [],
-      pagination: { page, limit: 20, total: 0, totalPages: 0 },
-      source: "none",
-      message: "No jobs found. Try a different search or check back later.",
+      jobs: paginatedJobs,
+      pagination: {
+        page,
+        limit: resultsPerPage,
+        total: totalResults,
+        totalPages: Math.ceil(totalResults / resultsPerPage),
+      },
+      sources: sourcesBreakdown,
+      filters: { search, location, workMode, seniority },
     });
   } catch (error) {
     console.error("Error fetching jobs:", error);
     return NextResponse.json({ error: "Failed to fetch jobs" }, { status: 500 });
-  }
-}
-
-async function fetchJobById(jobId: string, userId: string | null, savedJobIds: string[]) {
-  if (!ADZUNA_APP_ID || !ADZUNA_APP_KEY) {
-    return NextResponse.json({ error: "Job API not configured" }, { status: 500 });
-  }
-
-  const adzunaId = jobId.replace("adzuna-", "");
-  
-  try {
-    const url = `https://api.adzuna.com/v1/api/jobs/za/search/1?app_id=${ADZUNA_APP_ID}&app_key=${ADZUNA_APP_KEY}&what=${encodeURIComponent(adzunaId)}&results_per_page=1`;
-    
-    const response = await fetch(url);
-    const data = await response.json();
-
-    if (data.results && data.results.length > 0) {
-      const job = data.results[0];
-      const formattedJob = formatJob(job, "za", savedJobIds);
-
-      return NextResponse.json({ job: formattedJob });
-    }
-
-    return NextResponse.json({ error: "Job not found" }, { status: 404 });
-  } catch (error) {
-    console.error("Error fetching job by ID:", error);
-    return NextResponse.json({ error: "Failed to fetch job" }, { status: 500 });
   }
 }
