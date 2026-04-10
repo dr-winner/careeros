@@ -16,18 +16,6 @@ export interface AIConfig {
 }
 
 export const AI_MODELS: Record<AIModel, AIConfig> = {
-  deepseek: {
-    model: "deepseek",
-    modelName: "deepseek-chat",
-    baseURL: "https://api.deepseek.com",
-    costPer1MInput: 0.14,
-    costPer1MOutput: 0.28,
-    freeTier: {
-      tokensPerMonth: 5_000_000,
-      rpm: 60,
-      requiresCreditCard: false,
-    },
-  },
   groq: {
     model: "groq",
     modelName: "llama-3.3-70b-versatile",
@@ -37,6 +25,18 @@ export const AI_MODELS: Record<AIModel, AIConfig> = {
     freeTier: {
       tokensPerMonth: 1000 * 1000,
       rpm: 30,
+      requiresCreditCard: false,
+    },
+  },
+  deepseek: {
+    model: "deepseek",
+    modelName: "deepseek-chat",
+    baseURL: "https://api.deepseek.com",
+    costPer1MInput: 0.14,
+    costPer1MOutput: 0.28,
+    freeTier: {
+      tokensPerMonth: 5_000_000,
+      rpm: 60,
       requiresCreditCard: false,
     },
   },
@@ -126,8 +126,8 @@ export async function generateWithFallback(
   } = {}
 ): Promise<{ text: string; model: AIModel }> {
   const orderedModels: AIModel[] = options.preferFree !== false
-    ? ["groq", "gemini", "deepseek", "openai"]
-    : ["openai", "gemini", "groq", "deepseek"];
+    ? ["groq", "deepseek", "gemini", "openai"]
+    : ["openai", "groq", "deepseek", "gemini"];
 
   for (const model of orderedModels) {
     try {
