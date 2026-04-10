@@ -126,8 +126,8 @@ export async function generateWithFallback(
   } = {}
 ): Promise<{ text: string; model: AIModel }> {
   const orderedModels: AIModel[] = options.preferFree !== false
-    ? ["deepseek", "groq", "gemini", "openai"]
-    : ["deepseek", "openai", "gemini"];
+    ? ["groq", "gemini", "deepseek", "openai"]
+    : ["openai", "gemini", "groq", "deepseek"];
 
   for (const model of orderedModels) {
     try {
@@ -135,7 +135,6 @@ export async function generateWithFallback(
       const apiKey = getAPIKey(config);
       
       if (!apiKey) {
-        console.warn(`No API key for ${model}, skipping`);
         continue;
       }
 
@@ -149,6 +148,11 @@ export async function generateWithFallback(
         return { text, model };
       }
     } catch (error) {
+      const errorStr = String(error);
+      if (errorStr.includes("402") || errorStr.includes("Insufficient")) {
+        console.warn(`${model} has insufficient balance, trying next...`);
+        continue;
+      }
       console.warn(`Failed with ${model}:`, error);
       continue;
     }

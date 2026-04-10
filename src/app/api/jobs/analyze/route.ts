@@ -132,7 +132,9 @@ export async function POST(request: NextRequest) {
     else verdict = "Reach Position";
 
     let cvAdvice = "";
-    if (missing.length > 0 && process.env.OPENAI_API_KEY || process.env.DEEPSEEK_API_KEY) {
+    const hasAI = process.env.OPENAI_API_KEY || process.env.DEEPSEEK_API_KEY || process.env.GROQ_API_KEY;
+    
+    if (missing.length > 0 && hasAI) {
       try {
         const prompt = `You are a career coach helping someone optimize their CV for a specific job.
 
@@ -166,10 +168,12 @@ Keep suggestions practical and specific to African job market context. Max 150 w
         cvAdvice = text;
       } catch (error) {
         console.error("AI CV advice error:", error);
-        cvAdvice = `Consider adding these skills to your CV: ${missing.slice(0, 5).join(", ")}`;
+        cvAdvice = "";
       }
-    } else if (missing.length > 0) {
-      cvAdvice = `Key skills to add to your CV: ${missing.slice(0, 5).join(", ")}`;
+    } 
+    
+    if (!cvAdvice && missing.length > 0) {
+      cvAdvice = `Skills to add to your CV: ${missing.slice(0, 5).join(", ")}`;
     }
 
     return NextResponse.json({
