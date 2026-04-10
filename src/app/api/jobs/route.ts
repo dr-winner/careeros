@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
         where: { userId },
         select: { jobId: true },
       });
-      savedJobIds = savedJobs.map((sj) => sj.jobId);
+      savedJobIds = savedJobs.map((sj: { jobId: string }) => sj.jobId);
     }
 
     if (ADZUNA_APP_ID && ADZUNA_APP_KEY) {
