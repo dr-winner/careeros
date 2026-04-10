@@ -3,14 +3,6 @@
 import { useState, useRef, useCallback } from "react";
 import { toast } from "sonner";
 
-interface UploadedFile {
-  id: string;
-  filename: string;
-  originalName: string;
-  size: number;
-  versionLabel: string;
-}
-
 interface CVUploadProps {
   onUploadSuccess?: () => void;
 }
