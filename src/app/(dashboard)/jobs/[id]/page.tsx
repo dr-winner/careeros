@@ -47,9 +47,13 @@ export default function JobDetailPage() {
 
   const fetchJob = async () => {
     try {
-      const response = await fetch(`/api/jobs?search=${params.id}`);
+      const response = await fetch(`/api/jobs?jobId=${params.id}`);
       const data = await response.json();
-      if (data.jobs && data.jobs.length > 0) {
+      
+      if (data.job) {
+        setJob(data.job);
+        analyzeFit(data.job);
+      } else if (data.jobs && data.jobs.length > 0) {
         setJob(data.jobs[0]);
         analyzeFit(data.jobs[0]);
       }
@@ -134,7 +138,15 @@ export default function JobDetailPage() {
       const response = await fetch("/api/jobs/save", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jobId: job.id }),
+        body: JSON.stringify({
+          jobId: job.id,
+          title: job.title,
+          companyName: job.companyName,
+          location: job.location,
+          country: job.country,
+          workMode: job.workMode,
+          applicationUrl: job.applicationUrl,
+        }),
       });
 
       if (response.ok) {
