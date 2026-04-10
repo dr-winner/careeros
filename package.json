@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit --pretty",
-    "check": "npm run typecheck && npm run lint && npm run build"
+    "check": "npm run typecheck && npm run lint && npm run build",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.0.12",
