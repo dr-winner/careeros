@@ -105,12 +105,12 @@ export default function OnboardingPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-amber-50 to-white">
-      <nav className="border-b border-amber-200/50 bg-white/80 backdrop-blur-sm">
+    <div className="min-h-screen bg-slate-950">
+      <nav className="border-b border-slate-800 bg-slate-900/50 backdrop-blur-sm">
         <div className="mx-auto flex h-16 max-w-3xl items-center justify-between px-6">
           <div className="flex items-center gap-2">
             <Image src="/cs_logo.png" alt="CareerOS" width={40} height={40} />
-            <span className="text-lg font-bold text-emerald-900">CareerOS</span>
+            <span className="text-lg font-bold text-white">CareerOS</span>
           </div>
           <UserButton />
         </div>
@@ -124,16 +124,16 @@ export default function OnboardingPage() {
                 <div
                   className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold transition-all ${
                     s.num < step
-                      ? "bg-emerald-600 text-white"
+                      ? "bg-emerald-500 text-white"
                       : s.num === step
-                      ? "bg-emerald-800 text-white shadow-lg shadow-emerald-200"
-                      : "bg-emerald-100 text-emerald-600"
+                      ? "bg-gradient-to-r from-emerald-500 to-emerald-400 text-white shadow-lg shadow-emerald-500/25"
+                      : "bg-slate-800 text-slate-400"
                   }`}
                 >
                   {s.num < step ? "✓" : s.num}
                 </div>
                 {i < steps.length - 1 && (
-                  <div className={`h-1 w-12 ${s.num < step ? "bg-emerald-600" : "bg-emerald-100"}`} />
+                  <div className={`h-1 w-12 ${s.num < step ? "bg-emerald-500" : "bg-slate-800"}`} />
                 )}
               </div>
             ))}
@@ -142,7 +142,7 @@ export default function OnboardingPage() {
             {steps.map(s => (
               <span
                 key={s.num}
-                className={s.num === step ? "text-emerald-800" : "text-emerald-500"}
+                className={s.num === step ? "text-white" : "text-slate-500"}
               >
                 {s.label}
               </span>
@@ -150,46 +150,46 @@ export default function OnboardingPage() {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-emerald-100 bg-white p-8 shadow-lg">
+        <div className="rounded-2xl glass-card p-8">
           {step === 1 && (
             <div>
-              <h2 className="text-2xl font-bold text-emerald-950">Welcome to CareerOS! 👋</h2>
-              <p className="mt-2 text-emerald-700">
+              <h2 className="text-2xl font-bold text-white">Welcome to CareerOS! 👋</h2>
+              <p className="mt-2 text-slate-400">
                 Let&apos;s set up your profile in a few quick steps.
               </p>
 
               <div className="mt-8 space-y-5">
                 <div>
-                  <label className="block text-sm font-medium text-emerald-800">Full Name</label>
+                  <label className="block text-sm font-medium text-slate-300">Full Name</label>
                   <input
                     type="text"
                     name="fullName"
                     value={formData.fullName}
                     onChange={handleChange}
                     placeholder="e.g. Kwame Asante"
-                    className="mt-1 w-full rounded-xl border-2 border-emerald-200 px-4 py-3 text-emerald-900 placeholder:text-emerald-400 focus:border-emerald-500 focus:outline-none"
+                    className="mt-1 w-full rounded-xl border-2 border-slate-700 bg-slate-800 px-4 py-3 text-white placeholder:text-slate-500 focus:border-emerald-500 focus:outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-emerald-800">Professional Headline</label>
+                  <label className="block text-sm font-medium text-slate-300">Professional Headline</label>
                   <input
                     type="text"
                     name="headline"
                     value={formData.headline}
                     onChange={handleChange}
                     placeholder="e.g. Junior Software Developer at TechHub"
-                    className="mt-1 w-full rounded-xl border-2 border-emerald-200 px-4 py-3 text-emerald-900 placeholder:text-emerald-400 focus:border-emerald-500 focus:outline-none"
+                    className="mt-1 w-full rounded-xl border-2 border-slate-700 bg-slate-800 px-4 py-3 text-white placeholder:text-slate-500 focus:border-emerald-500 focus:outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-emerald-800">Country</label>
+                  <label className="block text-sm font-medium text-slate-300">Country</label>
                   <select
                     name="country"
                     value={formData.country}
                     onChange={handleChange}
-                    className="mt-1 w-full rounded-xl border-2 border-emerald-200 px-4 py-3 text-emerald-900 focus:border-emerald-500 focus:outline-none"
+                    className="mt-1 w-full rounded-xl border-2 border-slate-700 bg-slate-800 px-4 py-3 text-white focus:border-emerald-500 focus:outline-none"
                   >
                     <option value="Ghana">🇬🇭 Ghana</option>
                     <option value="Nigeria">🇳🇬 Nigeria</option>
@@ -203,7 +203,7 @@ export default function OnboardingPage() {
               <button
                 onClick={handleNext}
                 disabled={!formData.fullName || !formData.headline}
-                className="mt-8 w-full rounded-xl bg-emerald-800 py-4 font-semibold text-white shadow-lg shadow-emerald-200 transition hover:bg-emerald-700 disabled:opacity-50"
+                className="mt-8 w-full rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-400 py-4 font-semibold text-white shadow-lg shadow-emerald-500/25 hover:opacity-90 disabled:opacity-50"
               >
                 Let&apos;s Go →
               </button>
@@ -212,8 +212,8 @@ export default function OnboardingPage() {
 
           {step === 2 && (
             <div>
-              <h2 className="text-2xl font-bold text-emerald-950">What are your skills?</h2>
-              <p className="mt-2 text-emerald-700">
+              <h2 className="text-2xl font-bold text-white">What are your skills?</h2>
+              <p className="mt-2 text-slate-400">
                 Select the skills you have. We&apos;ll match you with relevant jobs.
               </p>
 
@@ -224,8 +224,8 @@ export default function OnboardingPage() {
                     onClick={() => toggleSkill(skill)}
                     className={`rounded-full px-4 py-2 text-sm font-medium transition-all ${
                       selectedSkills.includes(skill)
-                        ? "bg-emerald-600 text-white shadow-lg"
-                        : "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+                        ? "bg-gradient-to-r from-emerald-500 to-emerald-400 text-white shadow-lg"
+                        : "bg-slate-800 text-slate-300 hover:bg-slate-700"
                     }`}
                   >
                     {skill}
@@ -233,20 +233,20 @@ export default function OnboardingPage() {
                 ))}
               </div>
 
-              <p className="mt-4 text-sm text-emerald-600">
+              <p className="mt-4 text-sm text-slate-500">
                 {selectedSkills.length} skill{selectedSkills.length !== 1 ? "s" : ""} selected
               </p>
 
               <div className="mt-8 flex gap-3">
                 <button
                   onClick={handleBack}
-                  className="flex-1 rounded-xl border-2 border-emerald-200 py-4 font-semibold text-emerald-700 transition hover:bg-emerald-50"
+                  className="flex-1 rounded-xl border-2 border-slate-700 py-4 font-semibold text-slate-300 transition hover:bg-slate-800"
                 >
                   Back
                 </button>
                 <button
                   onClick={handleNext}
-                  className="flex-1 rounded-xl bg-emerald-800 py-4 font-semibold text-white shadow-lg shadow-emerald-200 transition hover:bg-emerald-700"
+                  className="flex-1 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-400 py-4 font-semibold text-white shadow-lg shadow-emerald-500/25 hover:opacity-90"
                 >
                   Continue →
                 </button>
@@ -256,8 +256,8 @@ export default function OnboardingPage() {
 
           {step === 3 && (
             <div>
-              <h2 className="text-2xl font-bold text-emerald-950">Experience Level</h2>
-              <p className="mt-2 text-emerald-700">
+              <h2 className="text-2xl font-bold text-white">Experience Level</h2>
+              <p className="mt-2 text-slate-400">
                 Where are you in your career journey?
               </p>
 
@@ -273,15 +273,15 @@ export default function OnboardingPage() {
                     onClick={() => setFormData({ ...formData, experience: exp.value })}
                     className={`w-full rounded-xl border-2 p-4 text-left transition-all ${
                       formData.experience === exp.value
-                        ? "border-emerald-500 bg-emerald-50 shadow-lg"
-                        : "border-emerald-200 hover:border-emerald-300"
+                        ? "border-emerald-500 bg-emerald-500/10 shadow-lg"
+                        : "border-slate-700 hover:border-slate-600"
                     }`}
                   >
                     <div className="flex items-center gap-3">
                       <span className="text-2xl">{exp.icon}</span>
                       <div>
-                        <span className="block font-semibold text-emerald-900">{exp.value}</span>
-                        <span className="text-sm text-emerald-600">{exp.desc}</span>
+                        <span className="block font-semibold text-white">{exp.value}</span>
+                        <span className="text-sm text-slate-400">{exp.desc}</span>
                       </div>
                     </div>
                   </button>
@@ -291,14 +291,14 @@ export default function OnboardingPage() {
               <div className="mt-8 flex gap-3">
                 <button
                   onClick={handleBack}
-                  className="flex-1 rounded-xl border-2 border-emerald-200 py-4 font-semibold text-emerald-700 transition hover:bg-emerald-50"
+                  className="flex-1 rounded-xl border-2 border-slate-700 py-4 font-semibold text-slate-300 transition hover:bg-slate-800"
                 >
                   Back
                 </button>
                 <button
                   onClick={handleNext}
                   disabled={!formData.experience}
-                  className="flex-1 rounded-xl bg-emerald-800 py-4 font-semibold text-white shadow-lg shadow-emerald-200 transition hover:bg-emerald-700 disabled:opacity-50"
+                  className="flex-1 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-400 py-4 font-semibold text-white shadow-lg shadow-emerald-500/25 hover:opacity-90 disabled:opacity-50"
                 >
                   Continue →
                 </button>
@@ -308,8 +308,8 @@ export default function OnboardingPage() {
 
           {step === 4 && (
             <div>
-              <h2 className="text-2xl font-bold text-emerald-950">What&apos;s your target role?</h2>
-              <p className="mt-2 text-emerald-700">
+              <h2 className="text-2xl font-bold text-white">What&apos;s your target role?</h2>
+              <p className="mt-2 text-slate-400">
                 We&apos;ll prioritize jobs that match your career goals.
               </p>
 
@@ -320,8 +320,8 @@ export default function OnboardingPage() {
                     onClick={() => setFormData({ ...formData, desiredRole: role })}
                     className={`rounded-xl border-2 p-3 text-sm font-medium transition-all ${
                       formData.desiredRole === role
-                        ? "border-emerald-500 bg-emerald-50 text-emerald-800"
-                        : "border-emerald-200 text-emerald-700 hover:border-emerald-300"
+                        ? "border-emerald-500 bg-emerald-500/10 text-white"
+                        : "border-slate-700 text-slate-300 hover:border-slate-600"
                     }`}
                   >
                     {role}
@@ -330,28 +330,28 @@ export default function OnboardingPage() {
               </div>
 
               <div className="mt-6">
-                <label className="block text-sm font-medium text-emerald-800">Or type your own</label>
+                <label className="block text-sm font-medium text-slate-300">Or type your own</label>
                 <input
                   type="text"
                   name="desiredRole"
                   value={formData.desiredRole}
                   onChange={handleChange}
                   placeholder="e.g. Senior Product Manager"
-                  className="mt-1 w-full rounded-xl border-2 border-emerald-200 px-4 py-3 text-emerald-900 placeholder:text-emerald-400 focus:border-emerald-500 focus:outline-none"
+                  className="mt-1 w-full rounded-xl border-2 border-slate-700 bg-slate-800 px-4 py-3 text-white placeholder:text-slate-500 focus:border-emerald-500 focus:outline-none"
                 />
               </div>
 
               <div className="mt-8 flex gap-3">
                 <button
                   onClick={handleBack}
-                  className="flex-1 rounded-xl border-2 border-emerald-200 py-4 font-semibold text-emerald-700 transition hover:bg-emerald-50"
+                  className="flex-1 rounded-xl border-2 border-slate-700 py-4 font-semibold text-slate-300 transition hover:bg-slate-800"
                 >
                   Back
                 </button>
                 <button
                   onClick={handleComplete}
                   disabled={isLoading || !formData.desiredRole}
-                  className="flex-1 rounded-xl bg-emerald-800 py-4 font-semibold text-white shadow-lg shadow-emerald-200 transition hover:bg-emerald-700 disabled:opacity-50"
+                  className="flex-1 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-400 py-4 font-semibold text-white shadow-lg shadow-emerald-500/25 hover:opacity-90 disabled:opacity-50"
                 >
                   {isLoading ? "Setting up..." : "Complete Setup 🎉"}
                 </button>

@@ -13,12 +13,12 @@ interface Application {
 }
 
 const STATUS_CONFIG: Record<string, { color: string; bg: string }> = {
-  Applied: { color: "text-blue-700", bg: "bg-blue-100" },
-  Screening: { color: "text-amber-700", bg: "bg-amber-100" },
-  Interview: { color: "text-purple-700", bg: "bg-purple-100" },
-  Offer: { color: "text-emerald-700", bg: "bg-emerald-100" },
-  Rejected: { color: "text-red-700", bg: "bg-red-100" },
-  Withdrawn: { color: "text-stone-700", bg: "bg-stone-100" },
+  Applied: { color: "text-blue-400", bg: "bg-blue-500/20" },
+  Screening: { color: "text-amber-400", bg: "bg-amber-500/20" },
+  Interview: { color: "text-purple-400", bg: "bg-purple-500/20" },
+  Offer: { color: "text-emerald-400", bg: "bg-emerald-500/20" },
+  Rejected: { color: "text-red-400", bg: "bg-red-500/20" },
+  Withdrawn: { color: "text-slate-400", bg: "bg-slate-500/20" },
 };
 
 export default function ApplicationsPage() {
@@ -98,7 +98,7 @@ export default function ApplicationsPage() {
   if (!isLoaded) {
     return (
       <div className="mx-auto max-w-7xl px-6 py-8">
-        <div className="text-emerald-800">Loading...</div>
+        <div className="text-slate-400">Loading...</div>
       </div>
     );
   }
@@ -107,14 +107,14 @@ export default function ApplicationsPage() {
     <div className="mx-auto max-w-7xl px-6 py-8">
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-emerald-950">My Applications</h1>
-          <p className="mt-2 text-emerald-700/70">
+          <h1 className="text-3xl font-bold text-white">My Applications</h1>
+          <p className="mt-2 text-slate-400">
             Track your job applications and their status.
           </p>
         </div>
         <Link
           href="/jobs"
-          className="rounded-lg bg-emerald-800 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+          className="rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-400 px-4 py-2 text-sm font-medium text-white hover:opacity-90"
         >
           Find More Jobs
         </Link>
@@ -125,8 +125,8 @@ export default function ApplicationsPage() {
           onClick={() => setFilter("all")}
           className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
             filter === "all"
-              ? "bg-emerald-800 text-white"
-              : "bg-white text-emerald-700 hover:bg-emerald-50"
+              ? "bg-gradient-to-r from-emerald-500 to-emerald-400 text-white"
+              : "border border-slate-700 text-slate-400 hover:bg-slate-800"
           }`}
         >
           All ({applications.length})
@@ -139,8 +139,8 @@ export default function ApplicationsPage() {
               onClick={() => setFilter(status)}
               className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
                 filter === status
-                  ? "bg-emerald-800 text-white"
-                  : "bg-white text-emerald-700 hover:bg-emerald-50"
+                  ? "bg-gradient-to-r from-emerald-500 to-emerald-400 text-white"
+                  : "border border-slate-700 text-slate-400 hover:bg-slate-800"
               }`}
             >
               {status} ({count})
@@ -152,28 +152,28 @@ export default function ApplicationsPage() {
       {loading ? (
         <div className="space-y-4">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="animate-pulse rounded-xl border border-emerald-100 bg-white p-6">
-              <div className="h-6 w-1/3 rounded bg-emerald-100"></div>
-              <div className="mt-2 h-4 w-1/4 rounded bg-emerald-100"></div>
+            <div key={i} className="animate-pulse rounded-xl glass-card p-6">
+              <div className="h-6 w-1/3 rounded bg-slate-700"></div>
+              <div className="mt-2 h-4 w-1/4 rounded bg-slate-700"></div>
             </div>
           ))}
         </div>
       ) : filteredApplications.length === 0 ? (
-        <div className="rounded-xl border border-emerald-100 bg-white p-12 text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100">
-            <svg className="h-8 w-8 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div className="rounded-xl glass-card p-12 text-center">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/20">
+            <svg className="h-8 w-8 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
           </div>
-          <h3 className="text-lg font-semibold text-emerald-950">No applications yet</h3>
-          <p className="mt-2 text-emerald-600">
+          <h3 className="text-lg font-semibold text-white">No applications yet</h3>
+          <p className="mt-2 text-slate-400">
             {filter === "all"
               ? "Start applying to jobs to track your progress here."
               : `No applications with status "${filter}".`}
           </p>
           <Link
             href="/jobs"
-            className="mt-4 inline-block text-emerald-600 hover:text-emerald-800"
+            className="mt-4 inline-block text-emerald-400 hover:text-emerald-300"
           >
             Browse Jobs
           </Link>
@@ -185,12 +185,12 @@ export default function ApplicationsPage() {
             return (
               <div
                 key={application.id}
-                className="rounded-xl border border-emerald-100 bg-white p-6"
+                className="rounded-xl glass-card p-6"
               >
                 <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-3">
-                      <h3 className="text-lg font-semibold text-emerald-950">
+                      <h3 className="text-lg font-semibold text-white">
                         Job #{application.jobId.replace("sample-", "")}
                       </h3>
                       <span
@@ -199,11 +199,11 @@ export default function ApplicationsPage() {
                         {application.status}
                       </span>
                     </div>
-                    <p className="mt-1 text-sm text-emerald-600">
+                    <p className="mt-1 text-sm text-slate-400">
                       Applied: {formatDate(application.appliedAt)}
                     </p>
                     {application.notes && (
-                      <p className="mt-2 text-sm text-emerald-700/80">
+                      <p className="mt-2 text-sm text-slate-400">
                         {application.notes}
                       </p>
                     )}
@@ -213,7 +213,7 @@ export default function ApplicationsPage() {
                     <select
                       value={application.status}
                       onChange={(e) => updateStatus(application.id, e.target.value)}
-                      className="rounded-lg border border-emerald-200 px-3 py-2 text-sm text-emerald-700 focus:border-emerald-500 focus:outline-none"
+                      className="rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none focus:ring-emerald-500/20"
                     >
                       <option value="Applied">Applied</option>
                       <option value="Screening">Screening</option>
@@ -224,7 +224,7 @@ export default function ApplicationsPage() {
                     </select>
                     <button
                       onClick={() => deleteApplication(application.id)}
-                      className="rounded-lg border border-red-200 px-3 py-2 text-sm text-red-600 hover:bg-red-50"
+                      className="rounded-lg border border-red-500/50 px-3 py-2 text-sm text-red-400 hover:bg-red-500/10"
                     >
                       Remove
                     </button>

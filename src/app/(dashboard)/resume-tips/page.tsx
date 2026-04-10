@@ -127,9 +127,9 @@ export default function ResumeTipsPage() {
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case "high": return "bg-red-100 text-red-700 border-red-200";
-      case "medium": return "bg-amber-100 text-amber-700 border-amber-200";
-      default: return "bg-emerald-100 text-emerald-700 border-emerald-200";
+      case "high": return "bg-red-500/20 text-red-400 border-red-500/30";
+      case "medium": return "bg-amber-500/20 text-amber-400 border-amber-500/30";
+      default: return "bg-emerald-500/20 text-emerald-400 border-emerald-500/30";
     }
   };
 
@@ -138,7 +138,7 @@ export default function ResumeTipsPage() {
   if (!isLoaded) {
     return (
       <div className="mx-auto max-w-4xl px-6 py-8">
-        <div className="text-emerald-800">Loading...</div>
+        <div className="text-slate-400">Loading...</div>
       </div>
     );
   }
@@ -146,42 +146,42 @@ export default function ResumeTipsPage() {
   return (
     <div className="mx-auto max-w-4xl px-6 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-emerald-950">Resume Optimization</h1>
-        <p className="mt-2 text-emerald-700/70">
+        <h1 className="text-3xl font-bold text-white">Resume Optimization</h1>
+        <p className="mt-2 text-slate-400">
           Get personalized suggestions to improve your resume.
         </p>
       </div>
 
       {loading ? (
         <div className="animate-pulse space-y-4">
-          <div className="h-32 rounded-xl bg-emerald-100"></div>
-          <div className="h-64 rounded-xl bg-emerald-100"></div>
+          <div className="h-32 rounded-xl glass-card"></div>
+          <div className="h-64 rounded-xl glass-card"></div>
         </div>
       ) : resumes.length === 0 ? (
-        <div className="rounded-xl border border-emerald-100 bg-white p-12 text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100">
-            <svg className="h-8 w-8 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div className="rounded-xl glass-card p-12 text-center">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/20">
+            <svg className="h-8 w-8 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
           </div>
-          <h3 className="text-lg font-semibold text-emerald-950">No Resume Uploaded</h3>
-          <p className="mt-2 text-emerald-600">
+          <h3 className="text-lg font-semibold text-white">No Resume Uploaded</h3>
+          <p className="mt-2 text-slate-400">
             Upload your resume to get personalized optimization tips.
           </p>
           <Link
             href="/dashboard"
-            className="mt-4 inline-block rounded-lg bg-emerald-800 px-4 py-2 text-white hover:bg-emerald-700"
+            className="mt-4 inline-block rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-400 px-4 py-2 text-white hover:opacity-90"
           >
             Upload Resume
           </Link>
         </div>
       ) : (
         <div className="space-y-6">
-          <div className="rounded-xl border border-emerald-100 bg-white p-6">
+          <div className="rounded-xl glass-card p-6">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-semibold text-emerald-950">Uploaded Resume</h2>
-                <p className="text-sm text-emerald-600">{selectedResume?.originalName}</p>
+                <h2 className="text-lg font-semibold text-white">Uploaded Resume</h2>
+                <p className="text-sm text-slate-400">{selectedResume?.originalName}</p>
               </div>
               <select
                 value={selectedResume?.id || ""}
@@ -189,7 +189,7 @@ export default function ResumeTipsPage() {
                   const resume = resumes.find(r => r.id === e.target.value);
                   setSelectedResume(resume || null);
                 }}
-                className="rounded-lg border border-emerald-200 px-4 py-2 text-emerald-800"
+                className="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-white"
               >
                 {resumes.map(r => (
                   <option key={r.id} value={r.id}>{r.originalName}</option>
@@ -198,30 +198,30 @@ export default function ResumeTipsPage() {
             </div>
 
             <div className="mt-4 grid gap-4 md:grid-cols-4">
-              <div className="rounded-lg bg-emerald-50 p-4 text-center">
-                <p className="text-2xl font-bold text-emerald-800">{resumes.find(r => r.id === selectedResume?.id)?.skills.length || 0}</p>
-                <p className="text-sm text-emerald-600">Skills</p>
+              <div className="rounded-lg bg-emerald-500/10 p-4 text-center">
+                <p className="text-2xl font-bold text-emerald-400">{resumes.find(r => r.id === selectedResume?.id)?.skills.length || 0}</p>
+                <p className="text-sm text-slate-400">Skills</p>
               </div>
-              <div className="rounded-lg bg-amber-50 p-4 text-center">
-                <p className="text-2xl font-bold text-amber-800">{resumes.find(r => r.id === selectedResume?.id)?.experiences.length || 0}</p>
-                <p className="text-sm text-amber-600">Experiences</p>
+              <div className="rounded-lg bg-amber-500/10 p-4 text-center">
+                <p className="text-2xl font-bold text-amber-400">{resumes.find(r => r.id === selectedResume?.id)?.experiences.length || 0}</p>
+                <p className="text-sm text-slate-400">Experiences</p>
               </div>
-              <div className="rounded-lg bg-purple-50 p-4 text-center">
-                <p className="text-2xl font-bold text-purple-800">{resumes.find(r => r.id === selectedResume?.id)?.education.length || 0}</p>
-                <p className="text-sm text-purple-600">Education</p>
+              <div className="rounded-lg bg-purple-500/10 p-4 text-center">
+                <p className="text-2xl font-bold text-purple-400">{resumes.find(r => r.id === selectedResume?.id)?.education.length || 0}</p>
+                <p className="text-sm text-slate-400">Education</p>
               </div>
-              <div className="rounded-lg bg-stone-50 p-4 text-center">
-                <p className="text-2xl font-bold text-stone-800">{suggestions.filter(s => s.priority === "high").length}</p>
-                <p className="text-sm text-stone-600">Issues</p>
+              <div className="rounded-lg bg-slate-700 p-4 text-center">
+                <p className="text-2xl font-bold text-slate-300">{suggestions.filter(s => s.priority === "high").length}</p>
+                <p className="text-sm text-slate-400">Issues</p>
               </div>
             </div>
           </div>
 
-          <div className="rounded-xl border border-emerald-100 bg-white p-6">
-            <h2 className="mb-4 text-lg font-semibold text-emerald-950">Optimization Suggestions</h2>
+          <div className="rounded-xl glass-card p-6">
+            <h2 className="mb-4 text-lg font-semibold text-white">Optimization Suggestions</h2>
             
             {suggestions.length === 0 ? (
-              <p className="text-emerald-600">No suggestions at this time.</p>
+              <p className="text-slate-400">No suggestions at this time.</p>
             ) : (
               <div className="space-y-4">
                 {suggestions.map((item, index) => (
@@ -231,15 +231,15 @@ export default function ResumeTipsPage() {
                   >
                     <div className="flex items-start gap-3">
                       <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                        item.priority === "high" ? "bg-red-200 text-red-800" :
-                        item.priority === "medium" ? "bg-amber-200 text-amber-800" :
-                        "bg-emerald-200 text-emerald-800"
+                        item.priority === "high" ? "bg-red-500/30 text-red-300" :
+                        item.priority === "medium" ? "bg-amber-500/30 text-amber-300" :
+                        "bg-emerald-500/30 text-emerald-300"
                       }`}>
                         {item.priority}
                       </span>
                       <div>
-                        <p className="font-medium">{item.issue}</p>
-                        <p className="mt-1 text-sm opacity-80">{item.suggestion}</p>
+                        <p className="font-medium text-white">{item.issue}</p>
+                        <p className="mt-1 text-sm text-slate-400">{item.suggestion}</p>
                       </div>
                     </div>
                   </div>
@@ -248,49 +248,49 @@ export default function ResumeTipsPage() {
             )}
           </div>
 
-          <div className="rounded-xl border border-emerald-100 bg-white p-6">
-            <h2 className="mb-4 text-lg font-semibold text-emerald-950">Best Practices Checklist</h2>
+          <div className="rounded-xl glass-card p-6">
+            <h2 className="mb-4 text-lg font-semibold text-white">Best Practices Checklist</h2>
             
             <div className="grid gap-4 md:grid-cols-2">
               <div>
-                <h3 className="mb-2 font-medium text-emerald-800">Format & Structure</h3>
-                <ul className="space-y-2 text-sm text-emerald-700">
+                <h3 className="mb-2 font-medium text-slate-300">Format & Structure</h3>
+                <ul className="space-y-2 text-sm text-slate-400">
                   <li className="flex items-start gap-2">
-                    <span className="text-emerald-500">✓</span>
+                    <span className="text-emerald-400">✓</span>
                     Keep it to 1-2 pages
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="text-emerald-500">✓</span>
+                    <span className="text-emerald-400">✓</span>
                     Use consistent formatting
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="text-emerald-500">✓</span>
+                    <span className="text-emerald-400">✓</span>
                     Use a clean, professional layout
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="text-emerald-500">✓</span>
+                    <span className="text-emerald-400">✓</span>
                     Use standard fonts (Arial, Calibri)
                   </li>
                 </ul>
               </div>
               
               <div>
-                <h3 className="mb-2 font-medium text-emerald-800">Content</h3>
-                <ul className="space-y-2 text-sm text-emerald-700">
+                <h3 className="mb-2 font-medium text-slate-300">Content</h3>
+                <ul className="space-y-2 text-sm text-slate-400">
                   <li className="flex items-start gap-2">
-                    <span className="text-emerald-500">✓</span>
+                    <span className="text-emerald-400">✓</span>
                     Tailor for each application
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="text-emerald-500">✓</span>
+                    <span className="text-emerald-400">✓</span>
                     Use keywords from job posting
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="text-emerald-500">✓</span>
+                    <span className="text-emerald-400">✓</span>
                     Quantify achievements
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="text-emerald-500">✓</span>
+                    <span className="text-emerald-400">✓</span>
                     Proofread for errors
                   </li>
                 </ul>

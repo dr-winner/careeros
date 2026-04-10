@@ -90,41 +90,41 @@ export default function JobsPage() {
 
   if (!isLoaded) {
     return (
-      <div className="mx-auto max-w-7xl px-6 py-8">
-        <div className="text-emerald-800">Loading...</div>
+      <div className="flex items-center justify-center py-20">
+        <div className="text-emerald-400">Loading...</div>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-6 py-8">
+    <div className="max-w-6xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-emerald-950">Find Jobs</h1>
-        <p className="mt-2 text-emerald-700/70">
+        <h1 className="text-3xl font-bold text-white">Find Jobs</h1>
+        <p className="mt-2 text-slate-400">
           Discover opportunities across Africa that match your skills.
         </p>
       </div>
 
-      <div className="mb-6 rounded-xl border border-emerald-100 bg-white p-4">
+      <div className="mb-6 rounded-xl glass-card p-4">
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
           <input
             type="text"
             placeholder="Search jobs..."
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            className="rounded-lg border border-emerald-200 px-4 py-2 text-emerald-900 placeholder:text-emerald-400 focus:border-emerald-500 focus:outline-none"
+            className="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2.5 text-white placeholder:text-slate-500 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
           />
           <input
             type="text"
             placeholder="Location..."
             value={location}
             onChange={(e) => { setLocation(e.target.value); setPage(1); }}
-            className="rounded-lg border border-emerald-200 px-4 py-2 text-emerald-900 placeholder:text-emerald-400 focus:border-emerald-500 focus:outline-none"
+            className="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2.5 text-white placeholder:text-slate-500 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
           />
           <select
             value={workMode}
             onChange={(e) => { setWorkMode(e.target.value); setPage(1); }}
-            className="rounded-lg border border-emerald-200 px-4 py-2 text-emerald-900 focus:border-emerald-500 focus:outline-none"
+            className="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2.5 text-white focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
           >
             <option value="">All Work Modes</option>
             <option value="Remote">Remote</option>
@@ -134,7 +134,7 @@ export default function JobsPage() {
           <select
             value={seniority}
             onChange={(e) => { setSeniority(e.target.value); setPage(1); }}
-            className="rounded-lg border border-emerald-200 px-4 py-2 text-emerald-900 focus:border-emerald-500 focus:outline-none"
+            className="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2.5 text-white focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
           >
             <option value="">All Levels</option>
             <option value="Entry-Level">Entry-Level</option>
@@ -143,7 +143,7 @@ export default function JobsPage() {
           </select>
           <button
             onClick={() => { setSearch(""); setLocation(""); setWorkMode(""); setSeniority(""); setPage(1); }}
-            className="rounded-lg border border-emerald-200 px-4 py-2 text-emerald-700 hover:bg-emerald-50"
+            className="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2.5 text-slate-300 hover:border-slate-600 hover:bg-slate-700 transition-colors"
           >
             Clear
           </button>
@@ -153,19 +153,22 @@ export default function JobsPage() {
       {loading ? (
         <div className="grid gap-4">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="animate-pulse rounded-xl border border-emerald-100 bg-white p-6">
-              <div className="h-6 w-1/3 rounded bg-emerald-100"></div>
-              <div className="mt-2 h-4 w-1/4 rounded bg-emerald-100"></div>
-              <div className="mt-4 h-4 w-full rounded bg-emerald-100"></div>
+            <div key={i} className="animate-pulse rounded-xl glass-card p-6">
+              <div className="h-6 w-1/3 rounded bg-slate-700"></div>
+              <div className="mt-2 h-4 w-1/4 rounded bg-slate-700"></div>
+              <div className="mt-4 h-4 w-full rounded bg-slate-700"></div>
             </div>
           ))}
         </div>
       ) : jobs.length === 0 ? (
-        <div className="rounded-xl border border-emerald-100 bg-white p-12 text-center">
-          <p className="text-emerald-600">No jobs found matching your criteria.</p>
+        <div className="rounded-xl glass-card p-12 text-center">
+          <svg className="mx-auto h-12 w-12 text-slate-500 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+          </svg>
+          <p className="text-slate-400">No jobs found matching your criteria.</p>
           <button
             onClick={() => { setSearch(""); setLocation(""); setWorkMode(""); setSeniority(""); }}
-            className="mt-4 text-emerald-600 hover:text-emerald-800"
+            className="mt-4 text-emerald-400 hover:text-emerald-300 transition-colors"
           >
             Clear filters
           </button>
@@ -173,7 +176,7 @@ export default function JobsPage() {
       ) : (
         <>
           <div className="mb-4 flex items-center justify-between">
-            <p className="text-sm text-emerald-600">
+            <p className="text-sm text-slate-400">
               Showing {jobs.length} job{jobs.length !== 1 ? "s" : ""}
             </p>
           </div>
@@ -182,18 +185,18 @@ export default function JobsPage() {
             {jobs.map((job) => (
               <div
                 key={job.id}
-                className="rounded-xl border border-emerald-100 bg-white p-6 transition hover:border-emerald-200 hover:shadow-md"
+                className="rounded-xl glass-card p-6 transition-all hover:border-emerald-500/30 hover:shadow-lg hover:shadow-emerald-500/5"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-3">
-                      <h3 className="text-xl font-semibold text-emerald-950">
+                      <h3 className="text-xl font-semibold text-white">
                         {job.title}
                       </h3>
                       {userId && (
                         <button
                           onClick={() => toggleSave(job.id)}
-                          className={`p-1 ${job.isSaved ? "text-amber-500" : "text-emerald-300 hover:text-amber-400"}`}
+                          className={`p-1 transition-colors ${job.isSaved ? "text-amber-400" : "text-slate-500 hover:text-amber-400"}`}
                         >
                           <svg className="h-6 w-6" fill={job.isSaved ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
@@ -201,46 +204,46 @@ export default function JobsPage() {
                         </button>
                       )}
                     </div>
-                    <p className="mt-1 font-medium text-emerald-700">{job.companyName}</p>
-                    <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-emerald-600/70">
-                      <span className="flex items-center gap-1">
-                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <p className="mt-1 font-medium text-emerald-400">{job.companyName}</p>
+                    <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-slate-400">
+                      <span className="flex items-center gap-1.5">
+                        <svg className="h-4 w-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                         </svg>
                         {job.location}
                       </span>
-                      <span className="flex items-center gap-1">
-                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      <span className="flex items-center gap-1.5">
+                        <svg className="h-4 w-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                         </svg>
                         {job.workMode}
                       </span>
-                      <span className="flex items-center gap-1">
-                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      <span className="flex items-center gap-1.5">
+                        <svg className="h-4 w-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                         {job.seniorityLevel}
                       </span>
-                      <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs">
+                      <span className="rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs text-emerald-400 border border-emerald-500/20">
                         {job.employmentType}
                       </span>
                     </div>
                   </div>
                 </div>
 
-                <p className="mt-4 line-clamp-2 text-sm text-emerald-700/80">
+                <p className="mt-4 line-clamp-2 text-sm text-slate-400">
                   {job.description}
                 </p>
 
                 <div className="mt-4 flex items-center justify-between">
-                  <span className="text-xs text-emerald-500">
+                  <span className="text-xs text-slate-500">
                     Posted {formatDate(job.postedAt)}
                   </span>
                   <div className="flex gap-2">
                     <Link
                       href={`/jobs/${job.id}`}
-                      className="rounded-lg border border-emerald-800 px-4 py-2 text-sm font-medium text-emerald-800 hover:bg-emerald-50"
+                      className="rounded-lg border border-emerald-500/50 px-4 py-2 text-sm font-medium text-emerald-400 hover:bg-emerald-500/10 transition-all"
                     >
                       View Details
                     </Link>
@@ -248,7 +251,7 @@ export default function JobsPage() {
                       href={job.applicationUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="rounded-lg bg-emerald-800 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+                      className="rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-400 px-4 py-2 text-sm font-medium text-white shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/40 transition-all"
                     >
                       Apply
                     </a>
@@ -263,17 +266,17 @@ export default function JobsPage() {
               <button
                 onClick={() => setPage(Math.max(1, page - 1))}
                 disabled={page === 1}
-                className="rounded-lg border border-emerald-200 px-4 py-2 text-emerald-700 disabled:cursor-not-allowed disabled:opacity-50 hover:bg-emerald-50"
+                className="rounded-lg border border-slate-700 px-4 py-2 text-slate-300 disabled:cursor-not-allowed disabled:opacity-50 hover:border-slate-600 hover:bg-slate-800 transition-colors"
               >
                 Previous
               </button>
-              <span className="px-4 text-emerald-600">
+              <span className="px-4 text-slate-400">
                 Page {page} of {totalPages}
               </span>
               <button
                 onClick={() => setPage(Math.min(totalPages, page + 1))}
                 disabled={page === totalPages}
-                className="rounded-lg border border-emerald-200 px-4 py-2 text-emerald-700 disabled:cursor-not-allowed disabled:opacity-50 hover:bg-emerald-50"
+                className="rounded-lg border border-slate-700 px-4 py-2 text-slate-300 disabled:cursor-not-allowed disabled:opacity-50 hover:border-slate-600 hover:bg-slate-800 transition-colors"
               >
                 Next
               </button>

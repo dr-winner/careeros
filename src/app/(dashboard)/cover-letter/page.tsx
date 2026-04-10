@@ -124,7 +124,7 @@ ${name}`;
   if (!isLoaded || loading) {
     return (
       <div className="mx-auto max-w-4xl px-6 py-8">
-        <div className="text-emerald-800">Loading...</div>
+        <div className="text-slate-400">Loading...</div>
       </div>
     );
   }
@@ -132,20 +132,20 @@ ${name}`;
   return (
     <div className="mx-auto max-w-4xl px-6 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-emerald-950">Cover Letter Generator</h1>
-        <p className="mt-2 text-emerald-700/70">
+        <h1 className="text-3xl font-bold text-white">Cover Letter Generator</h1>
+        <p className="mt-2 text-slate-400">
           Create a professional cover letter tailored to your target role.
         </p>
       </div>
 
       <div className="grid gap-8 lg:grid-cols-2">
         <div className="space-y-6">
-          <div className="rounded-xl border border-emerald-100 bg-white p-6">
-            <h2 className="mb-4 text-lg font-semibold text-emerald-950">Job Details</h2>
+          <div className="rounded-xl glass-card p-6">
+            <h2 className="mb-4 text-lg font-semibold text-white">Job Details</h2>
             
             <div className="space-y-4">
               <div>
-                <label className="mb-1 block text-sm font-medium text-emerald-700">
+                <label className="mb-1 block text-sm font-medium text-slate-400">
                   Recipient Name (optional)
                 </label>
                 <input
@@ -153,12 +153,12 @@ ${name}`;
                   placeholder="Hiring Manager"
                   value={formData.recipientName}
                   onChange={(e) => setFormData({ ...formData, recipientName: e.target.value })}
-                  className="w-full rounded-lg border border-emerald-200 px-4 py-2 text-emerald-900 placeholder:text-emerald-400 focus:border-emerald-500 focus:outline-none"
+                  className="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-white placeholder:text-slate-500 focus:border-emerald-500 focus:outline-none focus:ring-emerald-500/20"
                 />
               </div>
 
               <div>
-                <label className="mb-1 block text-sm font-medium text-emerald-700">
+                <label className="mb-1 block text-sm font-medium text-slate-400">
                   Company Name *
                 </label>
                 <input
@@ -166,12 +166,12 @@ ${name}`;
                   placeholder="Acme Corporation"
                   value={formData.companyName}
                   onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
-                  className="w-full rounded-lg border border-emerald-200 px-4 py-2 text-emerald-900 placeholder:text-emerald-400 focus:border-emerald-500 focus:outline-none"
+                  className="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-white placeholder:text-slate-500 focus:border-emerald-500 focus:outline-none focus:ring-emerald-500/20"
                 />
               </div>
 
               <div>
-                <label className="mb-1 block text-sm font-medium text-emerald-700">
+                <label className="mb-1 block text-sm font-medium text-slate-400">
                   Job Title *
                 </label>
                 <input
@@ -179,12 +179,12 @@ ${name}`;
                   placeholder="Software Engineer"
                   value={formData.jobTitle}
                   onChange={(e) => setFormData({ ...formData, jobTitle: e.target.value })}
-                  className="w-full rounded-lg border border-emerald-200 px-4 py-2 text-emerald-900 placeholder:text-emerald-400 focus:border-emerald-500 focus:outline-none"
+                  className="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-white placeholder:text-slate-500 focus:border-emerald-500 focus:outline-none focus:ring-emerald-500/20"
                 />
               </div>
 
               <div>
-                <label className="mb-1 block text-sm font-medium text-emerald-700">
+                <label className="mb-1 block text-sm font-medium text-slate-400">
                   Job Description (optional)
                 </label>
                 <textarea
@@ -192,14 +192,14 @@ ${name}`;
                   placeholder="Paste the job description here for a more tailored letter..."
                   value={formData.jobDescription}
                   onChange={(e) => setFormData({ ...formData, jobDescription: e.target.value })}
-                  className="w-full rounded-lg border border-emerald-200 px-4 py-2 text-emerald-900 placeholder:text-emerald-400 focus:border-emerald-500 focus:outline-none resize-none"
+                  className="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-white placeholder:text-slate-500 focus:border-emerald-500 focus:outline-none focus:ring-emerald-500/20 resize-none"
                 />
               </div>
 
               <button
                 onClick={generateCoverLetter}
                 disabled={generating}
-                className="w-full rounded-lg bg-emerald-800 py-3 text-center font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+                className="w-full rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-400 py-3 text-center font-medium text-white hover:opacity-90 disabled:opacity-50"
               >
                 {generating ? "Generating..." : "Generate Cover Letter"}
               </button>
@@ -207,28 +207,28 @@ ${name}`;
           </div>
 
           {profile && (
-            <div className="rounded-xl border border-emerald-100 bg-white p-6">
-              <h2 className="mb-2 text-lg font-semibold text-emerald-950">Your Profile</h2>
-              <p className="text-sm text-emerald-600">
+            <div className="rounded-xl glass-card p-6">
+              <h2 className="mb-2 text-lg font-semibold text-white">Your Profile</h2>
+              <p className="text-sm text-slate-400">
                 Used to personalize your cover letter
               </p>
               <div className="mt-4 space-y-2 text-sm">
-                <p><span className="font-medium">Name:</span> {profile.fullName || "Not set"}</p>
-                <p><span className="font-medium">Email:</span> {profile.email || "Not set"}</p>
-                <p><span className="font-medium">Headline:</span> {profile.headline || profile.experience || "Not set"}</p>
+                <p><span className="font-medium text-slate-300">Name:</span> {profile.fullName || "Not set"}</p>
+                <p><span className="font-medium text-slate-300">Email:</span> {profile.email || "Not set"}</p>
+                <p><span className="font-medium text-slate-300">Headline:</span> {profile.headline || profile.experience || "Not set"}</p>
               </div>
             </div>
           )}
         </div>
 
         <div>
-          <div className="rounded-xl border border-emerald-100 bg-white p-6">
+          <div className="rounded-xl glass-card p-6">
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-emerald-950">Your Cover Letter</h2>
+              <h2 className="text-lg font-semibold text-white">Your Cover Letter</h2>
               {coverLetter && (
                 <button
                   onClick={copyToClipboard}
-                  className="text-sm text-emerald-600 hover:text-emerald-800"
+                  className="text-sm text-emerald-400 hover:text-emerald-300"
                 >
                   Copy
                 </button>
@@ -236,23 +236,23 @@ ${name}`;
             </div>
 
             {coverLetter ? (
-              <div className="rounded-lg bg-stone-50 p-6">
-                <pre className="whitespace-pre-wrap text-sm text-emerald-800 font-sans">
+              <div className="rounded-lg bg-slate-800 p-6">
+                <pre className="whitespace-pre-wrap text-sm text-slate-300 font-sans">
                   {coverLetter}
                 </pre>
               </div>
             ) : (
-              <div className="flex h-64 items-center justify-center rounded-lg border-2 border-dashed border-emerald-200">
-                <p className="text-emerald-500">
+              <div className="flex h-64 items-center justify-center rounded-lg border-2 border-dashed border-slate-700">
+                <p className="text-slate-500">
                   Fill in the details and click generate
                 </p>
               </div>
             )}
           </div>
 
-          <div className="mt-4 rounded-xl border border-emerald-100 bg-amber-50 p-4">
-            <h3 className="font-semibold text-amber-800">Tips for a Great Cover Letter</h3>
-            <ul className="mt-2 space-y-1 text-sm text-amber-700">
+          <div className="mt-4 rounded-xl glass-card p-4">
+            <h3 className="font-semibold text-white">Tips for a Great Cover Letter</h3>
+            <ul className="mt-2 space-y-1 text-sm text-slate-400">
               <li>• Address it to a specific person when possible</li>
               <li>• Keep it to one page</li>
               <li>• Customize for each application</li>

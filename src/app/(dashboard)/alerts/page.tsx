@@ -126,7 +126,7 @@ export default function AlertsPage() {
   if (!isLoaded) {
     return (
       <div className="mx-auto max-w-4xl px-6 py-8">
-        <div className="text-emerald-800">Loading...</div>
+        <div className="text-slate-400">Loading...</div>
       </div>
     );
   }
@@ -135,59 +135,59 @@ export default function AlertsPage() {
     <div className="mx-auto max-w-4xl px-6 py-8">
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-emerald-950">Job Alerts</h1>
-          <p className="mt-2 text-emerald-700/70">
+          <h1 className="text-3xl font-bold text-white">Job Alerts</h1>
+          <p className="mt-2 text-slate-400">
             Get notified when new jobs match your criteria.
           </p>
         </div>
         <button
           onClick={() => setShowCreate(!showCreate)}
-          className="rounded-lg bg-emerald-800 px-4 py-2 text-white hover:bg-emerald-700"
+          className="rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-400 px-4 py-2 text-white hover:opacity-90"
         >
           {showCreate ? "Cancel" : "Create Alert"}
         </button>
       </div>
 
       {showCreate && (
-        <div className="mb-8 rounded-xl border border-emerald-100 bg-white p-6">
-          <h2 className="mb-4 text-lg font-semibold text-emerald-950">New Job Alert</h2>
+        <div className="mb-8 rounded-xl glass-card p-6">
+          <h2 className="mb-4 text-lg font-semibold text-white">New Job Alert</h2>
           <div className="grid gap-4 md:grid-cols-2">
             <div>
-              <label className="mb-1 block text-sm font-medium text-emerald-700">Alert Name *</label>
+              <label className="mb-1 block text-sm font-medium text-slate-400">Alert Name *</label>
               <input
                 type="text"
                 placeholder="e.g., Software Jobs in Lagos"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full rounded-lg border border-emerald-200 px-4 py-2 text-emerald-900 placeholder:text-emerald-400 focus:border-emerald-500 focus:outline-none"
+                className="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-white placeholder:text-slate-500 focus:border-emerald-500 focus:outline-none focus:ring-emerald-500/20"
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-emerald-700">Job Search *</label>
+              <label className="mb-1 block text-sm font-medium text-slate-400">Job Search *</label>
               <input
                 type="text"
                 placeholder="e.g., Software Engineer"
                 value={formData.searchQuery}
                 onChange={(e) => setFormData({ ...formData, searchQuery: e.target.value })}
-                className="w-full rounded-lg border border-emerald-200 px-4 py-2 text-emerald-900 placeholder:text-emerald-400 focus:border-emerald-500 focus:outline-none"
+                className="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-white placeholder:text-slate-500 focus:border-emerald-500 focus:outline-none focus:ring-emerald-500/20"
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-emerald-700">Location</label>
+              <label className="mb-1 block text-sm font-medium text-slate-400">Location</label>
               <input
                 type="text"
                 placeholder="e.g., Lagos, Nigeria"
                 value={formData.location}
                 onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                className="w-full rounded-lg border border-emerald-200 px-4 py-2 text-emerald-900 placeholder:text-emerald-400 focus:border-emerald-500 focus:outline-none"
+                className="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-white placeholder:text-slate-500 focus:border-emerald-500 focus:outline-none focus:ring-emerald-500/20"
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-emerald-700">Work Mode</label>
+              <label className="mb-1 block text-sm font-medium text-slate-400">Work Mode</label>
               <select
                 value={formData.workMode}
                 onChange={(e) => setFormData({ ...formData, workMode: e.target.value })}
-                className="w-full rounded-lg border border-emerald-200 px-4 py-2 text-emerald-900 focus:border-emerald-500 focus:outline-none"
+                className="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-white focus:border-emerald-500 focus:outline-none focus:ring-emerald-500/20"
               >
                 <option value="">Any</option>
                 <option value="Remote">Remote</option>
@@ -196,11 +196,11 @@ export default function AlertsPage() {
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-emerald-700">Seniority</label>
+              <label className="mb-1 block text-sm font-medium text-slate-400">Seniority</label>
               <select
                 value={formData.seniority}
                 onChange={(e) => setFormData({ ...formData, seniority: e.target.value })}
-                className="w-full rounded-lg border border-emerald-200 px-4 py-2 text-emerald-900 focus:border-emerald-500 focus:outline-none"
+                className="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-white focus:border-emerald-500 focus:outline-none focus:ring-emerald-500/20"
               >
                 <option value="">Any</option>
                 <option value="Entry-Level">Entry-Level</option>
@@ -209,11 +209,11 @@ export default function AlertsPage() {
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-emerald-700">Frequency</label>
+              <label className="mb-1 block text-sm font-medium text-slate-400">Frequency</label>
               <select
                 value={formData.alertFrequency}
                 onChange={(e) => setFormData({ ...formData, alertFrequency: e.target.value })}
-                className="w-full rounded-lg border border-emerald-200 px-4 py-2 text-emerald-900 focus:border-emerald-500 focus:outline-none"
+                className="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-white focus:border-emerald-500 focus:outline-none focus:ring-emerald-500/20"
               >
                 <option value="daily">Daily</option>
                 <option value="weekly">Weekly</option>
@@ -222,7 +222,7 @@ export default function AlertsPage() {
           </div>
           <button
             onClick={createSearch}
-            className="mt-4 w-full rounded-lg bg-emerald-800 py-2 text-white hover:bg-emerald-700"
+            className="mt-4 w-full rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-400 py-2 text-white hover:opacity-90"
           >
             Create Alert
           </button>
@@ -232,18 +232,18 @@ export default function AlertsPage() {
       {loading ? (
         <div className="space-y-4">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="animate-pulse rounded-xl border border-emerald-100 bg-white p-6">
-              <div className="h-6 w-1/3 rounded bg-emerald-100"></div>
+            <div key={i} className="animate-pulse rounded-xl glass-card p-6">
+              <div className="h-6 w-1/3 rounded bg-slate-700"></div>
             </div>
           ))}
         </div>
       ) : searches.length === 0 ? (
-        <div className="rounded-xl border border-emerald-100 bg-white p-12 text-center">
-          <h3 className="text-lg font-semibold text-emerald-950">No Job Alerts</h3>
-          <p className="mt-2 text-emerald-600">Create an alert to get notified about new jobs.</p>
+        <div className="rounded-xl glass-card p-12 text-center">
+          <h3 className="text-lg font-semibold text-white">No Job Alerts</h3>
+          <p className="mt-2 text-slate-400">Create an alert to get notified about new jobs.</p>
           <button
             onClick={() => setShowCreate(true)}
-            className="mt-4 text-emerald-600 hover:text-emerald-800"
+            className="mt-4 text-emerald-400 hover:text-emerald-300"
           >
             Create your first alert
           </button>
@@ -251,25 +251,25 @@ export default function AlertsPage() {
       ) : (
         <div className="space-y-4">
           {searches.map((search) => (
-            <div key={search.id} className="rounded-xl border border-emerald-100 bg-white p-6">
+            <div key={search.id} className="rounded-xl glass-card p-6">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-3">
-                    <h3 className="text-lg font-semibold text-emerald-950">{search.name}</h3>
+                    <h3 className="text-lg font-semibold text-white">{search.name}</h3>
                     <span className={`rounded-full px-2 py-0.5 text-xs ${
-                      search.alertEnabled ? "bg-emerald-100 text-emerald-700" : "bg-stone-100 text-stone-600"
+                      search.alertEnabled ? "bg-emerald-500/20 text-emerald-400" : "bg-slate-700 text-slate-400"
                     }`}>
                       {search.alertEnabled ? "Active" : "Paused"}
                     </span>
                   </div>
-                  <p className="mt-1 text-sm text-emerald-600">
-                    <span className="font-medium">{search.searchQuery}</span>
+                  <p className="mt-1 text-sm text-slate-400">
+                    <span className="font-medium text-slate-300">{search.searchQuery}</span>
                     {search.location && ` in ${search.location}`}
                   </p>
-                  <div className="mt-2 flex flex-wrap gap-2 text-xs text-emerald-500">
-                    {search.workMode && <span className="rounded bg-emerald-50 px-2 py-0.5">{search.workMode}</span>}
-                    {search.seniority && <span className="rounded bg-emerald-50 px-2 py-0.5">{search.seniority}</span>}
-                    <span className="rounded bg-amber-50 px-2 py-0.5">{search.alertFrequency}</span>
+                  <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-500">
+                    {search.workMode && <span className="rounded bg-slate-800 px-2 py-0.5">{search.workMode}</span>}
+                    {search.seniority && <span className="rounded bg-slate-800 px-2 py-0.5">{search.seniority}</span>}
+                    <span className="rounded bg-amber-500/20 px-2 py-0.5 text-amber-400">{search.alertFrequency}</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -280,17 +280,17 @@ export default function AlertsPage() {
                       onChange={(e) => toggleAlert(search.id, e.target.checked)}
                       className="peer sr-only"
                     />
-                    <div className="peer h-6 w-11 rounded-full bg-stone-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-stone-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-emerald-600 peer-checked:after:translate-x-full peer-checked:after:border-white"></div>
+                    <div className="peer h-6 w-11 rounded-full bg-slate-700 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-slate-600 after:bg-slate-500 after:transition-all after:content-[''] peer-checked:bg-emerald-600 peer-checked:after:translate-x-full peer-checked:after:border-white"></div>
                   </label>
                   <Link
                     href={`/jobs?search=${encodeURIComponent(search.searchQuery)}${search.location ? `&location=${encodeURIComponent(search.location)}` : ""}`}
-                    className="rounded-lg border border-emerald-200 px-3 py-1 text-sm text-emerald-700 hover:bg-emerald-50"
+                    className="rounded-lg border border-emerald-500/50 px-3 py-1 text-sm text-emerald-400 hover:bg-emerald-500/10"
                   >
                     Search
                   </Link>
                   <button
                     onClick={() => deleteSearch(search.id)}
-                    className="rounded-lg border border-red-200 px-3 py-1 text-sm text-red-600 hover:bg-red-50"
+                    className="rounded-lg border border-red-500/50 px-3 py-1 text-sm text-red-400 hover:bg-red-500/10"
                   >
                     Delete
                   </button>
@@ -301,9 +301,9 @@ export default function AlertsPage() {
         </div>
       )}
 
-      <div className="mt-8 rounded-xl border border-emerald-100 bg-amber-50 p-4">
-        <h3 className="font-semibold text-amber-800">How Job Alerts Work</h3>
-        <ul className="mt-2 space-y-1 text-sm text-amber-700">
+      <div className="mt-8 rounded-xl glass-card p-4">
+        <h3 className="font-semibold text-white">How Job Alerts Work</h3>
+        <ul className="mt-2 space-y-1 text-sm text-slate-400">
           <li>• We check for new jobs matching your criteria daily</li>
           <li>• You&apos;ll receive an email when new matching jobs are found</li>
           <li>• Toggle alerts on/off without losing your saved search</li>
