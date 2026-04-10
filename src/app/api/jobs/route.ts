@@ -138,8 +138,8 @@ function formatJob(raw: RawJob, sourceId: string, source: string, savedJobIds: s
   };
 }
 
-function getCountry(source: string, location: string): string {
-  const loc = location.toLowerCase();
+function getCountry(source: string, location: unknown): string {
+  const loc = String(location || "").toLowerCase();
   if (loc.includes("africa") || loc.includes("nigeria") || loc.includes("ghana") || loc.includes("kenya") || loc.includes("south africa")) {
     return "AFRICA";
   }
