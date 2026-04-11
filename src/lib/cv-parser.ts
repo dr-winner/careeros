@@ -1,7 +1,54 @@
 import fs from "fs";
 import path from "path";
-import { PDFParse } from "pdf-parse";
 import mammoth from "mammoth";
+
+async function extractTextFromPDF(buffer: Buffer): Promise<string> {
+  try {
+    const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs");
+    const pdfjs = pdfjsLib as unknown as {
+      getDocument: (options: {
+        data: Uint8Array;
+        useWorkerFetch: boolean;
+        isEvalSupported: boolean;
+        useSystemFonts: boolean;
+      }) => {
+        promise: Promise<{
+          numPages: number;
+          getPage: (page: number) => Promise<{
+            getTextContent: () => Promise<{
+              items: Array<{ str?: string }>;
+            }>;
+          }>;
+        }>;
+      };
+    };
+
+    const uint8Array = new Uint8Array(buffer);
+    const loadingTask = pdfjs.getDocument({
+      data: uint8Array,
+      useWorkerFetch: false,
+      isEvalSupported: false,
+      useSystemFonts: true,
+    });
+
+    const pdf = await loadingTask.promise;
+    const textParts: string[] = [];
+
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      const pageText = content.items
+        .map((item) => ("str" in item ? item.str : ""))
+        .join(" ");
+      textParts.push(pageText);
+    }
+
+    return textParts.join("\n");
+  } catch (error) {
+    console.error("PDF extraction error:", error);
+    return "";
+  }
+}
 
 export async function extractTextFromFile(
   filename: string,
@@ -11,9 +58,7 @@ export async function extractTextFromFile(
 
   if (mimeType === "application/pdf") {
     const dataBuffer = fs.readFileSync(filepath);
-    const parser = new PDFParse({ data: dataBuffer });
-    const data = await parser.getText();
-    return data.text;
+    return await extractTextFromPDF(dataBuffer);
   }
 
   if (
