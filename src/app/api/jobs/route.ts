@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getDbUserId } from "@/lib/auth";
-import { scrapeJobsForAPI } from "@/lib/scraper";
 
 interface Job {
   id: string;
@@ -291,6 +290,68 @@ async function fetchFromRise(query: string, savedJobIds: string[]): Promise<Job[
   return jobs;
 }
 
+async function fetchFromJooble(query: string, savedJobIds: string[]): Promise<Job[]> {
+  const jobs: Job[] = [];
+  const JOOBLE_API_KEY = process.env.JOOBLE_API_KEY;
+  
+  if (!JOOBLE_API_KEY) return [];
+  
+  const africanCountries = [
+    { name: "Ghana", code: "GH" },
+    { name: "Nigeria", code: "NG" },
+    { name: "Kenya", code: "KE" },
+    { name: "South Africa", code: "ZA" },
+  ];
+  
+  try {
+    for (const country of africanCountries) {
+      try {
+        const response = await fetch(`https://jooble.org/api/${JOOBLE_API_KEY}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            keywords: query,
+            location: country.name,
+            radius: 50,
+            page: 1,
+          }),
+        });
+        
+        const data = await response.json();
+        
+        if (data.jobs && Array.isArray(data.jobs)) {
+          for (const job of data.jobs.slice(0, 20)) {
+            jobs.push({
+              id: `jooble-${job.id}`,
+              title: job.title || "Unknown Position",
+              companyName: job.company || "Unknown Company",
+              location: job.location || country.name,
+              country: country.code,
+              workMode: job.type?.toLowerCase().includes("remote") ? "Remote" : "Not specified",
+              seniorityLevel: detectSeniority(job.title || ""),
+              employmentType: job.type || "Full-time",
+              description: job.snippet?.replace(/<[^>]*>/g, "").substring(0, 500) || "",
+              requirements: "See job posting for details",
+              postedAt: job.updated ? new Date(job.updated).toISOString() : new Date().toISOString(),
+              salaryMin: undefined,
+              salaryMax: undefined,
+              isSaved: savedJobIds.includes(`jooble-${job.id}`),
+              applicationUrl: job.link || "#",
+              source: "jooble",
+            });
+          }
+        }
+      } catch (error) {
+        console.error(`Jooble ${country.name} error:`, error);
+      }
+    }
+  } catch (error) {
+    console.error("Jooble error:", error);
+  }
+  
+  return jobs;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const userId = await getDbUserId();
@@ -324,7 +385,7 @@ export async function GET(request: NextRequest) {
       fetchFromRemotive(query, savedJobIds),
       fetchFromArbeitnow(savedJobIds),
       fetchFromRise(query, savedJobIds),
-      scrapeJobsForAPI(query).then(jobs => jobs.map(j => ({ ...j, isSaved: savedJobIds.includes(j.id) }))),
+      fetchFromJooble(query, savedJobIds),
     ];
 
     const results = await Promise.allSettled(promises);
@@ -355,7 +416,7 @@ export async function GET(request: NextRequest) {
       remotive: allJobs.filter(j => j.source === "remotive").length,
       arbeitnow: allJobs.filter(j => j.source === "arbeitnow").length,
       rise: allJobs.filter(j => j.source === "rise").length,
-      scraped: allJobs.filter(j => j.source.startsWith("scraped-")).length,
+      jooble: allJobs.filter(j => j.source === "jooble").length,
     };
 
     return NextResponse.json({
