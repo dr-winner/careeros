@@ -175,18 +175,46 @@ async function extractTextFromDOCX(buffer: Buffer): Promise<string> {
 
 async function extractTextFromPDF(buffer: Buffer): Promise<string> {
   try {
-    const pdfParseModule = await import("pdf-parse");
-    const PDFParse = (
-      pdfParseModule as {
-        PDFParse: new (options: { data: Buffer }) => {
-          getText: () => Promise<{ text: string }>;
-        };
-      }
-    ).PDFParse;
+    const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs");
+    const pdfjs = pdfjsLib as unknown as {
+      getDocument: (options: {
+        data: Uint8Array;
+        useWorkerFetch: boolean;
+        isEvalSupported: boolean;
+        useSystemFonts: boolean;
+      }) => {
+        promise: Promise<{
+          numPages: number;
+          getPage: (page: number) => Promise<{
+            getTextContent: () => Promise<{
+              items: Array<{ str?: string }>;
+            }>;
+          }>;
+        }>;
+      };
+    };
 
-    const parser = new PDFParse({ data: buffer });
-    const data = await parser.getText();
-    return data.text || "";
+    const uint8Array = new Uint8Array(buffer);
+    const loadingTask = pdfjs.getDocument({
+      data: uint8Array,
+      useWorkerFetch: false,
+      isEvalSupported: false,
+      useSystemFonts: true,
+    });
+
+    const pdf = await loadingTask.promise;
+    const textParts: string[] = [];
+
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      const pageText = content.items
+        .map((item) => ("str" in item ? item.str : ""))
+        .join(" ");
+      textParts.push(pageText);
+    }
+
+    return textParts.join("\n");
   } catch (error) {
     console.error("PDF extraction error:", error);
     return "";
