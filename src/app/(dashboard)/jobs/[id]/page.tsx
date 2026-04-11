@@ -36,6 +36,8 @@ export default function JobDetailPage() {
   const [missingSkills, setMissingSkills] = useState<string[]>([]);
   const [cvAdvice, setCvAdvice] = useState<string>("");
   const [analyzing, setAnalyzing] = useState(false);
+  const [hasResume, setHasResume] = useState(false);
+  const [aiEnabled, setAiEnabled] = useState(false);
 
   const jobId = useMemo(() => {
     if (!params?.id) return "";
@@ -62,6 +64,8 @@ export default function JobDetailPage() {
           setMatchedSkills(data.analysis.matchedSkills || []);
           setMissingSkills(data.analysis.missingSkills || []);
           setCvAdvice(data.analysis.cvAdvice || "");
+          setHasResume(data.analysis.hasResume);
+          setAiEnabled(data.analysis.aiEnabled);
         }
       } catch (error) {
         console.error("Error analyzing fit:", error);
@@ -418,7 +422,55 @@ export default function JobDetailPage() {
         {analyzing && (
           <div className="mt-6 flex items-center gap-3 text-slate-400">
             <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-600 border-t-emerald-500" />
-            <span>Analyzing your fit for this role...</span>
+            <span>Analyzing your CV against this job...</span>
+          </div>
+        )}
+
+        {!userId && (
+          <div className="mt-6 rounded-xl border border-slate-700 bg-slate-800/50 p-6">
+            <div className="flex items-start gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/20">
+                <svg className="h-6 w-6 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-white">Sign in for personalized analysis</h3>
+                <p className="mt-1 text-sm text-slate-400">
+                  Create an account to upload your CV and get AI-powered job fit analysis.
+                </p>
+                <Link
+                  href="/sign-in"
+                  className="mt-3 inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-400 px-4 py-2 text-sm font-medium text-white hover:opacity-90"
+                >
+                  Sign In
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {userId && !hasResume && !analyzing && fitScore === null && (
+          <div className="mt-6 rounded-xl border border-amber-500/30 bg-amber-500/10 p-6">
+            <div className="flex items-start gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-500/20">
+                <svg className="h-6 w-6 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-amber-400">Upload your CV for personalized analysis</h3>
+                <p className="mt-1 text-sm text-slate-400">
+                  Get match scores, skill gaps, and AI-powered advice tailored to this job.
+                </p>
+                <Link
+                  href="/resumes"
+                  className="mt-3 inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-amber-500 to-amber-400 px-4 py-2 text-sm font-medium text-white hover:opacity-90"
+                >
+                  Upload CV
+                </Link>
+              </div>
+            </div>
           </div>
         )}
 
@@ -486,6 +538,28 @@ export default function JobDetailPage() {
                 </div>
               </div>
             )}
+
+            <div className="mt-4 flex items-center justify-between border-t border-slate-700 pt-4">
+              <div className="flex items-center gap-2">
+                <p className="text-xs text-slate-500">
+                  {hasResume ? "CV-based analysis" : "Profile-based analysis"}
+                </p>
+                {aiEnabled && (
+                  <span className="rounded bg-purple-500/20 px-2 py-0.5 text-xs text-purple-400">
+                    AI-powered
+                  </span>
+                )}
+              </div>
+              <button
+                onClick={() => job && analyzeFit(job)}
+                className="flex items-center gap-1 text-sm text-emerald-400 hover:text-emerald-300"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Re-analyze
+              </button>
+            </div>
           </div>
         )}
 
