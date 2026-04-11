@@ -1,4 +1,4 @@
-import WaitlistForm from "./waitlist-form";
+import Link from "next/link";
 
 export default function Hero() {
   return (
@@ -28,7 +28,7 @@ export default function Hero() {
               <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
             </span>
             <span className="text-sm font-medium text-emerald-300">
-              Launching 2026 — Join the movement
+              Live now — Start your free trial
             </span>
           </div>
         </div>
@@ -44,22 +44,36 @@ export default function Hero() {
           improve — before you waste time applying.
         </p>
 
-        <div className="animate-fade-up delay-300 mt-12">
-          <WaitlistForm />
+        <div className="animate-fade-up delay-300 mt-12 flex items-center justify-center gap-4">
+          <Link
+            href="/sign-up"
+            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 px-8 py-4 text-lg font-semibold text-white shadow-lg shadow-emerald-500/25 transition-all hover:shadow-emerald-500/40 hover:scale-105"
+          >
+            Get Started Free
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+            </svg>
+          </Link>
+          <Link
+            href="/sign-in"
+            className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/5 px-8 py-4 text-lg font-medium text-white backdrop-blur-sm transition-all hover:bg-white/10"
+          >
+            Sign In
+          </Link>
         </div>
 
         <p className="animate-fade-up delay-400 mt-6 flex items-center justify-center gap-2 text-sm text-slate-500">
           <svg className="h-4 w-4 text-emerald-400" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
           </svg>
-          <span>Free to join. No credit card required.</span>
+          <span>Free to start. No credit card required.</span>
         </p>
 
         <div className="animate-fade-up delay-500 mt-20">
           <div className="glass inline-flex items-center gap-8 rounded-2xl px-10 py-5">
             <div className="text-center">
-              <div className="text-3xl font-bold text-white">2,847+</div>
-              <div className="text-xs text-slate-400 mt-1">On the waitlist</div>
+              <div className="text-3xl font-bold text-white">79+</div>
+              <div className="text-xs text-slate-400 mt-1">Jobs aggregated</div>
             </div>
             <div className="h-12 w-px bg-white/10" />
             <div className="text-center">

@@ -66,10 +66,9 @@ export default function Stats() {
             <div className="mt-12 rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-sm">
               <p className="text-slate-300">
                 <span className="font-semibold text-white">
-                  Early access users see results in weeks, not months.
+                  Join thousands of African job seekers
                 </span>{" "}
-                Join the waitlist and be among the first to transform your job
-                search.
+                who are already using CareerOS to transform their job search.
               </p>
             </div>
           </div>

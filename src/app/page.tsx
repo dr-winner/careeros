@@ -67,7 +67,7 @@ export default function Home() {
           
           <div className="mt-8 pt-8 border-t border-slate-800/50 text-center">
             <p className="text-sm text-slate-500">
-              Built for African job seekers. Launching 2026.
+              Built for African job seekers. Live and free.
             </p>
             <p className="mt-2 text-xs text-slate-600">
               &copy; {new Date().getFullYear()} CareerOS. All rights reserved.

@@ -1,4 +1,4 @@
-import WaitlistForm from "./waitlist-form";
+import Link from "next/link";
 
 export default function FinalCTA() {
   return (
@@ -9,12 +9,12 @@ export default function FinalCTA() {
           <div className="absolute right-0 bottom-0 h-[200px] w-[200px] rounded-full bg-purple-500/20 blur-[60px]" />
 
           <div className="relative z-10 text-center">
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-cyan-400/30 bg-cyan-400/10 px-4 py-1.5 text-sm text-cyan-300">
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-4 py-1.5 text-sm text-emerald-300">
               <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-cyan-400 opacity-75" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-cyan-400" />
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
               </span>
-              Limited early access
+              Live and free
             </div>
 
             <h2 className="text-3xl font-bold text-white sm:text-4xl md:text-5xl">
@@ -26,12 +26,26 @@ export default function FinalCTA() {
             </h2>
 
             <p className="mx-auto mt-4 max-w-xl text-lg text-slate-300">
-              Join the waitlist and be among the first to experience CareerOS
-              when we launch. No spam, just the good stuff.
+              Join thousands of African job seekers who are already using CareerOS
+              to find better fits and land more interviews.
             </p>
 
-            <div className="mt-10">
-              <WaitlistForm />
+            <div className="mt-10 flex items-center justify-center gap-4">
+              <Link
+                href="/sign-up"
+                className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 px-8 py-4 text-lg font-semibold text-white shadow-lg shadow-emerald-500/25 transition-all hover:shadow-emerald-500/40 hover:scale-105"
+              >
+                Get Started Free
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                </svg>
+              </Link>
+              <Link
+                href="/sign-in"
+                className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/5 px-6 py-4 text-lg font-medium text-white backdrop-blur-sm transition-all hover:bg-white/10"
+              >
+                Sign In
+              </Link>
             </div>
 
             <div className="mt-8 flex flex-wrap items-center justify-center gap-6 text-sm text-slate-500">
