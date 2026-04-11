@@ -1,63 +1,113 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
+import { ZodError } from "zod";
 import { prisma } from "@/lib/db";
 import { generateWithFallback } from "@/lib/ai";
+import { coverLetterRequestSchema, getZodErrorMessage } from "@/lib/validation";
+
+async function findPreferredResume(userId: string) {
+  const include = {
+    skills: true,
+    experiences: {
+      orderBy: [
+        { endDate: "desc" as const },
+        { startDate: "desc" as const },
+        { id: "desc" as const },
+      ],
+      take: 3,
+    },
+  };
+
+  const primaryResume = await prisma.resume.findFirst({
+    where: { userId, isPrimary: true },
+    include,
+  });
+
+  if (primaryResume) {
+    return {
+      resume: primaryResume,
+      usedPrimaryResume: true,
+    };
+  }
+
+  const latestResume = await prisma.resume.findFirst({
+    where: { userId },
+    include,
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+  });
+
+  return {
+    resume: latestResume,
+    usedPrimaryResume: false,
+  };
+}
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId } = await auth();
+    const { userId: clerkId } = await auth();
 
-    if (!userId) {
+    if (!clerkId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (!process.env.OPENAI_API_KEY && !process.env.DEEPSEEK_API_KEY) {
+    if (
+      !process.env.OPENAI_API_KEY &&
+      !process.env.DEEPSEEK_API_KEY &&
+      !process.env.GROQ_API_KEY
+    ) {
       return NextResponse.json({ error: "AI not configured" }, { status: 500 });
     }
 
-    const { jobTitle, companyName, jobDescription, recipientName } = await request.json();
-
-    if (!jobTitle || !companyName) {
-      return NextResponse.json(
-        { error: "Job title and company name required" },
-        { status: 400 }
-      );
-    }
+    const payload = coverLetterRequestSchema.parse(await request.json());
 
     const user = await prisma.user.findUnique({
-      where: { clerkId: userId },
-      include: {
-        resumes: {
-          where: { isPrimary: true },
-          take: 1,
-          include: { skills: true, experiences: true },
-        },
-      },
+      where: { clerkId },
     });
 
-    const userName = user?.fullName || "Candidate";
-    const userExperience = user?.experience || "";
-    const userHeadline = user?.headline || "";
-    const parsedResume = user?.resumes[0]?.parsedText || "";
-    const skillsList = user?.resumes[0]?.skills || [];
-    const resumeSkills = skillsList
-      .map((s: { skillName: string }) => s.skillName)
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    const { resume: selectedResume, usedPrimaryResume } =
+      await findPreferredResume(user.id);
+
+    const userName = user.fullName || "Candidate";
+    const userExperience = user.experience?.trim() || "";
+    const userHeadline = user.headline?.trim() || "";
+    const parsedResume = selectedResume?.parsedText?.trim() || "";
+
+    const resumeSkills = (selectedResume?.skills ?? [])
+      .map((skill) => skill.skillName?.trim())
+      .filter((skill): skill is string => !!skill)
       .join(", ");
 
-    const recentRole = user?.resumes[0]?.experiences?.[0];
+    const recentRole = selectedResume?.experiences?.[0];
+    const experienceSummary =
+      userExperience ||
+      parsedResume.slice(0, 800) ||
+      "Relevant professional experience";
+
     const candidateContext = `
 CANDIDATE DATA (use ONLY this information):
 - Name: ${userName}
 - Professional Headline: ${userHeadline || "Professional"}
-- Experience Summary: ${userExperience || parsedResume.substring(0, 800) || "Relevant professional experience"}
+- Experience Summary: ${experienceSummary}
 - Key Skills: ${resumeSkills || "Strong professional skills"}
-${recentRole ? `- Current/Most Recent Role: ${recentRole.title}${recentRole.company ? ` at ${recentRole.company}` : ""}` : ""}`;
+${
+  recentRole
+    ? `- Current/Most Recent Role: ${recentRole.title}${recentRole.company ? ` at ${recentRole.company}` : ""}`
+    : ""
+}
+`.trim();
 
-    const prompt = `Write a professional cover letter for a ${jobTitle} position at ${companyName}.
+    const prompt = `Write a professional cover letter for a ${payload.jobTitle} position at ${payload.companyName}.
 ${candidateContext}
 
 JOB DETAILS:
-${jobDescription || `The role of ${jobTitle} at ${companyName}. ${companyName} is seeking a qualified candidate.`}
+${
+  payload.jobDescription ||
+  `The role of ${payload.jobTitle} at ${payload.companyName}. ${payload.companyName} is seeking a qualified candidate.`
+}
 
 WRITING RULES:
 1. Start with a hook - NOT "I am writing to express my interest..."
@@ -67,7 +117,7 @@ WRITING RULES:
 5. Sound human - like someone actually excited about THIS job
 6. Do NOT use generic phrases like "team player", "hard worker", "detail-oriented"
 7. Do NOT invent skills or experiences not in the candidate data
-${recipientName ? `8. Address to: ${recipientName}` : ""}
+${payload.recipientName ? `8. Address to: ${payload.recipientName}` : ""}
 
 Write ONLY the cover letter. No preamble or explanation.`;
 
@@ -79,29 +129,50 @@ Write ONLY the cover letter. No preamble or explanation.`;
 
 Do NOT write generic cover letters that could apply to any job or person.`;
 
-    const { text: coverLetter, model } = await generateWithFallback(prompt, systemPrompt, {
-      maxTokens: 600,
-      temperature: 0.65,
-    });
+    const { text: coverLetter, model } = await generateWithFallback(
+      prompt,
+      systemPrompt,
+      {
+        maxTokens: 600,
+        temperature: 0.65,
+      },
+    );
 
-    const wordCount = coverLetter.split(/\s+/).length;
-    const hasGenericPhrases = /I am writing to express (my interest|this letter)/i.test(coverLetter);
-    
+    const wordCount = coverLetter.trim().split(/\s+/).filter(Boolean).length;
+    const hasGenericPhrases =
+      /I am writing to express (my interest|this letter)/i.test(coverLetter);
+
     if (wordCount > 400 || hasGenericPhrases) {
-      console.warn("Cover letter may be too generic or long, consider regenerating");
+      console.warn("Cover letter output may be too generic or too long", {
+        wordCount,
+        hasGenericPhrases,
+        model,
+      });
     }
 
     return NextResponse.json({
       success: true,
       coverLetter,
       model,
-      stats: { wordCount, model },
+      stats: {
+        wordCount,
+        model,
+        usedPrimaryResume,
+        usedAnyResume: !!selectedResume,
+      },
     });
   } catch (error) {
+    if (error instanceof ZodError) {
+      return NextResponse.json(
+        { error: getZodErrorMessage(error) },
+        { status: 400 },
+      );
+    }
+
     console.error("Error generating cover letter:", error);
     return NextResponse.json(
       { error: "Failed to generate cover letter" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

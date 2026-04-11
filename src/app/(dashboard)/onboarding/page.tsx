@@ -7,16 +7,37 @@ import { toast } from "sonner";
 import Image from "next/image";
 
 const POPULAR_SKILLS = [
-  "JavaScript", "TypeScript", "React", "Node.js", "Python", "Java",
-  "SQL", "PostgreSQL", "AWS", "Docker", "Git", "Figma",
-  "Excel", "PowerPoint", "Communication", "Leadership"
+  "JavaScript",
+  "TypeScript",
+  "React",
+  "Node.js",
+  "Python",
+  "Java",
+  "SQL",
+  "PostgreSQL",
+  "AWS",
+  "Docker",
+  "Git",
+  "Figma",
+  "Excel",
+  "PowerPoint",
+  "Communication",
+  "Leadership",
 ];
 
 const ROLE_SUGGESTIONS = [
-  "Software Developer", "Frontend Developer", "Backend Developer",
-  "Full Stack Developer", "Data Analyst", "Data Scientist",
-  "UX/UI Designer", "Product Manager", "DevOps Engineer",
-  "Business Analyst", "Marketing Manager", "Sales Representative"
+  "Software Developer",
+  "Frontend Developer",
+  "Backend Developer",
+  "Full Stack Developer",
+  "Data Analyst",
+  "Data Scientist",
+  "UX/UI Designer",
+  "Product Manager",
+  "DevOps Engineer",
+  "Business Analyst",
+  "Marketing Manager",
+  "Sales Representative",
 ];
 
 export default function OnboardingPage() {
@@ -41,24 +62,25 @@ export default function OnboardingPage() {
       router.push("/");
     }
     if (user) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        fullName: user.firstName && user.lastName 
-          ? `${user.firstName} ${user.lastName}` 
-          : user.firstName || prev.fullName,
+        fullName:
+          user.firstName && user.lastName
+            ? `${user.firstName} ${user.lastName}`
+            : user.firstName || prev.fullName,
       }));
     }
   }, [isLoaded, userId, router, user]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+  ) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const toggleSkill = (skill: string) => {
-    setSelectedSkills(prev =>
-      prev.includes(skill)
-        ? prev.filter(s => s !== skill)
-        : [...prev, skill]
+    setSelectedSkills((prev) =>
+      prev.includes(skill) ? prev.filter((s) => s !== skill) : [...prev, skill],
     );
   };
 
@@ -78,7 +100,6 @@ export default function OnboardingPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...formData,
-          experience: selectedSkills.length > 0 ? selectedSkills.join(", ") : formData.experience,
         }),
       });
 
@@ -126,20 +147,22 @@ export default function OnboardingPage() {
                     s.num < step
                       ? "bg-emerald-500 text-white"
                       : s.num === step
-                      ? "bg-gradient-to-r from-emerald-500 to-emerald-400 text-white shadow-lg shadow-emerald-500/25"
-                      : "bg-slate-800 text-slate-400"
+                        ? "bg-gradient-to-r from-emerald-500 to-emerald-400 text-white shadow-lg shadow-emerald-500/25"
+                        : "bg-slate-800 text-slate-400"
                   }`}
                 >
                   {s.num < step ? "✓" : s.num}
                 </div>
                 {i < steps.length - 1 && (
-                  <div className={`h-1 w-12 ${s.num < step ? "bg-emerald-500" : "bg-slate-800"}`} />
+                  <div
+                    className={`h-1 w-12 ${s.num < step ? "bg-emerald-500" : "bg-slate-800"}`}
+                  />
                 )}
               </div>
             ))}
           </div>
           <div className="mt-4 flex justify-between text-sm font-medium">
-            {steps.map(s => (
+            {steps.map((s) => (
               <span
                 key={s.num}
                 className={s.num === step ? "text-white" : "text-slate-500"}
@@ -153,14 +176,18 @@ export default function OnboardingPage() {
         <div className="rounded-2xl glass-card p-8">
           {step === 1 && (
             <div>
-              <h2 className="text-2xl font-bold text-white">Welcome to CareerOS! 👋</h2>
+              <h2 className="text-2xl font-bold text-white">
+                Welcome to CareerOS! 👋
+              </h2>
               <p className="mt-2 text-slate-400">
                 Let&apos;s set up your profile in a few quick steps.
               </p>
 
               <div className="mt-8 space-y-5">
                 <div>
-                  <label className="block text-sm font-medium text-slate-300">Full Name</label>
+                  <label className="block text-sm font-medium text-slate-300">
+                    Full Name
+                  </label>
                   <input
                     type="text"
                     name="fullName"
@@ -172,7 +199,9 @@ export default function OnboardingPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-300">Professional Headline</label>
+                  <label className="block text-sm font-medium text-slate-300">
+                    Professional Headline
+                  </label>
                   <input
                     type="text"
                     name="headline"
@@ -184,7 +213,9 @@ export default function OnboardingPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-300">Country</label>
+                  <label className="block text-sm font-medium text-slate-300">
+                    Country
+                  </label>
                   <select
                     name="country"
                     value={formData.country}
@@ -212,9 +243,12 @@ export default function OnboardingPage() {
 
           {step === 2 && (
             <div>
-              <h2 className="text-2xl font-bold text-white">What are your skills?</h2>
+              <h2 className="text-2xl font-bold text-white">
+                What are your skills?
+              </h2>
               <p className="mt-2 text-slate-400">
-                Select the skills you have. We&apos;ll match you with relevant jobs.
+                Select the skills you have. We&apos;ll match you with relevant
+                jobs.
               </p>
 
               <div className="mt-6 flex flex-wrap gap-2">
@@ -234,7 +268,8 @@ export default function OnboardingPage() {
               </div>
 
               <p className="mt-4 text-sm text-slate-500">
-                {selectedSkills.length} skill{selectedSkills.length !== 1 ? "s" : ""} selected
+                {selectedSkills.length} skill
+                {selectedSkills.length !== 1 ? "s" : ""} selected
               </p>
 
               <div className="mt-8 flex gap-3">
@@ -256,21 +291,41 @@ export default function OnboardingPage() {
 
           {step === 3 && (
             <div>
-              <h2 className="text-2xl font-bold text-white">Experience Level</h2>
+              <h2 className="text-2xl font-bold text-white">
+                Experience Level
+              </h2>
               <p className="mt-2 text-slate-400">
                 Where are you in your career journey?
               </p>
 
               <div className="mt-6 space-y-3">
                 {[
-                  { value: "Student / Just graduated", icon: "🎓", desc: "Still in school or recently graduated" },
-                  { value: "0-2 years experience", icon: "🌱", desc: "Early career, building skills" },
-                  { value: "3-5 years experience", icon: "🚀", desc: "Mid-level, ready for bigger challenges" },
-                  { value: "5+ years experience", icon: "⭐", desc: "Senior level, leadership roles" },
+                  {
+                    value: "Student / Just graduated",
+                    icon: "🎓",
+                    desc: "Still in school or recently graduated",
+                  },
+                  {
+                    value: "0-2 years experience",
+                    icon: "🌱",
+                    desc: "Early career, building skills",
+                  },
+                  {
+                    value: "3-5 years experience",
+                    icon: "🚀",
+                    desc: "Mid-level, ready for bigger challenges",
+                  },
+                  {
+                    value: "5+ years experience",
+                    icon: "⭐",
+                    desc: "Senior level, leadership roles",
+                  },
                 ].map((exp) => (
                   <button
                     key={exp.value}
-                    onClick={() => setFormData({ ...formData, experience: exp.value })}
+                    onClick={() =>
+                      setFormData({ ...formData, experience: exp.value })
+                    }
                     className={`w-full rounded-xl border-2 p-4 text-left transition-all ${
                       formData.experience === exp.value
                         ? "border-emerald-500 bg-emerald-500/10 shadow-lg"
@@ -280,8 +335,12 @@ export default function OnboardingPage() {
                     <div className="flex items-center gap-3">
                       <span className="text-2xl">{exp.icon}</span>
                       <div>
-                        <span className="block font-semibold text-white">{exp.value}</span>
-                        <span className="text-sm text-slate-400">{exp.desc}</span>
+                        <span className="block font-semibold text-white">
+                          {exp.value}
+                        </span>
+                        <span className="text-sm text-slate-400">
+                          {exp.desc}
+                        </span>
                       </div>
                     </div>
                   </button>
@@ -308,7 +367,9 @@ export default function OnboardingPage() {
 
           {step === 4 && (
             <div>
-              <h2 className="text-2xl font-bold text-white">What&apos;s your target role?</h2>
+              <h2 className="text-2xl font-bold text-white">
+                What&apos;s your target role?
+              </h2>
               <p className="mt-2 text-slate-400">
                 We&apos;ll prioritize jobs that match your career goals.
               </p>
@@ -317,7 +378,9 @@ export default function OnboardingPage() {
                 {ROLE_SUGGESTIONS.map((role) => (
                   <button
                     key={role}
-                    onClick={() => setFormData({ ...formData, desiredRole: role })}
+                    onClick={() =>
+                      setFormData({ ...formData, desiredRole: role })
+                    }
                     className={`rounded-xl border-2 p-3 text-sm font-medium transition-all ${
                       formData.desiredRole === role
                         ? "border-emerald-500 bg-emerald-500/10 text-white"
@@ -330,7 +393,9 @@ export default function OnboardingPage() {
               </div>
 
               <div className="mt-6">
-                <label className="block text-sm font-medium text-slate-300">Or type your own</label>
+                <label className="block text-sm font-medium text-slate-300">
+                  Or type your own
+                </label>
                 <input
                   type="text"
                   name="desiredRole"

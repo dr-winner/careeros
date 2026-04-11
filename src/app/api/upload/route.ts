@@ -1,41 +1,113 @@
 import { NextRequest, NextResponse } from "next/server";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
+import { mkdir, writeFile } from "fs/promises";
 import { existsSync } from "fs";
-import { auth } from "@clerk/nextjs/server";
+import path from "path";
 import { clerkClient } from "@clerk/nextjs/server";
+import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import { syncClerkUserToDb } from "@/lib/user";
+import { getDbUser } from "@/lib/auth";
+import { z } from "zod";
 
-const ALLOWED_TYPES = [
+const ALLOWED_TYPES = new Set([
   "application/msword",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-];
+  "application/pdf",
+]);
 
 const MAX_SIZE = 5 * 1024 * 1024;
 
-function parseCVText(text: string) {
-  const lines = text.split("\n").map((l: string) => l.trim()).filter(Boolean);
+const uploadSchema = z.object({
+  file: z
+    .instanceof(File)
+    .refine((file) => file.size > 0, "File is required")
+    .refine(
+      (file) => ALLOWED_TYPES.has(file.type),
+      "Only PDF and Word documents are allowed",
+    )
+    .refine((file) => file.size <= MAX_SIZE, "File size must be less than 5MB"),
+});
+
+type ParsedResumeData = {
+  skills: string[];
+  experience: { title: string; company: string | null }[];
+  education: { institution: string; degree: string | null }[];
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+};
+
+function sanitizeFilenamePart(value: string): string {
+  return value.replace(/[^a-zA-Z0-9._-]/g, "-");
+}
+
+function getSafeExtension(file: File): string {
+  const fromName = file.name.split(".").pop()?.toLowerCase();
+
+  if (fromName && ["pdf", "doc", "docx"].includes(fromName)) {
+    return fromName;
+  }
+
+  if (file.type === "application/pdf") return "pdf";
+  if (file.type === "application/msword") return "doc";
+  return "docx";
+}
+
+function parseCVText(text: string): ParsedResumeData {
+  const lines = text
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+
   const skills: string[] = [];
   const experience: { title: string; company: string | null }[] = [];
   const education: { institution: string; degree: string | null }[] = [];
 
   const skillKeywords = [
-    "javascript", "typescript", "react", "node", "python", "java", "c++", "c#",
-    "html", "css", "sql", "mongodb", "postgresql", "aws", "docker", "kubernetes",
-    "git", "github", "figma", "photoshop", "excel", "word", "powerpoint",
-    "communication", "leadership", "teamwork", "problem solving", "analytical",
-    "project management", "agile", "scrum", "machine learning", "data analysis",
+    "javascript",
+    "typescript",
+    "react",
+    "node",
+    "python",
+    "java",
+    "c++",
+    "c#",
+    "html",
+    "css",
+    "sql",
+    "mongodb",
+    "postgresql",
+    "aws",
+    "docker",
+    "kubernetes",
+    "git",
+    "github",
+    "figma",
+    "photoshop",
+    "excel",
+    "word",
+    "powerpoint",
+    "communication",
+    "leadership",
+    "teamwork",
+    "problem solving",
+    "analytical",
+    "project management",
+    "agile",
+    "scrum",
+    "machine learning",
+    "data analysis",
   ];
 
   for (const line of lines) {
     const lowerLine = line.toLowerCase();
-    
-    if (skillKeywords.some((s: string) => lowerLine.includes(s))) {
-      const words = line.split(/[,@|]/).map((p: string) => p.trim());
-      for (const word of words) {
-        if (word.length > 2 && word.length < 30 && !skills.includes(word)) {
-          skills.push(word);
+
+    if (skillKeywords.some((keyword) => lowerLine.includes(keyword))) {
+      const parts = line.split(/[,@|/]/).map((part) => part.trim());
+
+      for (const part of parts) {
+        if (part.length > 2 && part.length < 40 && !skills.includes(part)) {
+          skills.push(part);
         }
       }
     }
@@ -52,16 +124,22 @@ function parseCVText(text: string) {
   ];
 
   for (const line of lines) {
-    if (experiencePatterns.some((p: RegExp) => p.test(line)) && line.length < 100) {
-      const parts = line.split(/at|@|,|-/).map((p: string) => p.trim());
+    if (
+      experiencePatterns.some((pattern) => pattern.test(line)) &&
+      line.length < 120
+    ) {
+      const parts = line.split(/ at | @ |,| - /i).map((part) => part.trim());
       experience.push({
         title: parts[0] || line,
         company: parts[1] || null,
       });
     }
 
-    if (educationPatterns.some((p: RegExp) => p.test(line)) && line.length < 100) {
-      const parts = line.split(/,|-/).map((p: string) => p.trim());
+    if (
+      educationPatterns.some((pattern) => pattern.test(line)) &&
+      line.length < 120
+    ) {
+      const parts = line.split(/,| - /).map((part) => part.trim());
       education.push({
         institution: parts[0] || line,
         degree: parts[1] || null,
@@ -70,83 +148,105 @@ function parseCVText(text: string) {
   }
 
   const emailMatch = text.match(/[\w.-]+@[\w.-]+\.\w+/);
-  const phoneMatch = text.match(/[\+]?[\d\s-]{10,}/);
-  const nameMatch = text.match(/^([A-Z][a-z]+\s+[A-Z][a-z]+)/m);
+  const phoneMatch = text.match(/[\+]?[\d\s()-]{10,}/);
+  const nameMatch = text.match(/^([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})$/m);
 
   return {
     skills: [...new Set(skills)].slice(0, 15),
     experience: experience.slice(0, 5),
     education: education.slice(0, 3),
     name: nameMatch ? nameMatch[1] : null,
-    email: emailMatch ? emailMatch[0] : null,
-    phone: phoneMatch ? phoneMatch[0].replace(/\s/g, "") : null,
+    email: emailMatch ? emailMatch[0].toLowerCase() : null,
+    phone: phoneMatch ? phoneMatch[0].replace(/[^\d+]/g, "") : null,
   };
 }
 
 async function extractTextFromDOCX(buffer: Buffer): Promise<string> {
   try {
     const mammoth = await import("mammoth");
-    const mammothFn = mammoth.default || mammoth;
-    const result = await mammothFn.extractRawText({ buffer });
-    return result.value;
+    const mammothModule = mammoth.default || mammoth;
+    const result = await mammothModule.extractRawText({ buffer });
+    return result.value || "";
   } catch (error) {
     console.error("Text extraction error:", error);
     return "";
   }
 }
 
-export async function POST(request: NextRequest) {
+async function extractTextFromPDF(buffer: Buffer): Promise<string> {
   try {
-    const { userId } = await auth();
+    const pdfParseModule = await import("pdf-parse");
+    const PDFParse = (
+      pdfParseModule as {
+        PDFParse: new (options: { data: Buffer }) => {
+          getText: () => Promise<{ text: string }>;
+        };
+      }
+    ).PDFParse;
 
-    if (!userId) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    const parser = new PDFParse({ data: buffer });
+    const data = await parser.getText();
+    return data.text || "";
+  } catch (error) {
+    console.error("PDF extraction error:", error);
+    return "";
+  }
+}
 
+async function ensureAuthenticatedDbUser() {
+  const { userId } = await auth();
+
+  if (!userId) {
+    return { clerkId: null, user: null };
+  }
+
+  let user = await getDbUser();
+
+  if (user) {
+    return { clerkId: userId, user };
+  }
+
+  try {
     const client = await clerkClient();
     const clerkUser = await client.users.getUser(userId);
     await syncClerkUserToDb(clerkUser);
+    user = await getDbUser();
+  } catch (error) {
+    console.error("Failed to sync Clerk user during upload:", error);
+  }
 
-    const user = await prisma.user.findUnique({
-      where: { clerkId: userId },
-    });
+  return { clerkId: userId, user };
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const { user } = await ensureAuthenticatedDbUser();
 
     if (!user) {
-      return NextResponse.json(
-        { error: "User not found. Please complete onboarding first." },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const formData = await request.formData();
-    const file = formData.get("file") as File | null;
+    const rawFile = formData.get("file");
 
-    if (!file) {
+    const parsedUpload = uploadSchema.safeParse({
+      file: rawFile,
+    });
+
+    if (!parsedUpload.success) {
       return NextResponse.json(
-        { error: "No file provided" },
-        { status: 400 }
+        { error: parsedUpload.error.issues[0]?.message || "Invalid upload" },
+        { status: 400 },
       );
     }
 
-    if (!ALLOWED_TYPES.includes(file.type)) {
-      return NextResponse.json(
-        { error: "Only PDF and Word documents are allowed" },
-        { status: 400 }
-      );
-    }
+    const { file } = parsedUpload.data;
 
-    if (file.size > MAX_SIZE) {
-      return NextResponse.json(
-        { error: "File size must be less than 5MB" },
-        { status: 400 }
-      );
-    }
-
-    const ext = file.name.split(".").pop();
-    const filename = `${Date.now()}-${Math.random().toString(36).substring(2)}.${ext}`;
+    const ext = getSafeExtension(file);
+    const baseName = sanitizeFilenamePart(
+      path.basename(file.name, path.extname(file.name)) || "resume",
+    );
+    const filename = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}-${baseName}.${ext}`;
     const uploadDir = path.join(process.cwd(), "uploads");
 
     if (!existsSync(uploadDir)) {
@@ -164,11 +264,16 @@ export async function POST(request: NextRequest) {
     });
 
     let parsedText: string | null = null;
-    let parsedData = null;
+    let parsedData: ParsedResumeData | null = null;
 
     try {
-      parsedText = await extractTextFromDOCX(buffer);
-      if (parsedText) {
+      if (file.type === "application/pdf") {
+        parsedText = await extractTextFromPDF(buffer);
+      } else {
+        parsedText = await extractTextFromDOCX(buffer);
+      }
+
+      if (parsedText?.trim()) {
         parsedData = parseCVText(parsedText);
       }
     } catch (parseError) {
@@ -182,7 +287,8 @@ export async function POST(request: NextRequest) {
         originalName: file.name,
         fileUrl: `/uploads/${filename}`,
         parsedText,
-        versionLabel: existingResumes === 0 ? "Primary" : `Version ${existingResumes + 1}`,
+        versionLabel:
+          existingResumes === 0 ? "Primary" : `Version ${existingResumes + 1}`,
         isPrimary: existingResumes === 0,
       },
     });
@@ -190,7 +296,7 @@ export async function POST(request: NextRequest) {
     if (parsedData) {
       if (parsedData.experience.length > 0) {
         await prisma.resumeExperience.createMany({
-          data: parsedData.experience.map((exp: { title: string; company: string | null }) => ({
+          data: parsedData.experience.map((exp) => ({
             resumeId: resume.id,
             title: exp.title,
             company: exp.company,
@@ -200,7 +306,7 @@ export async function POST(request: NextRequest) {
 
       if (parsedData.education.length > 0) {
         await prisma.resumeEducation.createMany({
-          data: parsedData.education.map((edu: { institution: string; degree: string | null }) => ({
+          data: parsedData.education.map((edu) => ({
             resumeId: resume.id,
             institution: edu.institution,
             degree: edu.degree,
@@ -210,7 +316,7 @@ export async function POST(request: NextRequest) {
 
       if (parsedData.skills.length > 0) {
         await prisma.resumeSkill.createMany({
-          data: parsedData.skills.map((skill: string) => ({
+          data: parsedData.skills.map((skill) => ({
             resumeId: resume.id,
             skillName: skill,
             source: "parsed",
@@ -218,16 +324,30 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      if (parsedData.name || parsedData.phone) {
+      const profileUpdates: {
+        fullName?: string;
+        phone?: string;
+      } = {};
+
+      if (!user.fullName && parsedData.name) {
+        profileUpdates.fullName = parsedData.name;
+      }
+
+      if (!user.phone && parsedData.phone) {
+        profileUpdates.phone = parsedData.phone;
+      }
+
+      if (Object.keys(profileUpdates).length > 0) {
         await prisma.user.update({
           where: { id: user.id },
-          data: {
-            ...(parsedData.name && { fullName: parsedData.name }),
-            ...(parsedData.phone && { phone: parsedData.phone }),
-          },
+          data: profileUpdates,
         });
       }
     }
+
+    const updatedCounts = await prisma.resume.count({
+      where: { userId: user.id },
+    });
 
     return NextResponse.json({
       success: true,
@@ -236,13 +356,14 @@ export async function POST(request: NextRequest) {
       originalName: file.name,
       size: file.size,
       versionLabel: resume.versionLabel,
+      isPrimary: resume.isPrimary,
       parsed: parsedData,
+      counts: {
+        resumes: updatedCounts,
+      },
     });
   } catch (error) {
     console.error("Upload error:", error);
-    return NextResponse.json(
-      { error: "Upload failed" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Upload failed" }, { status: 500 });
   }
 }

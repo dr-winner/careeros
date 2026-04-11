@@ -1,53 +1,72 @@
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { ZodError } from "zod";
+import { getDbUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { getZodErrorMessage, profileUpdateSchema } from "@/lib/validation";
 
 export async function GET() {
   try {
-    const { userId } = await auth();
+    const user = await getDbUser();
 
-    if (!userId) {
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const user = await prisma.user.findUnique({
-      where: { clerkId: userId },
-    });
+    const [savedJobsCount, resumesCount, alertsCount, applicationsCount] =
+      await Promise.all([
+        prisma.savedJob.count({ where: { userId: user.id } }),
+        prisma.resume.count({ where: { userId: user.id } }),
+        prisma.savedSearch.count({ where: { userId: user.id } }),
+        prisma.application.count({ where: { userId: user.id } }),
+      ]);
 
-    return NextResponse.json({ user });
+    return NextResponse.json({
+      user,
+      counts: {
+        savedJobs: savedJobsCount,
+        resumes: resumesCount,
+        alerts: alertsCount,
+        applications: applicationsCount,
+      },
+    });
   } catch (error) {
     console.error("Error fetching user profile:", error);
-    return NextResponse.json({ error: "Failed to fetch profile" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to fetch profile" },
+      { status: 500 },
+    );
   }
 }
 
 export async function PATCH(request: Request) {
   try {
-    const { userId } = await auth();
+    const user = await getDbUser();
 
-    if (!userId) {
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body = await request.json();
-    const { fullName, phone, headline, country, experience, desiredRole, roleType } = body;
+    const data = profileUpdateSchema.parse(body);
 
-    const user = await prisma.user.update({
-      where: { clerkId: userId },
-      data: {
-        ...(fullName !== undefined && { fullName }),
-        ...(phone !== undefined && { phone }),
-        ...(headline !== undefined && { headline }),
-        ...(country !== undefined && { country }),
-        ...(experience !== undefined && { experience }),
-        ...(desiredRole !== undefined && { desiredRole }),
-        ...(roleType !== undefined && { roleType }),
-      },
+    const updatedUser = await prisma.user.update({
+      where: { id: user.id },
+      data,
     });
 
-    return NextResponse.json({ user });
+    return NextResponse.json({ user: updatedUser });
   } catch (error) {
+    if (error instanceof ZodError) {
+      return NextResponse.json(
+        { error: getZodErrorMessage(error) },
+        { status: 400 },
+      );
+    }
+
     console.error("Error updating user profile:", error);
-    return NextResponse.json({ error: "Failed to update profile" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to update profile" },
+      { status: 500 },
+    );
   }
 }

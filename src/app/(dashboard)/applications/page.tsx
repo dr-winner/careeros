@@ -7,6 +7,10 @@ import Link from "next/link";
 interface Application {
   id: string;
   jobId: string;
+  jobTitle: string | null;
+  companyName: string | null;
+  location: string | null;
+  workMode: string | null;
   status: string;
   appliedAt: string | null;
   notes: string | null;
@@ -191,7 +195,7 @@ export default function ApplicationsPage() {
                   <div className="flex-1">
                     <div className="flex items-center gap-3">
                       <h3 className="text-lg font-semibold text-white">
-                        Job #{application.jobId.replace("sample-", "")}
+                        {application.jobTitle || `Job #${application.jobId.replace("sample-", "")}`}
                       </h3>
                       <span
                         className={`rounded-full px-3 py-1 text-xs font-medium ${config.bg} ${config.color}`}
@@ -199,9 +203,16 @@ export default function ApplicationsPage() {
                         {application.status}
                       </span>
                     </div>
-                    <p className="mt-1 text-sm text-slate-400">
-                      Applied: {formatDate(application.appliedAt)}
-                    </p>
+                    {application.companyName && (
+                      <p className="mt-1 text-sm text-emerald-400">
+                        {application.companyName}
+                      </p>
+                    )}
+                    <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-slate-500">
+                      {application.location && <span>{application.location}</span>}
+                      {application.workMode && <span>• {application.workMode}</span>}
+                      <span>• Applied: {formatDate(application.appliedAt)}</span>
+                    </div>
                     {application.notes && (
                       <p className="mt-2 text-sm text-slate-400">
                         {application.notes}

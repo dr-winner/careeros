@@ -1,21 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { getDbUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { createSavedSearchSchema, getZodErrorMessage } from "@/lib/validation";
+import { ZodError } from "zod";
 
 export async function GET() {
   try {
-    const { userId: clerkId } = await auth();
-
-    if (!clerkId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const dbUser = await prisma.user.findUnique({
-      where: { clerkId },
-    });
+    const dbUser = await getDbUser();
 
     if (!dbUser) {
-      return NextResponse.json({ searches: [] });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const searches = await prisma.savedSearch.findMany({
@@ -23,54 +17,55 @@ export async function GET() {
       orderBy: { createdAt: "desc" },
     });
 
-    return NextResponse.json({ searches });
+    return NextResponse.json({
+      searches,
+      count: searches.length,
+    });
   } catch (error) {
     console.error("Error fetching searches:", error);
-    return NextResponse.json({ error: "Failed to fetch searches" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to fetch searches" },
+      { status: 500 },
+    );
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId: clerkId } = await auth();
+    const dbUser = await getDbUser();
 
-    if (!clerkId) {
+    if (!dbUser) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const dbUser = await prisma.user.findUnique({
-      where: { clerkId },
-    });
-
-    if (!dbUser) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-
-    const { name, searchQuery, location, workMode, seniority, alertEnabled, alertFrequency } = await request.json();
-
-    if (!name || !searchQuery) {
-      return NextResponse.json(
-        { error: "Name and search query required" },
-        { status: 400 }
-      );
-    }
+    const parsed = createSavedSearchSchema.parse(await request.json());
 
     const search = await prisma.savedSearch.create({
       data: {
         userId: dbUser.id,
-        name,
-        searchQuery,
-        location: location || null,
-        workMode: workMode || null,
-        seniority: seniority || null,
-        alertEnabled: alertEnabled ?? true,
-        alertFrequency: alertFrequency || "daily",
+        name: parsed.name,
+        searchQuery: parsed.searchQuery,
+        location: parsed.location,
+        workMode: parsed.workMode,
+        seniority: parsed.seniority,
+        alertEnabled: parsed.alertEnabled ?? true,
+        alertFrequency: parsed.alertFrequency ?? "daily",
       },
     });
 
-    return NextResponse.json({ search });
+    return NextResponse.json({ search }, { status: 201 });
   } catch (error) {
+    if (error instanceof ZodError) {
+      return NextResponse.json(
+        { error: getZodErrorMessage(error) },
+        { status: 400 },
+      );
+    }
+
     console.error("Error creating search:", error);
-    return NextResponse.json({ error: "Failed to create search" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to create search" },
+      { status: 500 },
+    );
   }
 }

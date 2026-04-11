@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { getAiProviderKeys } from "@/lib/env";
 
 export type AIModel = "deepseek" | "groq" | "gemini" | "openai";
 
@@ -23,7 +24,7 @@ export const AI_MODELS: Record<AIModel, AIConfig> = {
     costPer1MInput: 0.18,
     costPer1MOutput: 0.18,
     freeTier: {
-      tokensPerMonth: 1000 * 1000,
+      tokensPerMonth: 1_000_000,
       rpm: 30,
       requiresCreditCard: false,
     },
@@ -44,8 +45,8 @@ export const AI_MODELS: Record<AIModel, AIConfig> = {
     model: "gemini",
     modelName: "gemini-2.0-flash",
     baseURL: "https://generativelanguage.googleapis.com/v1beta/openai",
-    costPer1MInput: 0.10,
-    costPer1MOutput: 0.40,
+    costPer1MInput: 0.1,
+    costPer1MOutput: 0.4,
     freeTier: {
       tokensPerMonth: 1_000_000,
       rpm: 60,
@@ -56,7 +57,7 @@ export const AI_MODELS: Record<AIModel, AIConfig> = {
     model: "openai",
     modelName: "gpt-4o-mini",
     costPer1MInput: 0.15,
-    costPer1MOutput: 0.60,
+    costPer1MOutput: 0.6,
     freeTier: {
       tokensPerMonth: 100_000,
       rpm: 3,
@@ -66,23 +67,25 @@ export const AI_MODELS: Record<AIModel, AIConfig> = {
 };
 
 function getAPIKey(config: AIConfig): string | undefined {
+  const keys = getAiProviderKeys();
+
   switch (config.model) {
     case "deepseek":
-      return process.env.DEEPSEEK_API_KEY;
+      return keys.deepseek;
     case "groq":
-      return process.env.GROQ_API_KEY;
+      return keys.groq;
     case "gemini":
-      return process.env.GEMINI_API_KEY;
+      return keys.gemini;
     case "openai":
-      return process.env.OPENAI_API_KEY;
+      return keys.openai;
     default:
-      return process.env.OPENAI_API_KEY;
+      return keys.openai;
   }
 }
 
 function createClient(config: AIConfig): OpenAI {
   const apiKey = getAPIKey(config);
-  
+
   return new OpenAI({
     apiKey,
     baseURL: config.baseURL,
@@ -96,11 +99,11 @@ export async function generateWithAI(
     model?: AIModel;
     maxTokens?: number;
     temperature?: number;
-  } = {}
+  } = {},
 ): Promise<string> {
   const model = options.model || "deepseek";
   const config = AI_MODELS[model];
-  
+
   const client = createClient(config);
 
   const completion = await client.chat.completions.create({
@@ -123,17 +126,18 @@ export async function generateWithFallback(
     preferFree?: boolean;
     maxTokens?: number;
     temperature?: number;
-  } = {}
+  } = {},
 ): Promise<{ text: string; model: AIModel }> {
-  const orderedModels: AIModel[] = options.preferFree !== false
-    ? ["groq", "deepseek", "gemini", "openai"]
-    : ["openai", "groq", "deepseek", "gemini"];
+  const orderedModels: AIModel[] =
+    options.preferFree !== false
+      ? ["groq", "deepseek", "gemini", "openai"]
+      : ["openai", "groq", "deepseek", "gemini"];
 
   for (const model of orderedModels) {
     try {
       const config = AI_MODELS[model];
       const apiKey = getAPIKey(config);
-      
+
       if (!apiKey) {
         continue;
       }
@@ -149,10 +153,12 @@ export async function generateWithFallback(
       }
     } catch (error) {
       const errorStr = String(error);
+
       if (errorStr.includes("402") || errorStr.includes("Insufficient")) {
         console.warn(`${model} has insufficient balance, trying next...`);
         continue;
       }
+
       console.warn(`Failed with ${model}:`, error);
       continue;
     }

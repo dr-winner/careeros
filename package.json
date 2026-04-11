@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit --pretty",
-    "check": "npm run typecheck && npm run lint && npm run build",
+    "test": "vitest run",
+    "check": "npm run typecheck && npm run lint && npm run test && npm run build",
     "postinstall": "prisma generate"
   },
   "dependencies": {
@@ -18,14 +19,15 @@
     "@prisma/client": "^7.7.0",
     "canvas-confetti": "^1.9.4",
     "mammoth": "^1.12.0",
-    "next": "16.2.2",
+    "next": "^16.2.3",
     "openai": "^6.34.0",
     "pdf-parse": "^2.4.5",
     "prisma": "^7.7.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "resend": "^6.10.0",
-    "sonner": "^2.0.7"
+    "sonner": "^2.0.7",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -34,8 +36,9 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.2.2",
+    "eslint-config-next": "^16.2.3",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.4"
   }
 }

@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { getDbUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { ensureJobRecord } from "@/lib/jobs";
+import { fitAnalysisRequestSchema, getZodErrorMessage } from "@/lib/validation";
+import { ZodError } from "zod";
 
 interface FitAnalysisResult {
   fitScore: number;
@@ -13,7 +16,7 @@ interface FitAnalysisResult {
 function calculateFitScore(
   userSkills: string[],
   jobRequirements: string[],
-  experience: string | null
+  experience: string | null,
 ): FitAnalysisResult {
   const userSkillsLower = userSkills.map((s) => s.toLowerCase());
   const jobReqsLower = jobRequirements.map((r) => r.toLowerCase());
@@ -23,8 +26,9 @@ function calculateFitScore(
 
   for (const req of jobReqsLower) {
     const skillMatch = userSkillsLower.find(
-      (us) => us.includes(req) || req.includes(us)
+      (us) => us.includes(req) || req.includes(us),
     );
+
     if (skillMatch) {
       matchedSkills.push(skillMatch);
     } else {
@@ -32,9 +36,8 @@ function calculateFitScore(
     }
   }
 
-  const matchRate = jobReqsLower.length > 0 
-    ? matchedSkills.length / jobReqsLower.length 
-    : 0.5;
+  const matchRate =
+    jobReqsLower.length > 0 ? matchedSkills.length / jobReqsLower.length : 0.5;
 
   const expScores: Record<string, number> = {
     "Student / Just graduated": 0.3,
@@ -42,8 +45,8 @@ function calculateFitScore(
     "3-5 years experience": 0.75,
     "5+ years experience": 1.0,
   };
-  const expScore = experience ? (expScores[experience] || 0.5) : 0.5;
 
+  const expScore = experience ? (expScores[experience] ?? 0.5) : 0.5;
   const fitScore = Math.round((matchRate * 0.7 + expScore * 0.3) * 100);
 
   let verdict: string;
@@ -52,19 +55,22 @@ function calculateFitScore(
   else if (fitScore >= 40) verdict = "Partial Match";
   else verdict = "Needs Improvement";
 
-  const strengthsSummary = matchedSkills.length > 0
-    ? `Strong in: ${matchedSkills.slice(0, 5).join(", ")}`
-    : "Core skills align with role requirements";
+  const strengthsSummary =
+    matchedSkills.length > 0
+      ? `Strong in: ${matchedSkills.slice(0, 5).join(", ")}`
+      : "Core skills align with role requirements";
 
-  const gapsSummary = missingSkills.length > 0
-    ? `Consider learning: ${missingSkills.slice(0, 3).join(", ")}`
-    : "No significant skill gaps identified";
+  const gapsSummary =
+    missingSkills.length > 0
+      ? `Consider learning: ${missingSkills.slice(0, 3).join(", ")}`
+      : "No significant skill gaps identified";
 
-  const riskSummary = fitScore < 50
-    ? "You may need to upskill before applying"
-    : fitScore < 70
-    ? "Consider gaining more experience"
-    : "Strong candidate for this role";
+  const riskSummary =
+    fitScore < 50
+      ? "You may need to upskill before applying"
+      : fitScore < 70
+        ? "Consider gaining more experience"
+        : "Strong candidate for this role";
 
   return {
     fitScore,
@@ -75,127 +81,158 @@ function calculateFitScore(
   };
 }
 
+function inferJobRequirements(jobTitle: string): string[] {
+  const lowerTitle = jobTitle.toLowerCase();
+
+  if (lowerTitle.includes("frontend")) {
+    return ["react", "typescript", "css", "javascript", "git"];
+  }
+
+  if (lowerTitle.includes("backend") || lowerTitle.includes("engineer")) {
+    return ["node", "python", "postgresql", "aws", "git"];
+  }
+
+  if (lowerTitle.includes("data")) {
+    return ["excel", "sql", "python", "tableau", "analytics"];
+  }
+
+  if (lowerTitle.includes("design")) {
+    return ["figma", "user research", "prototyping", "ui", "ux"];
+  }
+
+  if (lowerTitle.includes("devops")) {
+    return ["aws", "docker", "kubernetes", "terraform", "ci/cd"];
+  }
+
+  if (lowerTitle.includes("mobile")) {
+    return ["flutter", "dart", "ios", "android", "firebase"];
+  }
+
+  if (lowerTitle.includes("product")) {
+    return ["product management", "agile", "roadmap", "stakeholder"];
+  }
+
+  return ["communication", "problem solving", "teamwork"];
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const { userId } = await auth();
-    if (!userId) {
+    const user = await getDbUser();
+
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await request.json();
-    const { jobId, jobTitle } = body;
+    const payload = fitAnalysisRequestSchema.parse(await request.json());
 
-    if (!jobId || !jobTitle) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { clerkId: userId },
+    await ensureJobRecord({
+      jobId: payload.jobId,
+      title: payload.jobTitle,
     });
-
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
 
     const primaryResume = await prisma.resume.findFirst({
-      where: { userId: user.id, isPrimary: true },
-      include: { skills: true },
+      where: {
+        userId: user.id,
+        isPrimary: true,
+      },
+      include: {
+        skills: true,
+      },
     });
 
-    const allResumes = primaryResume
+    const resumes = primaryResume
       ? [primaryResume]
       : await prisma.resume.findMany({
           where: { userId: user.id },
           include: { skills: true },
+          orderBy: [{ createdAt: "desc" }, { id: "desc" }],
           take: 1,
         });
 
-    const userSkills = allResumes.flatMap((r: typeof primaryResume) => {
-      const skills = r?.skills || [];
-      return skills.map((s: { skillName: string }) => s.skillName);
-    });
+    const userSkills = [
+      ...new Set(
+        resumes.flatMap((resume) =>
+          (resume.skills || []).map((skill) => skill.skillName),
+        ),
+      ),
+    ];
 
-    const jobReqs = jobTitle.toLowerCase().includes("frontend")
-      ? ["react", "typescript", "css", "javascript", "git"]
-      : jobTitle.toLowerCase().includes("backend") || jobTitle.toLowerCase().includes("engineer")
-      ? ["node", "python", "postgresql", "aws", "git"]
-      : jobTitle.toLowerCase().includes("data")
-      ? ["excel", "sql", "python", "tableau", "analytics"]
-      : jobTitle.toLowerCase().includes("design")
-      ? ["figma", "user research", "prototyping", "ui", "ux"]
-      : jobTitle.toLowerCase().includes("devops")
-      ? ["aws", "docker", "kubernetes", "terraform", "ci/cd"]
-      : jobTitle.toLowerCase().includes("mobile")
-      ? ["flutter", "dart", "ios", "android", "firebase"]
-      : jobTitle.toLowerCase().includes("product")
-      ? ["product management", "agile", "roadmap", "stakeholder"]
-      : ["communication", "problem solving", "teamwork"];
-
-    const result = calculateFitScore(userSkills, jobReqs, user.experience);
+    const jobRequirements = inferJobRequirements(payload.jobTitle);
+    const result = calculateFitScore(
+      userSkills,
+      jobRequirements,
+      user.experience,
+    );
 
     const existingAnalysis = await prisma.fitAnalysis.findFirst({
       where: {
         userId: user.id,
-        jobId: jobId,
+        jobId: payload.jobId,
       },
     });
 
-    if (existingAnalysis) {
-      await prisma.fitAnalysis.update({
-        where: { id: existingAnalysis.id },
-        data: {
-          fitScore: result.fitScore,
-          verdict: result.verdict,
-          strengthsSummary: result.strengthsSummary,
-          gapsSummary: result.gapsSummary,
-          riskSummary: result.riskSummary,
-        },
-      });
-    } else {
-      await prisma.fitAnalysis.create({
-        data: {
-          userId: user.id,
-          jobId,
-          fitScore: result.fitScore,
-          verdict: result.verdict,
-          strengthsSummary: result.strengthsSummary,
-          gapsSummary: result.gapsSummary,
-          riskSummary: result.riskSummary,
-        },
-      });
+    const fitAnalysis = existingAnalysis
+      ? await prisma.fitAnalysis.update({
+          where: { id: existingAnalysis.id },
+          data: {
+            fitScore: result.fitScore,
+            verdict: result.verdict,
+            strengthsSummary: result.strengthsSummary,
+            gapsSummary: result.gapsSummary,
+            riskSummary: result.riskSummary,
+          },
+        })
+      : await prisma.fitAnalysis.create({
+          data: {
+            userId: user.id,
+            jobId: payload.jobId,
+            fitScore: result.fitScore,
+            verdict: result.verdict,
+            strengthsSummary: result.strengthsSummary,
+            gapsSummary: result.gapsSummary,
+            riskSummary: result.riskSummary,
+          },
+        });
+
+    return NextResponse.json({
+      fitAnalysis: {
+        ...fitAnalysis,
+        fitScore: result.fitScore,
+        verdict: result.verdict,
+        strengthsSummary: result.strengthsSummary,
+        gapsSummary: result.gapsSummary,
+        riskSummary: result.riskSummary,
+      },
+    });
+  } catch (error) {
+    if (error instanceof ZodError) {
+      return NextResponse.json(
+        { error: getZodErrorMessage(error) },
+        { status: 400 },
+      );
     }
 
-    return NextResponse.json({ fitAnalysis: result });
-  } catch (error) {
     console.error("Error calculating fit analysis:", error);
-    return NextResponse.json({ error: "Failed to calculate fit analysis" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to calculate fit analysis" },
+      { status: 500 },
+    );
   }
 }
 
 export async function GET(request: NextRequest) {
   try {
-    const { userId } = await auth();
-    if (!userId) {
+    const user = await getDbUser();
+
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { searchParams } = new URL(request.url);
     const jobId = searchParams.get("jobId");
 
-    const user = await prisma.user.findUnique({
-      where: { clerkId: userId },
-    });
-
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-
-    const whereClause = jobId
-      ? { userId: user.id, jobId }
-      : { userId: user.id };
-
     const analyses = await prisma.fitAnalysis.findMany({
-      where: whereClause,
+      where: jobId ? { userId: user.id, jobId } : { userId: user.id },
       orderBy: { createdAt: "desc" },
       take: 10,
     });
@@ -203,6 +240,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ fitAnalyses: analyses });
   } catch (error) {
     console.error("Error fetching fit analyses:", error);
-    return NextResponse.json({ error: "Failed to fetch fit analyses" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to fetch fit analyses" },
+      { status: 500 },
+    );
   }
 }

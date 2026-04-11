@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, type KeyboardEvent } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { toast } from "sonner";
 import CVUpload from "@/app/components/cv-upload";
@@ -27,7 +27,7 @@ export default function ResumesPage() {
 
   const fetchResumes = useCallback(async () => {
     if (!userId) return;
-    
+
     try {
       setLoading(true);
       const response = await fetch("/api/user/resumes");
@@ -35,7 +35,8 @@ export default function ResumesPage() {
         const data = await response.json();
         setResumes(data.resumes || []);
         if (data.resumes?.length > 0) {
-          const primary = data.resumes.find((r: Resume) => r.isPrimary) || data.resumes[0];
+          const primary =
+            data.resumes.find((r: Resume) => r.isPrimary) || data.resumes[0];
           setSelectedResume(primary);
         } else {
           setSelectedResume(null);
@@ -59,16 +60,17 @@ export default function ResumesPage() {
 
   const setPrimary = async (id: string) => {
     try {
-      const response = await fetch(`/api/user/resumes/${id}/primary`, {
+      const response = await fetch(`/api/user/resumes/${id}`, {
         method: "POST",
       });
 
       if (response.ok) {
-        setResumes(resumes.map(r => ({
+        const updatedResumes = resumes.map((r) => ({
           ...r,
           isPrimary: r.id === id,
-        })));
-        setSelectedResume(resumes.find(r => r.id === id) || null);
+        }));
+        setResumes(updatedResumes);
+        setSelectedResume(updatedResumes.find((r) => r.id === id) || null);
         toast.success("Primary resume updated!");
       }
     } catch {
@@ -86,7 +88,7 @@ export default function ResumesPage() {
       });
 
       if (response.ok) {
-        const newResumes = resumes.filter(r => r.id !== id);
+        const newResumes = resumes.filter((r) => r.id !== id);
         setResumes(newResumes);
         if (selectedResume?.id === id) {
           setSelectedResume(newResumes[0] || null);
@@ -111,13 +113,19 @@ export default function ResumesPage() {
   const analyzeResume = (resume: Resume | null) => {
     if (!resume) return [];
 
-    const suggestions: { category: string; issue: string; suggestion: string; priority: "high" | "medium" | "low" }[] = [];
+    const suggestions: {
+      category: string;
+      issue: string;
+      suggestion: string;
+      priority: "high" | "medium" | "low";
+    }[] = [];
 
     if (!resume.parsedText || resume.parsedText.length < 200) {
       suggestions.push({
         category: "Content",
         issue: "Limited resume content detected",
-        suggestion: "Add more details about your work experience, achievements, and responsibilities.",
+        suggestion:
+          "Add more details about your work experience, achievements, and responsibilities.",
         priority: "high",
       });
     }
@@ -135,7 +143,8 @@ export default function ResumesPage() {
       suggestions.push({
         category: "Experience",
         issue: "Limited work experience entries",
-        suggestion: "Include all relevant positions, even internships or part-time roles.",
+        suggestion:
+          "Include all relevant positions, even internships or part-time roles.",
         priority: "medium",
       });
     }
@@ -144,17 +153,22 @@ export default function ResumesPage() {
       suggestions.push({
         category: "Education",
         issue: "No education entries found",
-        suggestion: "Add your educational background including degrees and certifications.",
+        suggestion:
+          "Add your educational background including degrees and certifications.",
         priority: "high",
       });
     }
 
-    const hasActionVerbs = /^(Led|Managed|Developed|Created|Implemented|Increased|Reduced|Improved|Designed|Built|Analyzed)/.test(resume.parsedText || "");
+    const hasActionVerbs =
+      /^(Led|Managed|Developed|Created|Implemented|Increased|Reduced|Improved|Designed|Built|Analyzed)/.test(
+        resume.parsedText || "",
+      );
     if (!hasActionVerbs) {
       suggestions.push({
         category: "Writing",
         issue: "Consider using action verbs",
-        suggestion: "Start bullet points with strong action verbs like 'Led', 'Developed', 'Increased'.",
+        suggestion:
+          "Start bullet points with strong action verbs like 'Led', 'Developed', 'Increased'.",
         priority: "low",
       });
     }
@@ -163,7 +177,8 @@ export default function ResumesPage() {
       suggestions.push({
         category: "Overall",
         issue: "Looking good!",
-        suggestion: "Your resume appears well-structured. Consider tailoring it for specific job applications.",
+        suggestion:
+          "Your resume appears well-structured. Consider tailoring it for specific job applications.",
         priority: "low",
       });
     }
@@ -173,9 +188,12 @@ export default function ResumesPage() {
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case "high": return "border-red-500/30 bg-red-500/10";
-      case "medium": return "border-amber-500/30 bg-amber-500/10";
-      default: return "border-emerald-500/30 bg-emerald-500/10";
+      case "high":
+        return "border-red-500/30 bg-red-500/10";
+      case "medium":
+        return "border-amber-500/30 bg-amber-500/10";
+      default:
+        return "border-emerald-500/30 bg-emerald-500/10";
     }
   };
 
@@ -208,7 +226,9 @@ export default function ResumesPage() {
 
       {showUpload && (
         <div className="mb-8 rounded-xl glass-card p-6">
-          <h2 className="mb-4 text-lg font-semibold text-white">Upload Your CV</h2>
+          <h2 className="mb-4 text-lg font-semibold text-white">
+            Upload Your CV
+          </h2>
           <CVUpload onUploadSuccess={handleUploadSuccess} />
         </div>
       )}
@@ -224,8 +244,18 @@ export default function ResumesPage() {
       ) : resumes.length === 0 && !showUpload ? (
         <div className="rounded-xl glass-card p-12 text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/20">
-            <svg className="h-8 w-8 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            <svg
+              className="h-8 w-8 text-emerald-400"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+              />
             </svg>
           </div>
           <h3 className="text-lg font-semibold text-white">No Resumes Yet</h3>
@@ -243,7 +273,9 @@ export default function ResumesPage() {
         <div className="grid gap-6 lg:grid-cols-2">
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-white">Your Resumes ({resumes.length})</h2>
+              <h2 className="text-lg font-semibold text-white">
+                Your Resumes ({resumes.length})
+              </h2>
               <button
                 onClick={() => setShowUpload(true)}
                 className="text-sm text-emerald-400 hover:text-emerald-300"
@@ -251,64 +283,100 @@ export default function ResumesPage() {
                 + Add another
               </button>
             </div>
-            {resumes.map((resume) => (
-              <div
-                key={resume.id}
-                onClick={() => setSelectedResume(resume)}
-                className={`rounded-xl glass-card p-5 cursor-pointer transition ${
-                  selectedResume?.id === resume.id
-                    ? "border-emerald-500/50 shadow-lg shadow-emerald-500/10"
-                    : "hover:border-slate-600"
-                }`}
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-500/20">
-                      <svg className="h-5 w-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-medium text-white">{resume.originalName}</h3>
-                        {resume.isPrimary && (
-                          <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-xs font-medium text-emerald-400">
-                            Primary
-                          </span>
-                        )}
-                      </div>
-                      <p className="mt-0.5 text-xs text-slate-500">
-                        Uploaded {formatDate(resume.createdAt)} • {resume.skills.length} skills
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {!resume.isPrimary && (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setPrimary(resume.id); }}
-                        className="rounded-lg border border-emerald-500/50 px-2 py-1 text-xs font-medium text-emerald-400 hover:bg-emerald-500/10"
-                      >
-                        Set Primary
-                      </button>
-                    )}
+            {resumes.map((resume) => {
+              const isSelected = selectedResume?.id === resume.id;
+
+              const handleSelect = () => setSelectedResume(resume);
+
+              const handleKeyDown = (
+                event: KeyboardEvent<HTMLButtonElement>,
+              ) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  handleSelect();
+                }
+              };
+
+              return (
+                <div
+                  key={resume.id}
+                  className={`rounded-xl glass-card p-5 transition ${
+                    isSelected
+                      ? "border-emerald-500/50 shadow-lg shadow-emerald-500/10"
+                      : "hover:border-slate-600"
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-3">
                     <button
-                      onClick={(e) => { e.stopPropagation(); deleteResume(resume.id); }}
-                      disabled={deleting === resume.id}
-                      className="rounded-lg border border-red-500/50 px-2 py-1 text-xs font-medium text-red-400 hover:bg-red-500/10 disabled:opacity-50"
+                      type="button"
+                      onClick={handleSelect}
+                      onKeyDown={handleKeyDown}
+                      aria-pressed={isSelected}
+                      aria-label={`Select resume ${resume.originalName}`}
+                      className="flex flex-1 items-start gap-3 text-left focus:outline-none focus:ring-2 focus:ring-emerald-500/40 rounded-lg"
                     >
-                      {deleting === resume.id ? "..." : "Delete"}
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-500/20">
+                        <svg
+                          className="h-5 w-5 text-emerald-400"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                          />
+                        </svg>
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-medium text-white">
+                            {resume.originalName}
+                          </h3>
+                          {resume.isPrimary && (
+                            <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-xs font-medium text-emerald-400">
+                              Primary
+                            </span>
+                          )}
+                        </div>
+                        <p className="mt-0.5 text-xs text-slate-500">
+                          Uploaded {formatDate(resume.createdAt)} •{" "}
+                          {resume.skills.length} skills
+                        </p>
+                      </div>
                     </button>
+                    <div className="flex items-center gap-2">
+                      {!resume.isPrimary && (
+                        <button
+                          onClick={() => setPrimary(resume.id)}
+                          className="rounded-lg border border-emerald-500/50 px-2 py-1 text-xs font-medium text-emerald-400 hover:bg-emerald-500/10"
+                        >
+                          Set Primary
+                        </button>
+                      )}
+                      <button
+                        onClick={() => deleteResume(resume.id)}
+                        disabled={deleting === resume.id}
+                        className="rounded-lg border border-red-500/50 px-2 py-1 text-xs font-medium text-red-400 hover:bg-red-500/10 disabled:opacity-50"
+                      >
+                        {deleting === resume.id ? "..." : "Delete"}
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {selectedResume && (
             <div className="space-y-4">
               <div className="rounded-xl glass-card p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold text-white">Optimization Tips</h2>
+                  <h2 className="text-lg font-semibold text-white">
+                    Optimization Tips
+                  </h2>
                   <span className="rounded-full bg-slate-700 px-2 py-0.5 text-xs text-slate-400">
                     {selectedResume.originalName}
                   </span>
@@ -316,15 +384,21 @@ export default function ResumesPage() {
 
                 <div className="mb-4 grid grid-cols-3 gap-3">
                   <div className="rounded-lg bg-emerald-500/10 p-3 text-center">
-                    <p className="text-xl font-bold text-emerald-400">{selectedResume.skills.length}</p>
+                    <p className="text-xl font-bold text-emerald-400">
+                      {selectedResume.skills.length}
+                    </p>
                     <p className="text-xs text-slate-400">Skills</p>
                   </div>
                   <div className="rounded-lg bg-amber-500/10 p-3 text-center">
-                    <p className="text-xl font-bold text-amber-400">{selectedResume.experiences.length}</p>
+                    <p className="text-xl font-bold text-amber-400">
+                      {selectedResume.experiences.length}
+                    </p>
                     <p className="text-xs text-slate-400">Experiences</p>
                   </div>
                   <div className="rounded-lg bg-purple-500/10 p-3 text-center">
-                    <p className="text-xl font-bold text-purple-400">{selectedResume.education.length}</p>
+                    <p className="text-xl font-bold text-purple-400">
+                      {selectedResume.education.length}
+                    </p>
                     <p className="text-xs text-slate-400">Education</p>
                   </div>
                 </div>
@@ -336,16 +410,22 @@ export default function ResumesPage() {
                       className={`rounded-lg border p-4 ${getPriorityColor(item.priority)}`}
                     >
                       <div className="flex items-start gap-3">
-                        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                          item.priority === "high" ? "bg-red-500/20 text-red-300" :
-                          item.priority === "medium" ? "bg-amber-500/20 text-amber-300" :
-                          "bg-emerald-500/20 text-emerald-300"
-                        }`}>
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                            item.priority === "high"
+                              ? "bg-red-500/20 text-red-300"
+                              : item.priority === "medium"
+                                ? "bg-amber-500/20 text-amber-300"
+                                : "bg-emerald-500/20 text-emerald-300"
+                          }`}
+                        >
                           {item.priority}
                         </span>
                         <div>
                           <p className="font-medium text-white">{item.issue}</p>
-                          <p className="mt-1 text-sm text-slate-400">{item.suggestion}</p>
+                          <p className="mt-1 text-sm text-slate-400">
+                            {item.suggestion}
+                          </p>
                         </div>
                       </div>
                     </div>

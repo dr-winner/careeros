@@ -1,67 +1,81 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
+import { requireDbUser } from "@/lib/auth";
+import {
+  applicationStatuses,
+  getZodErrorMessage,
+  updateApplicationSchema,
+} from "@/lib/validation";
+import { ZodError } from "zod";
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const { userId } = await auth();
-
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
+    const dbUser = await requireDbUser();
     const { id } = await params;
-    const { status, notes } = await request.json();
 
-    const validStatuses = ["Applied", "Screening", "Interview", "Offer", "Rejected", "Withdrawn"];
-    if (status && !validStatuses.includes(status)) {
-      return NextResponse.json({ error: "Invalid status" }, { status: 400 });
-    }
+    const body = await request.json();
+    const { status, notes } = updateApplicationSchema.parse(body);
 
     const application = await prisma.application.findUnique({
       where: { id },
     });
 
     if (!application) {
-      return NextResponse.json({ error: "Application not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Application not found" },
+        { status: 404 },
+      );
     }
 
-    if (application.userId !== userId) {
+    if (application.userId !== dbUser.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const updated = await prisma.application.update({
       where: { id },
       data: {
-        ...(status && { status }),
-        ...(notes !== undefined && { notes }),
+        ...(status !== undefined ? { status } : {}),
+        ...(notes !== undefined ? { notes } : {}),
       },
     });
 
-    return NextResponse.json({ success: true, application: updated });
+    return NextResponse.json({
+      success: true,
+      application: updated,
+      validStatuses: applicationStatuses,
+    });
   } catch (error) {
+    if (error instanceof ZodError) {
+      return NextResponse.json(
+        { error: getZodErrorMessage(error) },
+        { status: 400 },
+      );
+    }
+
+    if (
+      error instanceof Error &&
+      error.message === "User not found in database"
+    ) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     console.error("Error updating application:", error);
     return NextResponse.json(
       { error: "Failed to update application" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const { userId } = await auth();
-
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
+    const dbUser = await requireDbUser();
     const { id } = await params;
 
     const application = await prisma.application.findUnique({
@@ -69,10 +83,13 @@ export async function DELETE(
     });
 
     if (!application) {
-      return NextResponse.json({ error: "Application not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Application not found" },
+        { status: 404 },
+      );
     }
 
-    if (application.userId !== userId) {
+    if (application.userId !== dbUser.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -82,10 +99,17 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message === "User not found in database"
+    ) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     console.error("Error deleting application:", error);
     return NextResponse.json(
       { error: "Failed to delete application" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

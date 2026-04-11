@@ -1,26 +1,59 @@
-import { auth } from "@clerk/nextjs/server";
+import { auth, clerkClient } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
+import { syncClerkUserToDb } from "@/lib/user";
 
-export async function getDbUserId(): Promise<string | null> {
-  const { userId: clerkId } = await auth();
-  
+export async function getClerkUserId(): Promise<string | null> {
+  const { userId } = await auth();
+  return userId ?? null;
+}
+
+export async function getDbUser() {
+  const clerkId = await getClerkUserId();
+
   if (!clerkId) {
     return null;
   }
 
-  const user = await prisma.user.findUnique({
+  let user = await prisma.user.findUnique({
     where: { clerkId },
   });
 
-  return user?.id || null;
+  if (user) {
+    return user;
+  }
+
+  try {
+    const client = await clerkClient();
+    const clerkUser = await client.users.getUser(clerkId);
+    await syncClerkUserToDb(clerkUser);
+
+    user = await prisma.user.findUnique({
+      where: { clerkId },
+    });
+
+    return user;
+  } catch (error) {
+    console.error("Failed to sync Clerk user to database:", error);
+    return null;
+  }
 }
 
-export async function requireDbUserId(): Promise<string> {
-  const userId = await getDbUserId();
-  
-  if (!userId) {
+export async function getDbUserId(): Promise<string | null> {
+  const user = await getDbUser();
+  return user?.id ?? null;
+}
+
+export async function requireDbUser() {
+  const user = await getDbUser();
+
+  if (!user) {
     throw new Error("User not found in database");
   }
 
-  return userId;
+  return user;
+}
+
+export async function requireDbUserId(): Promise<string> {
+  const user = await requireDbUser();
+  return user.id;
 }

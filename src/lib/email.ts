@@ -1,13 +1,31 @@
 import { Resend } from "resend";
+import { getEmailFrom, getOptionalEnv, getResendAudienceId } from "@/lib/env";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resendApiKey = getOptionalEnv("RESEND_API_KEY");
+const resend = resendApiKey ? new Resend(resendApiKey) : null;
 
-const ADMIN_EMAIL = "duvorrichardwinner@gmail.com";
+const ADMIN_EMAIL =
+  getOptionalEnv("ADMIN_EMAIL") || "duvorrichardwinner@gmail.com";
+
+function isEmailConfigured(): boolean {
+  return Boolean(resend);
+}
+
+function getAudienceId(): string | null {
+  return getResendAudienceId() || null;
+}
 
 export async function sendWaitlistNotification(email: string) {
+  if (!isEmailConfigured()) {
+    return {
+      success: false,
+      error: new Error("RESEND_API_KEY is not configured"),
+    };
+  }
+
   try {
-    await resend.emails.send({
-      from: "CareerOS <noreply@careeros.live>",
+    await resend!.emails.send({
+      from: getEmailFrom(),
       to: ADMIN_EMAIL,
       subject: "New waitlist signup!",
       html: `
@@ -22,6 +40,7 @@ export async function sendWaitlistNotification(email: string) {
         </div>
       `,
     });
+
     return { success: true };
   } catch (error) {
     console.error("Failed to send admin notification:", error);
@@ -30,9 +49,16 @@ export async function sendWaitlistNotification(email: string) {
 }
 
 export async function sendConfirmationEmail(email: string) {
+  if (!isEmailConfigured()) {
+    return {
+      success: false,
+      error: new Error("RESEND_API_KEY is not configured"),
+    };
+  }
+
   try {
-    await resend.emails.send({
-      from: "CareerOS <noreply@careeros.live>",
+    await resend!.emails.send({
+      from: getEmailFrom(),
       to: email,
       subject: "You're on the list!",
       html: `
@@ -53,6 +79,7 @@ export async function sendConfirmationEmail(email: string) {
         </div>
       `,
     });
+
     return { success: true };
   } catch (error) {
     console.error("Failed to send confirmation email:", error);
@@ -61,32 +88,59 @@ export async function sendConfirmationEmail(email: string) {
 }
 
 export async function checkContactExists(email: string): Promise<boolean> {
+  if (!isEmailConfigured()) {
+    return false;
+  }
+
+  const audienceId = getAudienceId();
+
+  if (!audienceId) {
+    console.warn("RESEND_AUDIENCE_ID is not configured");
+    return false;
+  }
+
   try {
-    const { data } = await resend.contacts.list({
-     audienceId: process.env.RESEND_AUDIENCE_ID!,
+    const { data } = await resend!.contacts.list({
+      audienceId,
     });
-    
-    return data?.data?.some((contact) => contact.email === email.toLowerCase()) ?? false;
+
+    return (
+      data?.data?.some((contact) => contact.email === email.toLowerCase()) ??
+      false
+    );
   } catch (error) {
     console.error("Failed to check contact:", error);
     return false;
   }
 }
 
-export async function addToResend(email: string): Promise<{ success: boolean; alreadyExists: boolean }> {
+export async function addToResend(
+  email: string,
+): Promise<{ success: boolean; alreadyExists: boolean }> {
+  if (!isEmailConfigured()) {
+    return { success: false, alreadyExists: false };
+  }
+
+  const audienceId = getAudienceId();
+
+  if (!audienceId) {
+    console.warn("RESEND_AUDIENCE_ID is not configured");
+    return { success: false, alreadyExists: false };
+  }
+
   try {
     const exists = await checkContactExists(email);
-    
+
     if (exists) {
       return { success: true, alreadyExists: true };
     }
 
-    await resend.contacts.create({
-      audienceId: process.env.RESEND_AUDIENCE_ID!,
+    await resend!.contacts.create({
+      audienceId,
       email,
       unsubscribed: false,
     });
-    
+
     return { success: true, alreadyExists: false };
   } catch (error) {
     console.error("Failed to add contact:", error);

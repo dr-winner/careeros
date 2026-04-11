@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 
@@ -31,11 +31,24 @@ export default function JobsPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
-  useEffect(() => {
-    fetchJobs();
-  }, [search, location, workMode, seniority, page, userId]); // eslint-disable-line react-hooks/exhaustive-deps
+  const persistJobs = useCallback((jobList: Job[]) => {
+    if (typeof window === "undefined" || jobList.length === 0) return;
 
-  const fetchJobs = async () => {
+    try {
+      const existing = sessionStorage.getItem("dashboard-job-cache");
+      const cache = existing ? JSON.parse(existing) : {};
+
+      for (const job of jobList) {
+        cache[job.id] = job;
+      }
+
+      sessionStorage.setItem("dashboard-job-cache", JSON.stringify(cache));
+    } catch (error) {
+      console.error("Error caching jobs:", error);
+    }
+  }, []);
+
+  const fetchJobs = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
@@ -47,29 +60,50 @@ export default function JobsPage() {
 
       const response = await fetch(`/api/jobs?${params}`);
       const data = await response.json();
-      setJobs(data.jobs || []);
+      const nextJobs = data.jobs || [];
+      setJobs(nextJobs);
       setTotalPages(data.pagination?.totalPages || 1);
+      persistJobs(nextJobs);
     } catch (error) {
       console.error("Error fetching jobs:", error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [location, page, persistJobs, search, seniority, workMode]);
+
+  useEffect(() => {
+    fetchJobs();
+  }, [fetchJobs, userId]);
 
   const toggleSave = async (jobId: string) => {
     if (!userId) return;
-    
+
     try {
+      const jobToToggle = jobs.find((job) => job.id === jobId);
       const response = await fetch("/api/jobs/save", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jobId }),
+        body: JSON.stringify(
+          jobToToggle
+            ? {
+                jobId: jobToToggle.id,
+                title: jobToToggle.title,
+                companyName: jobToToggle.companyName,
+                location: jobToToggle.location,
+                country: jobToToggle.country,
+                workMode: jobToToggle.workMode,
+                applicationUrl: jobToToggle.applicationUrl,
+              }
+            : { jobId },
+        ),
       });
-      
+
       if (response.ok) {
-        setJobs(jobs.map(job => 
-          job.id === jobId ? { ...job, isSaved: !job.isSaved } : job
-        ));
+        const updatedJobs = jobs.map((job) =>
+          job.id === jobId ? { ...job, isSaved: !job.isSaved } : job,
+        );
+        setJobs(updatedJobs);
+        persistJobs(updatedJobs);
       }
     } catch (error) {
       console.error("Error saving job:", error);
@@ -79,8 +113,10 @@ export default function JobsPage() {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
-    const diff = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
-    
+    const diff = Math.floor(
+      (now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24),
+    );
+
     if (diff === 0) return "Today";
     if (diff === 1) return "Yesterday";
     if (diff < 7) return `${diff} days ago`;
@@ -109,21 +145,33 @@ export default function JobsPage() {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
           <input
             type="text"
+            aria-label="Search jobs"
             placeholder="Search jobs..."
             value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
             className="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2.5 text-white placeholder:text-slate-500 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
           />
           <input
             type="text"
+            aria-label="Filter jobs by location"
             placeholder="Location..."
             value={location}
-            onChange={(e) => { setLocation(e.target.value); setPage(1); }}
+            onChange={(e) => {
+              setLocation(e.target.value);
+              setPage(1);
+            }}
             className="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2.5 text-white placeholder:text-slate-500 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
           />
           <select
+            aria-label="Filter jobs by work mode"
             value={workMode}
-            onChange={(e) => { setWorkMode(e.target.value); setPage(1); }}
+            onChange={(e) => {
+              setWorkMode(e.target.value);
+              setPage(1);
+            }}
             className="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2.5 text-white focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
           >
             <option value="">All Work Modes</option>
@@ -134,8 +182,12 @@ export default function JobsPage() {
             <option value="On-site">On-site</option>
           </select>
           <select
+            aria-label="Filter jobs by seniority"
             value={seniority}
-            onChange={(e) => { setSeniority(e.target.value); setPage(1); }}
+            onChange={(e) => {
+              setSeniority(e.target.value);
+              setPage(1);
+            }}
             className="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2.5 text-white focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
           >
             <option value="">All Levels</option>
@@ -144,7 +196,13 @@ export default function JobsPage() {
             <option value="Senior">Senior</option>
           </select>
           <button
-            onClick={() => { setSearch(""); setLocation(""); setWorkMode(""); setSeniority(""); setPage(1); }}
+            onClick={() => {
+              setSearch("");
+              setLocation("");
+              setWorkMode("");
+              setSeniority("");
+              setPage(1);
+            }}
             className="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2.5 text-slate-300 hover:border-slate-600 hover:bg-slate-700 transition-colors"
           >
             Clear
@@ -164,12 +222,29 @@ export default function JobsPage() {
         </div>
       ) : jobs.length === 0 ? (
         <div className="rounded-xl glass-card p-12 text-center">
-          <svg className="mx-auto h-12 w-12 text-slate-500 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+          <svg
+            className="mx-auto h-12 w-12 text-slate-500 mb-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={1.5}
+              d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"
+            />
           </svg>
-          <p className="text-slate-400">No jobs found matching your criteria.</p>
+          <p className="text-slate-400">
+            No jobs found matching your criteria.
+          </p>
           <button
-            onClick={() => { setSearch(""); setLocation(""); setWorkMode(""); setSeniority(""); }}
+            onClick={() => {
+              setSearch("");
+              setLocation("");
+              setWorkMode("");
+              setSeniority("");
+            }}
             className="mt-4 text-emerald-400 hover:text-emerald-300 transition-colors"
           >
             Clear filters
@@ -198,32 +273,84 @@ export default function JobsPage() {
                       {userId && (
                         <button
                           onClick={() => toggleSave(job.id)}
+                          aria-label={
+                            job.isSaved
+                              ? `Remove ${job.title} from saved jobs`
+                              : `Save ${job.title}`
+                          }
                           className={`p-1 transition-colors ${job.isSaved ? "text-amber-400" : "text-slate-500 hover:text-amber-400"}`}
                         >
-                          <svg className="h-6 w-6" fill={job.isSaved ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                          <svg
+                            className="h-6 w-6"
+                            fill={job.isSaved ? "currentColor" : "none"}
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
+                            />
                           </svg>
                         </button>
                       )}
                     </div>
-                    <p className="mt-1 font-medium text-emerald-400">{job.companyName}</p>
+                    <p className="mt-1 font-medium text-emerald-400">
+                      {job.companyName}
+                    </p>
                     <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-slate-400">
                       <span className="flex items-center gap-1.5">
-                        <svg className="h-4 w-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <svg
+                          className="h-4 w-4 text-slate-500"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={1.5}
+                            d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                          />
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={1.5}
+                            d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                          />
                         </svg>
                         {job.location}
                       </span>
                       <span className="flex items-center gap-1.5">
-                        <svg className="h-4 w-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        <svg
+                          className="h-4 w-4 text-slate-500"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={1.5}
+                            d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                          />
                         </svg>
                         {job.workMode}
                       </span>
                       <span className="flex items-center gap-1.5">
-                        <svg className="h-4 w-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        <svg
+                          className="h-4 w-4 text-slate-500"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={1.5}
+                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
                         </svg>
                         {job.seniorityLevel}
                       </span>
@@ -244,7 +371,8 @@ export default function JobsPage() {
                   </span>
                   <div className="flex gap-2">
                     <Link
-                      href={`/jobs/${job.id}?data=${encodeURIComponent(JSON.stringify(job))}`}
+                      href={`/jobs/${job.id}`}
+                      onClick={() => persistJobs([job])}
                       className="rounded-lg border border-emerald-500/50 px-4 py-2 text-sm font-medium text-emerald-400 hover:bg-emerald-500/10 transition-all"
                     >
                       View Details

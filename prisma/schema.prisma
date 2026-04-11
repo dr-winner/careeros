@@ -133,30 +133,34 @@ model CoverLetter {
 }
 
 model SavedJob {
-  id           String   @id @default(cuid())
-  userId       String
-  externalJobId String  @unique @default(cuid())
-  title        String
-  companyName  String?
-  location     String?
-  country      String?
-  workMode     String?
+  id             String   @id @default(cuid())
+  userId         String
+  externalJobId  String
+  title          String
+  companyName    String?
+  location       String?
+  country        String?
+  workMode       String?
   applicationUrl String?
-  savedAt      DateTime @default(now())
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  savedAt        DateTime @default(now())
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, externalJobId])
 }
 
 model Application {
-  id        String   @id @default(cuid())
-  userId    String
-  jobId     String
-  status    String
-  appliedAt DateTime?
-  notes     String?
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  job       Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  id           String   @id @default(cuid())
+  userId       String
+  jobId        String
+  jobTitle     String?
+  companyName  String?
+  location     String?
+  workMode     String?
+  status       String
+  appliedAt    DateTime?
+  notes        String?
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job          Job?     @relation(fields: [jobId], references: [id], onDelete: Cascade)
 }
 
 model SavedSearch {
@@ -175,13 +179,16 @@ model SavedSearch {
 }
 
 model Referral {
-  id          String   @id @default(cuid())
-  referrerId  String
+  id           String   @id @default(cuid())
+  referrerId   String
   refereeEmail String
-  referralCode String  @unique
-  status      String   @default("pending")
-  createdAt   DateTime @default(now())
-  user        User     @relation(fields: [referrerId], references: [id], onDelete: Cascade)
+  referralCode String
+  status       String   @default("pending")
+  createdAt    DateTime @default(now())
+  user         User     @relation(fields: [referrerId], references: [id], onDelete: Cascade)
+
+  @@unique([referrerId, refereeEmail])
+  @@index([referralCode])
 }
 
 model WaitlistReferral {
