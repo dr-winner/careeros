@@ -4,43 +4,20 @@ import mammoth from "mammoth";
 
 async function extractTextFromPDF(buffer: Buffer): Promise<string> {
   try {
-    const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs");
-    const pdfjs = pdfjsLib as unknown as {
-      getDocument: (options: {
-        data: Uint8Array;
-        useWorkerFetch: boolean;
-        isEvalSupported: boolean;
-        useSystemFonts: boolean;
-      }) => {
-        promise: Promise<{
-          numPages: number;
-          getPage: (page: number) => Promise<{
-            getTextContent: () => Promise<{
-              items: Array<{ str?: string }>;
-            }>;
-          }>;
-        }>;
-      };
-    };
-
-    const uint8Array = new Uint8Array(buffer);
-    const loadingTask = pdfjs.getDocument({
-      data: uint8Array,
-      useWorkerFetch: false,
-      isEvalSupported: false,
-      useSystemFonts: true,
-    });
-
-    const pdf = await loadingTask.promise;
+    const unpdf = await import("unpdf");
+    const getDocumentProxy = unpdf.getDocumentProxy as (data: Buffer) => Promise<{
+      numPages: number;
+      getPage: (i: number) => Promise<unknown>;
+    }>;
+    const extractText = unpdf.extractText as (page: unknown) => Promise<{ totalPages: number; text: string[] }>;
+    
+    const pdf = await getDocumentProxy(buffer);
     const textParts: string[] = [];
 
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);
-      const content = await page.getTextContent();
-      const pageText = content.items
-        .map((item) => ("str" in item ? item.str : ""))
-        .join(" ");
-      textParts.push(pageText);
+      const result = await extractText(page);
+      if (result?.text) textParts.push(...result.text);
     }
 
     return textParts.join("\n");
