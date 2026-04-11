@@ -156,63 +156,115 @@ export async function POST(request: NextRequest) {
     else verdict = "Reach Position";
 
     let cvAdvice = "";
+    let cvOptimization: {
+      content: string[];
+      format: string[];
+      atsTips: string[];
+      keywordsToAdd: string[];
+      phrasesToUse: string[];
+    } | null = null;
+
     const hasAI = hasAiProviderConfigured();
 
     if (missing.length > 0 && hasAI) {
       try {
-        const prompt = `You are a career coach helping someone optimize their CV for a specific job.
+        const prompt = `You are an expert CV optimization specialist helping someone tailor their resume for a specific job. Return a JSON object with specific, actionable advice.
 
 JOB TITLE: ${jobTitle || "This position"}
 JOB REQUIREMENTS: ${(jobDescription || "").substring(0, 2000)}
 
-CANDIDATE'S CURRENT CV HIGHLIGHTS:
+CANDIDATE PROFILE:
 - Headline: ${user?.headline || "Not set"}
-- Experience: ${user?.experience || "Not provided"}
-- Skills found in CV: ${allUserSkills.join(", ") || "Limited skills detected"}
+- Experience Level: ${user?.experience || "Not provided"}
+- Current Skills: ${allUserSkills.join(", ") || "Limited skills detected"}
 - Work History: ${
           experiences
             .map(
               (experience) =>
-                `${experience.title} at ${experience.company || "Unknown Company"}`,
+                `${experience.title} at ${experience.company || "Unknown Company"}${experience.description ? ": " + experience.description.substring(0, 100) : ""}`,
             )
-            .join("; ") || "Not provided"
+            .join(" | ") || "Not provided"
         }
 - Education: ${
           education
             .map(
               (entry) =>
-                `${entry.degree || "Degree"} in ${entry.fieldOfStudy || "Field"}`,
+                `${entry.degree || "Degree"}${entry.fieldOfStudy ? " in " + entry.fieldOfStudy : ""} from ${entry.institution || "Unknown Institution"}`,
             )
-            .join("; ") || "Not provided"
+            .join(" | ") || "Not provided"
         }
 
-MISSING SKILLS FOR THIS JOB: ${missing.join(", ")}
+MISSING SKILLS: ${missing.join(", ")}
 
-Generate 3-4 specific, actionable suggestions for how this candidate can UPDATE THEIR CV to better match this job. Focus on:
-1. Keywords to add to their skills section
-2. Phrases to include in their work experience descriptions
-3. Specific achievements they could highlight
-4. Any certifications or quick wins to mention
+Return a JSON object with this exact structure (no markdown, just the JSON):
+{
+  "content": ["Actionable content changes - what to add/rewrite in each section"],
+  "format": ["Formatting recommendations - section order, length, visual structure"],
+  "atsTips": ["ATS optimization tips - keywords, structure, common pitfalls to avoid"],
+  "keywordsToAdd": ["Specific keywords to add to skills section"],
+  "phrasesToUse": ["Power phrases to use in work experience descriptions"]
+}
 
-Keep suggestions practical and specific to African job market context. Max 150 words.`;
+Make suggestions specific to African job market. Prioritize the most impactful changes.`;
 
         const systemPrompt =
-          "You are a professional career coach specializing in helping African job seekers. Give practical, actionable CV advice.";
+          "You are an expert CV optimization specialist. Return ONLY valid JSON with no additional text.";
 
         const { text } = await generateWithFallback(prompt, systemPrompt, {
-          maxTokens: 300,
-          temperature: 0.5,
+          maxTokens: 600,
+          temperature: 0.4,
         });
 
-        cvAdvice = text;
+        // Try to parse JSON from response
+        try {
+          const jsonMatch = text.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+            cvOptimization = {
+              content: parsed.content || [],
+              format: parsed.format || [],
+              atsTips: parsed.atsTips || [],
+              keywordsToAdd: parsed.keywordsToAdd || [],
+              phrasesToUse: parsed.phrasesToUse || [],
+            };
+            cvAdvice = parsed.content?.slice(0, 2).join(" ") || "";
+          }
+        } catch {
+          // Fallback to plain text advice
+          cvAdvice = text.substring(0, 300);
+        }
       } catch (error) {
-        console.error("AI CV advice error:", error);
+        console.error("AI CV optimization error:", error);
         cvAdvice = "";
       }
     }
 
+    // Fallback advice if no AI
     if (!cvAdvice && missing.length > 0) {
-      cvAdvice = `Skills to add to your CV: ${missing.slice(0, 5).join(", ")}`;
+      cvAdvice = `Skills to add: ${missing.slice(0, 5).join(", ")}`;
+      cvOptimization = {
+        content: [
+          `Add these skills to your CV: ${missing.slice(0, 5).join(", ")}`,
+          "Quantify achievements where possible (e.g., 'Increased sales by 30%')",
+          "Mirror the exact wording from the job description",
+        ],
+        format: [
+          "Keep CV to 1-2 pages maximum",
+          "Place most relevant experience at the top",
+          "Use consistent formatting throughout",
+        ],
+        atsTips: [
+          "Include keywords from the job posting verbatim",
+          "Avoid tables, headers, and complex formatting",
+          "Save as Word or PDF format",
+        ],
+        keywordsToAdd: missing.slice(0, 5),
+        phrasesToUse: [
+          "Led the implementation of...",
+          "Achieved measurable results in...",
+          "Collaborated with cross-functional teams...",
+        ],
+      };
     }
 
     return NextResponse.json({
@@ -224,6 +276,7 @@ Keep suggestions practical and specific to African job market context. Max 150 w
         hasResume: !!user?.resumes[0],
         hasProfile: !!user?.headline || !!user?.experience,
         cvAdvice,
+        cvOptimization,
         aiEnabled: hasAI,
       },
     });
