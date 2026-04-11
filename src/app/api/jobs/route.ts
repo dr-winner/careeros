@@ -29,7 +29,7 @@ interface RawJob {
   company_name?: string;
   company?: { display_name: string };
   owner?: { companyName?: string };
-  location?: string;
+  location?: string | { display_name?: string; area?: string[] };
   location_data?: { display_name?: string };
   locationAddress?: string;
   description?: string;
@@ -101,9 +101,18 @@ function parseSalary(salary?: string): { min?: number; max?: number } {
   return { min: nums[0] };
 }
 
+function extractLocation(raw: RawJob): string {
+  if (typeof raw.location === "string") return raw.location;
+  if (typeof raw.location === "object" && raw.location?.display_name) return raw.location.display_name;
+  if (raw.location_data?.display_name) return raw.location_data.display_name;
+  if (raw.candidate_required_location) return raw.candidate_required_location;
+  if (raw.locationAddress) return raw.locationAddress;
+  return "Not specified";
+}
+
 function formatJob(raw: RawJob, sourceId: string, source: string, savedJobIds: string[]): Job {
   const companyName = raw.company_name || raw.company?.display_name || raw.owner?.companyName || "Unknown Company";
-  const location = raw.location || raw.location_data?.display_name || raw.candidate_required_location || raw.locationAddress || "Not specified";
+  const location = extractLocation(raw);
   const appUrl = raw.url || raw.redirect_url || "#";
   const postedAt = raw.created || (raw.created_at ? new Date(raw.created_at * 1000).toISOString() : new Date().toISOString());
   const description = raw.description?.replace(/<[^>]*>/g, "").substring(0, 500) || raw.descriptionBreakdown?.oneSentenceJobSummary || "";
