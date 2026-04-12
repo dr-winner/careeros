@@ -164,7 +164,7 @@ export default function AlertsPage() {
           <div className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label className="mono text-xs text-zinc-500 mb-1 block">alert_name *</label>
+                 <label className="text-sm text-zinc-400 mb-1 block">Alert Name *</label>
                 <input
                   type="text"
                   placeholder="e.g., Software Jobs"
@@ -174,7 +174,7 @@ export default function AlertsPage() {
                 />
               </div>
               <div>
-                <label className="mono text-xs text-zinc-500 mb-1 block">search_query *</label>
+                 <label className="text-sm text-zinc-400 mb-1 block">Search Query *</label>
                 <input
                   type="text"
                   placeholder="e.g., Software Engineer"
@@ -184,7 +184,7 @@ export default function AlertsPage() {
                 />
               </div>
               <div>
-                <label className="mono text-xs text-zinc-500 mb-1 block">location</label>
+                 <label className="text-sm text-zinc-400 mb-1 block">Location</label>
                 <input
                   type="text"
                   placeholder="e.g., Lagos, Nigeria"
@@ -194,7 +194,7 @@ export default function AlertsPage() {
                 />
               </div>
               <div>
-                <label className="mono text-xs text-zinc-500 mb-1 block">frequency</label>
+                 <label className="text-sm text-zinc-400 mb-1 block">Frequency</label>
                 <select
                   value={formData.alertFrequency}
                   onChange={(e) => setFormData({ ...formData, alertFrequency: e.target.value })}
@@ -205,7 +205,7 @@ export default function AlertsPage() {
                 </select>
               </div>
               <div>
-                <label className="mono text-xs text-zinc-500 mb-1 block">work_mode</label>
+                 <label className="text-sm text-zinc-400 mb-1 block">Work Mode</label>
                 <select
                   value={formData.workMode}
                   onChange={(e) => setFormData({ ...formData, workMode: e.target.value })}
@@ -218,7 +218,7 @@ export default function AlertsPage() {
                 </select>
               </div>
               <div>
-                <label className="mono text-xs text-zinc-500 mb-1 block">seniority</label>
+                 <label className="text-sm text-zinc-400 mb-1 block">Seniority</label>
                 <select
                   value={formData.seniority}
                   onChange={(e) => setFormData({ ...formData, seniority: e.target.value })}

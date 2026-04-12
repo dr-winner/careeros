@@ -141,7 +141,7 @@ export default function AnalyticsPage() {
           </div>
           <div>
             <h1 className="text-xl font-bold text-white">Analytics</h1>
-            <p className="mono text-xs text-zinc-500">job_search_metrics</p>
+             <p className="text-sm text-zinc-500">Track your job search progress</p>
           </div>
         </div>
       </div>
@@ -180,7 +180,7 @@ export default function AnalyticsPage() {
             <div className="agent-card p-5">
               <span className="text-sm font-medium text-zinc-400">Application Status</span>
               {stats.totalApplications === 0 ? (
-                <p className="mono text-xs text-zinc-600 mt-4">no_data</p>
+                <p className="text-sm text-zinc-600 mt-4">No data</p>
               ) : (
                 <div className="mt-4 space-y-3">
                   {Object.entries(stats.applicationsByStatus).map(([status, count]) => {
@@ -227,7 +227,7 @@ export default function AnalyticsPage() {
           <div className="agent-card p-5">
               <span className="text-sm font-medium text-zinc-400">Recent Applications</span>
             {applications.length === 0 ? (
-              <p className="mono text-xs text-zinc-600 mt-4">no_data</p>
+              <p className="text-sm text-zinc-600 mt-4">No data</p>
             ) : (
               <div className="mt-4 space-y-2">
                 {applications.slice(0, 5).map((app) => {

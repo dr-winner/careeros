@@ -85,7 +85,7 @@ export default function ReferralPage() {
           </div>
           <div>
             <h1 className="text-xl font-bold text-white">Refer & Earn</h1>
-            <p className="mono text-xs text-zinc-500">referral_program</p>
+             <p className="text-sm text-zinc-500">Share CareerOS with friends</p>
           </div>
         </div>
       </div>
@@ -113,7 +113,7 @@ export default function ReferralPage() {
             <span className="text-sm font-medium text-zinc-400">Send an Invite</span>
           <div className="mt-4 space-y-3">
             <div>
-              <label className="mono text-xs text-zinc-500 mb-1 block">referee_email</label>
+               <label className="text-sm text-zinc-400 mb-1 block">Friend&apos;s Email</label>
               <input
                 type="email"
                 value={refereeEmail}

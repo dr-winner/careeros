@@ -143,7 +143,7 @@ ${name}`;
           </div>
           <div>
             <h1 className="text-xl font-bold text-white">Cover Letter</h1>
-            <p className="mono text-xs text-zinc-500">ai_generator</p>
+             <p className="text-sm text-zinc-500">AI-powered letter generator</p>
           </div>
         </div>
       </div>
@@ -154,7 +154,7 @@ ${name}`;
             <span className="text-sm font-medium text-zinc-400">Job Details</span>
             <div className="mt-4 space-y-4">
               <div>
-                <label className="mono text-xs text-zinc-500 mb-1 block">recipient_name</label>
+                 <label className="text-sm text-zinc-400 mb-1 block">Recipient Name</label>
                 <input
                   type="text"
                   placeholder="Hiring Manager"
@@ -164,7 +164,7 @@ ${name}`;
                 />
               </div>
               <div>
-                <label className="mono text-xs text-zinc-500 mb-1 block">company_name *</label>
+                 <label className="text-sm text-zinc-400 mb-1 block">Company Name *</label>
                 <input
                   type="text"
                   placeholder="Acme Corporation"
@@ -174,7 +174,7 @@ ${name}`;
                 />
               </div>
               <div>
-                <label className="mono text-xs text-zinc-500 mb-1 block">job_title *</label>
+                 <label className="text-sm text-zinc-400 mb-1 block">Job Title *</label>
                 <input
                   type="text"
                   placeholder="Software Engineer"
@@ -184,7 +184,7 @@ ${name}`;
                 />
               </div>
               <div>
-                <label className="mono text-xs text-zinc-500 mb-1 block">job_description</label>
+                 <label className="text-sm text-zinc-400 mb-1 block">Job Description</label>
                 <textarea
                   rows={4}
                   placeholder="Paste job description for tailored letter..."
@@ -220,16 +220,16 @@ ${name}`;
             <span className="text-sm font-medium text-zinc-400">Your Profile</span>
               <div className="mt-3 space-y-2">
                 <div className="flex justify-between">
-                  <span className="mono text-xs text-zinc-600">name</span>
-                  <span className="mono text-xs text-zinc-400">{profile.fullName || "not_set"}</span>
+                   <span className="text-sm text-zinc-500">Name</span>
+                  <span className="text-sm text-zinc-400">{profile.fullName || "Not set"}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="mono text-xs text-zinc-600">email</span>
-                  <span className="mono text-xs text-zinc-400">{profile.email || "not_set"}</span>
+                   <span className="text-sm text-zinc-500">Email</span>
+                  <span className="text-sm text-zinc-400">{profile.email || "Not set"}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="mono text-xs text-zinc-600">headline</span>
-                  <span className="mono text-xs text-zinc-400 truncate max-w-[150px]">{profile.headline || profile.experience || "not_set"}</span>
+                   <span className="text-sm text-zinc-500">Headline</span>
+                  <span className="text-sm text-zinc-400 truncate max-w-[150px]">{profile.headline || profile.experience || "Not set"}</span>
                 </div>
               </div>
             </div>
@@ -255,7 +255,7 @@ ${name}`;
               </div>
             ) : (
               <div className="flex items-center justify-center h-48 rounded-lg border-2 border-dashed border-zinc-800">
-                <p className="mono text-xs text-zinc-600">fill_details_and_generate()</p>
+                 <p className="text-sm text-zinc-600">Fill in the details and click generate</p>
               </div>
             )}
           </div>

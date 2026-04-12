@@ -115,7 +115,7 @@ export default function ProfilePage() {
           </div>
           <div>
             <h1 className="text-xl font-bold text-white">Profile Settings</h1>
-            <p className="mono text-xs text-zinc-500">user_configuration</p>
+             <p className="text-sm text-zinc-500">Manage your settings</p>
           </div>
         </div>
       </div>

@@ -111,7 +111,7 @@ export default function MobileAppPage() {
             </svg>
           </div>
           <h1 className="text-xl font-bold text-white">Quick Search</h1>
-          <p className="mono text-xs text-zinc-500 mt-1">job_search_mobile</p>
+           <p className="text-sm text-zinc-500 mt-1">Find opportunities on the go</p>
         </div>
       </div>
 

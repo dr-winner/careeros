@@ -360,15 +360,15 @@ export default function ResumesPage() {
                 <div className="grid grid-cols-3 gap-3 mb-4">
                   <div className="rounded-lg bg-purple-500/10 p-3 text-center">
                     <p className="text-xl font-bold text-purple-400">{selectedResume.skills.length}</p>
-                    <p className="mono text-xs text-zinc-500">skills</p>
+                     <p className="text-xs text-zinc-500">Skills</p>
                   </div>
                   <div className="rounded-lg bg-cyan-500/10 p-3 text-center">
                     <p className="text-xl font-bold text-cyan-400">{selectedResume.experiences.length}</p>
-                    <p className="mono text-xs text-zinc-500">exp</p>
+                     <p className="text-xs text-zinc-500">Experience</p>
                   </div>
                   <div className="rounded-lg bg-amber-500/10 p-3 text-center">
                     <p className="text-xl font-bold text-amber-400">{selectedResume.education.length}</p>
-                    <p className="mono text-xs text-zinc-500">edu</p>
+                     <p className="text-xs text-zinc-500">Education</p>
                   </div>
                 </div>
 
