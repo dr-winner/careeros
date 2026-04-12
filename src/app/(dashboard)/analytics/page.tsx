@@ -168,7 +168,7 @@ export default function AnalyticsPage() {
             ].map((item, i) => (
               <div key={i} className="agent-card p-5">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="mono text-xs text-zinc-500 uppercase tracking-wider">{item.label}</span>
+                  <span className="text-xs text-zinc-400">{item.label}</span>
                   <div className={`h-2 w-2 rounded-full ${item.color === "purple" ? "bg-purple-400" : item.color === "cyan" ? "bg-cyan-400" : item.color === "amber" ? "bg-amber-400" : "bg-green-400"}`} />
                 </div>
                 <div className="text-2xl font-bold text-white">{item.value}</div>
@@ -178,7 +178,7 @@ export default function AnalyticsPage() {
 
           <div className="grid gap-6 lg:grid-cols-2 mb-6">
             <div className="agent-card p-5">
-              <span className="mono text-xs text-zinc-500 uppercase tracking-wider">application_status</span>
+              <span className="text-sm font-medium text-zinc-400">Application Status</span>
               {stats.totalApplications === 0 ? (
                 <p className="mono text-xs text-zinc-600 mt-4">no_data</p>
               ) : (
@@ -208,7 +208,7 @@ export default function AnalyticsPage() {
             </div>
 
             <div className="agent-card p-5">
-              <span className="mono text-xs text-zinc-500 uppercase tracking-wider">activity_overview</span>
+              <span className="text-sm font-medium text-zinc-400">Activity Overview</span>
               <div className="mt-4 space-y-3">
                 {[
                   { label: "resumes_uploaded", value: stats.resumes },
@@ -225,7 +225,7 @@ export default function AnalyticsPage() {
           </div>
 
           <div className="agent-card p-5">
-            <span className="mono text-xs text-zinc-500 uppercase tracking-wider">recent_applications</span>
+              <span className="text-sm font-medium text-zinc-400">Recent Applications</span>
             {applications.length === 0 ? (
               <p className="mono text-xs text-zinc-600 mt-4">no_data</p>
             ) : (

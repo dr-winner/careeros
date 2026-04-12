@@ -418,7 +418,7 @@ export default function JobDetailPage() {
                 </svg>
               </div>
               <div>
-                <span className="mono text-xs text-zinc-500 uppercase tracking-wider">fit_score()</span>
+                <span className="text-xs text-zinc-500">Fit Score</span>
                 <div className="text-lg font-bold text-white">{getFitVerdict(fitScore)}</div>
               </div>
             </div>
@@ -434,7 +434,7 @@ export default function JobDetailPage() {
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             {matchedSkills.length > 0 && (
               <div>
-                <div className="mono text-xs text-zinc-600 uppercase tracking-wider mb-2">matched_skills</div>
+                <div className="text-xs text-zinc-500 mb-2 font-medium">Matched Skills</div>
                 <div className="flex flex-wrap gap-1.5">
                   {matchedSkills.map((skill, i) => (
                     <span key={i} className="px-2 py-1 rounded text-xs bg-purple-500/20 text-purple-300 border border-purple-500/30">
@@ -446,7 +446,7 @@ export default function JobDetailPage() {
             )}
             {missingSkills.length > 0 && (
               <div>
-                <div className="mono text-xs text-zinc-600 uppercase tracking-wider mb-2">skills_to_add</div>
+                <div className="text-xs text-zinc-500 mb-2 font-medium">Skills to Add</div>
                 <div className="flex flex-wrap gap-1.5">
                   {missingSkills.map((skill, i) => (
                     <span key={i} className="px-2 py-1 rounded text-xs bg-zinc-800 text-zinc-400 border border-zinc-700">
@@ -460,8 +460,8 @@ export default function JobDetailPage() {
 
           <div className="mt-4 pt-4 border-t border-zinc-800/50 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="mono text-xs text-zinc-600">
-                {hasResume ? "cv_analysis" : "profile_analysis"}
+              <span className="text-xs text-zinc-500">
+                {hasResume ? "CV Analysis" : "Profile Analysis"}
               </span>
               {aiEnabled && (
                 <span className="px-2 py-0.5 rounded text-xs bg-purple-500/20 text-purple-400 border border-purple-500/30">
@@ -476,7 +476,7 @@ export default function JobDetailPage() {
               <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
-              re_analyze
+              Re-analyze
             </button>
           </div>
         </div>
@@ -508,7 +508,7 @@ export default function JobDetailPage() {
       )}
 
       <div className="agent-card p-6 animate-fade-up">
-        <div className="mono text-xs text-zinc-600 uppercase tracking-wider mb-3">job_description</div>
+        <div className="text-sm text-zinc-500 mb-3 font-medium">Job Description</div>
         <div className="text-sm text-zinc-300 whitespace-pre-wrap leading-relaxed">
           {job.description}
         </div>
@@ -568,7 +568,7 @@ export default function JobDetailPage() {
               <div className="p-4 space-y-4">
                 {cvOptimization.content.length > 0 && (
                   <div>
-                    <div className="mono text-xs text-purple-400 uppercase tracking-wider mb-2">content_changes[]</div>
+                    <div className="text-xs text-purple-400 mb-2 font-medium">Content Changes</div>
                     <ul className="space-y-2">
                       {cvOptimization.content.map((tip, i) => (
                         <li key={i} className="flex items-start gap-2 p-2 rounded bg-zinc-900/50 border border-zinc-800">
@@ -582,7 +582,7 @@ export default function JobDetailPage() {
 
                 {cvOptimization.keywordsToAdd.length > 0 && (
                   <div>
-                    <div className="mono text-xs text-cyan-400 uppercase tracking-wider mb-2">keywords_to_add[]</div>
+                    <div className="text-xs text-cyan-400 mb-2 font-medium">Keywords to Add</div>
                     <div className="flex flex-wrap gap-1.5">
                       {cvOptimization.keywordsToAdd.map((keyword, i) => (
                         <span key={i} className="px-2 py-1 rounded text-xs bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 mono">
@@ -595,7 +595,7 @@ export default function JobDetailPage() {
 
                 {cvOptimization.phrasesToUse.length > 0 && (
                   <div>
-                    <div className="mono text-xs text-amber-400 uppercase tracking-wider mb-2">power_phrases</div>
+                    <div className="text-xs text-amber-400 mb-2 font-medium">Power Phrases</div>
                     <div className="space-y-2">
                       {cvOptimization.phrasesToUse.map((phrase, i) => (
                         <div key={i} className="p-2 rounded bg-amber-500/10 border border-amber-500/30">
@@ -608,7 +608,7 @@ export default function JobDetailPage() {
 
                 {cvOptimization.format.length > 0 && (
                   <div>
-                    <div className="mono text-xs text-green-400 uppercase tracking-wider mb-2">format_tips</div>
+                    <div className="text-xs text-green-400 mb-2 font-medium">Format Tips</div>
                     <ul className="space-y-2">
                       {cvOptimization.format.map((tip, i) => (
                         <li key={i} className="flex items-start gap-2 p-2 rounded bg-zinc-900/50 border border-zinc-800">
@@ -622,7 +622,7 @@ export default function JobDetailPage() {
 
                 {cvOptimization.atsTips.length > 0 && (
                   <div>
-                    <div className="mono text-xs text-red-400 uppercase tracking-wider mb-2">ats_optimization[]</div>
+                    <div className="text-xs text-red-400 mb-2 font-medium">ATS Optimization</div>
                     <ul className="space-y-2">
                       {cvOptimization.atsTips.map((tip, i) => (
                         <li key={i} className="flex items-start gap-2 p-2 rounded bg-zinc-900/50 border border-zinc-800">

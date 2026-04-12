@@ -151,7 +151,7 @@ ${name}`;
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="space-y-4">
           <div className="agent-card p-5">
-            <span className="mono text-xs text-zinc-500 uppercase tracking-wider">job_details</span>
+            <span className="text-sm font-medium text-zinc-400">Job Details</span>
             <div className="mt-4 space-y-4">
               <div>
                 <label className="mono text-xs text-zinc-500 mb-1 block">recipient_name</label>
@@ -217,7 +217,7 @@ ${name}`;
 
           {profile && (
           <div className="agent-card p-5">
-            <span className="mono text-xs text-zinc-500 uppercase tracking-wider">user_profile</span>
+            <span className="text-sm font-medium text-zinc-400">Your Profile</span>
               <div className="mt-3 space-y-2">
                 <div className="flex justify-between">
                   <span className="mono text-xs text-zinc-600">name</span>
@@ -239,7 +239,7 @@ ${name}`;
         <div className="space-y-4">
           <div className="agent-card p-5">
             <div className="flex items-center justify-between mb-4">
-              <span className="mono text-xs text-zinc-500 uppercase tracking-wider">output</span>
+              <span className="text-sm font-medium text-zinc-400">Generated Letter</span>
               {coverLetter && (
                 <button onClick={copyToClipboard} className="mono text-xs text-purple-400 hover:text-purple-300">
                   copy
@@ -261,7 +261,7 @@ ${name}`;
           </div>
 
           <div className="agent-card p-5">
-            <span className="mono text-xs text-zinc-500 uppercase tracking-wider">tips</span>
+            <span className="text-sm font-medium text-zinc-400">Tips</span>
             <ul className="mt-3 space-y-2">
               {[
                 "Address to a specific person when possible",

@@ -92,7 +92,7 @@ export default function ReferralPage() {
 
       <div className="space-y-4">
         <div className="agent-card p-5">
-          <span className="mono text-xs text-zinc-500 uppercase tracking-wider">referral_link</span>
+            <span className="text-sm font-medium text-zinc-400">Your Referral Link</span>
           <div className="mt-4">
             <div className="flex gap-2">
               <input
@@ -110,7 +110,7 @@ export default function ReferralPage() {
         </div>
 
         <div className="agent-card p-5">
-          <span className="mono text-xs text-zinc-500 uppercase tracking-wider">send_invite</span>
+            <span className="text-sm font-medium text-zinc-400">Send an Invite</span>
           <div className="mt-4 space-y-3">
             <div>
               <label className="mono text-xs text-zinc-500 mb-1 block">referee_email</label>
@@ -129,7 +129,7 @@ export default function ReferralPage() {
         </div>
 
         <div className="agent-card p-5">
-          <span className="mono text-xs text-zinc-500 uppercase tracking-wider">why_refer</span>
+            <span className="text-sm font-medium text-zinc-400">Why Refer Friends</span>
           <div className="mt-4 space-y-3">
             {[
               { icon: "→", color: "purple", text: "Help someone land their dream job" },

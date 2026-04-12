@@ -107,7 +107,7 @@ export default function InterviewPrepPage() {
                   </div>
 
                   <div className="mb-3">
-                    <span className="mono text-xs text-zinc-600 uppercase tracking-wider">tips[]</span>
+                    <span className="text-xs text-zinc-500">Tips</span>
                     <ul className="mt-2 space-y-1">
                       {q.tips.map((tip, i) => (
                         <li key={i} className="flex items-start gap-2 text-xs text-zinc-400">
@@ -120,7 +120,7 @@ export default function InterviewPrepPage() {
 
                   {q.sampleAnswer && (
                     <div className="p-3 rounded-lg bg-zinc-900/50 border border-zinc-800">
-                      <span className="mono text-xs text-zinc-600 uppercase tracking-wider">sample_answer</span>
+                      <span className="text-xs text-zinc-500">Sample Answer</span>
                       <p className="mt-2 text-xs text-zinc-400 italic">{q.sampleAnswer}</p>
                     </div>
                   )}
@@ -133,12 +133,12 @@ export default function InterviewPrepPage() {
 
       {filteredQuestions.length === 0 && (
         <div className="agent-card p-8 text-center">
-          <p className="mono text-xs text-zinc-500">no_questions_match_filter</p>
+          <p className="text-sm text-zinc-500">No questions match your filters.</p>
         </div>
       )}
 
       <div className="agent-card p-5 mt-6">
-        <span className="mono text-xs text-zinc-600 uppercase tracking-wider">interview_tips</span>
+        <span className="text-sm font-medium text-zinc-400">Interview Tips</span>
         <ul className="mt-3 space-y-2">
           {[
             "Research the company and role beforehand",

@@ -274,7 +274,7 @@ export default function ResumesPage() {
         <div className="grid gap-6 lg:grid-cols-2">
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className="mono text-xs text-zinc-500 uppercase tracking-wider">resumes</span>
+              <span className="text-xs text-zinc-500 font-medium">Your Resumes</span>
               <button
                 onClick={() => setShowUpload(true)}
                 className="mono text-xs text-purple-400 hover:text-purple-300"
@@ -353,7 +353,7 @@ export default function ResumesPage() {
             <div className="space-y-4">
               <div className="rounded-2xl border border-white/10 bg-[#14141f] p-5">
                 <div className="flex items-center justify-between mb-4">
-                  <span className="mono text-xs text-zinc-500 uppercase tracking-wider">optimization</span>
+                  <span className="text-xs text-zinc-500 font-medium">Optimization Tips</span>
                   <span className="mono text-xs text-zinc-600 truncate max-w-[150px]">{selectedResume.originalName}</span>
                 </div>
 
@@ -390,7 +390,7 @@ export default function ResumesPage() {
               </div>
 
               <div className="rounded-2xl border border-white/10 bg-[#14141f] p-5">
-                <span className="mono text-xs text-zinc-500 uppercase tracking-wider">best_practices</span>
+                  <span className="text-xs text-zinc-500 font-medium">Best Practices</span>
                 <ul className="mt-3 space-y-2">
                   {[
                     "Keep it to 1-2 pages",

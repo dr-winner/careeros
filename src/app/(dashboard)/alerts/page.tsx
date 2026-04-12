@@ -160,7 +160,7 @@ export default function AlertsPage() {
 
       {showCreate && (
         <div className="agent-card p-5 mb-6 animate-fade-up">
-          <div className="mono text-xs text-zinc-500 uppercase tracking-wider mb-4">new_alert</div>
+          <div className="text-sm font-medium text-zinc-400 mb-4">Create New Alert</div>
           <div className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
@@ -307,7 +307,7 @@ export default function AlertsPage() {
       )}
 
       <div className="agent-card p-5 mt-6">
-        <span className="mono text-xs text-zinc-600 uppercase tracking-wider">how_it_works</span>
+        <span className="text-sm font-medium text-zinc-400">How Alerts Work</span>
         <ul className="mt-3 space-y-1.5">
           {[
             "Daily checks for matching jobs",

@@ -184,7 +184,7 @@ export default function MobileAppPage() {
       </div>
 
       <div className="agent-card p-4">
-        <span className="mono text-xs text-zinc-600 uppercase tracking-wider">quick_actions</span>
+        <span className="text-sm font-medium text-zinc-400">Quick Actions</span>
         <div className="grid grid-cols-2 gap-2 mt-3">
           {[
             { href: "/jobs", label: "Browse Jobs", icon: "M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z", color: "cyan" },
