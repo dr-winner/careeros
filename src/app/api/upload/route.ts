@@ -176,22 +176,10 @@ async function extractTextFromDOCX(buffer: Buffer): Promise<string> {
 async function extractTextFromPDF(buffer: Buffer): Promise<string> {
   try {
     const unpdf = await import("unpdf");
-    const getDocumentProxy = unpdf.getDocumentProxy as (data: Buffer) => Promise<{
-      numPages: number;
-      getPage: (i: number) => Promise<unknown>;
-    }>;
-    const extractText = unpdf.extractText as (page: unknown) => Promise<{ totalPages: number; text: string[] }>;
-    
-    const pdf = await getDocumentProxy(buffer);
-    const textParts: string[] = [];
-
-    for (let i = 1; i <= pdf.numPages; i++) {
-      const page = await pdf.getPage(i);
-      const result = await extractText(page);
-      if (result?.text) textParts.push(...result.text);
-    }
-
-    return textParts.join("\n");
+    const uint8Array = new Uint8Array(buffer);
+    const pdf = await unpdf.getDocumentProxy(uint8Array);
+    const { text } = await unpdf.extractText(pdf, { mergePages: true });
+    return text || "";
   } catch (error) {
     console.error("PDF extraction error:", error);
     return "";

@@ -211,7 +211,7 @@ export default function AnalyticsPage() {
               <span className="text-sm font-medium text-zinc-400">Activity Overview</span>
               <div className="mt-4 space-y-3">
                 {[
-                  { label: "resumes_uploaded", value: stats.resumes },
+                  { label: "CVs Uploaded", value: stats.resumes },
                   { label: "avg_days_active", value: `${stats.avgTimeToResponse}d` },
                   { label: "offers_received", value: stats.applicationsByStatus["Offer"] || 0 },
                 ].map((item, i) => (

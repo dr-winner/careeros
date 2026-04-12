@@ -169,7 +169,7 @@ export default function SavedJobsPage() {
                     disabled={deleting === job.externalJobId}
                     className="mono text-xs px-3 py-1.5 rounded-lg border border-white/10 text-zinc-500 hover:border-red-500/50 hover:text-red-400 transition-colors disabled:opacity-50"
                   >
-                    {deleting === job.externalJobId ? "..." : "rm"}
+                    {deleting === job.externalJobId ? "..." : "Remove"}
                   </button>
                 </div>
               </div>

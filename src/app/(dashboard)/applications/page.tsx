@@ -234,7 +234,7 @@ export default function ApplicationsPage() {
                       onClick={() => deleteApplication(application.id)}
                       className="mono text-xs px-3 py-2 rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500/10 transition-colors"
                     >
-                      rm
+                      Remove
                     </button>
                   </div>
                 </div>

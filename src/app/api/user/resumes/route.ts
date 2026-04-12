@@ -34,7 +34,12 @@ export async function GET() {
       orderBy: { createdAt: "desc" },
     });
 
-    return NextResponse.json({ resumes });
+    const resumesWithText = resumes.map(resume => ({
+      ...resume,
+      parsedText: resume.parsedText || "",
+    }));
+
+    return NextResponse.json({ resumes: resumesWithText });
   } catch (error) {
     console.error("Error fetching resumes:", error);
     return NextResponse.json({ error: "Failed to fetch resumes" }, { status: 500 });

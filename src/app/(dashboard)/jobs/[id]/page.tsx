@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 import { toast } from "sonner";
+import PaywallModal from "@/components/paywall-modal";
 
 interface Job {
   id: string;
@@ -39,6 +40,8 @@ export default function JobDetailPage() {
   const [hasResume, setHasResume] = useState(false);
   const [aiEnabled, setAiEnabled] = useState(false);
   const [showOptimizeModal, setShowOptimizeModal] = useState(false);
+  const [showPaywall, setShowPaywall] = useState(false);
+  const [isPremium, setIsPremium] = useState(false);
   const [cvOptimization, setCvOptimization] = useState<{
     content: string[];
     format: string[];
@@ -51,6 +54,21 @@ export default function JobDetailPage() {
     if (!params?.id) return "";
     return Array.isArray(params.id) ? params.id[0] : params.id;
   }, [params]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const premiumStatus = localStorage.getItem("isPremium") === "true";
+      setIsPremium(premiumStatus);
+    }
+  }, []);
+
+  const handleOptimizeClick = () => {
+    if (isPremium) {
+      setShowOptimizeModal(true);
+    } else {
+      setShowPaywall(true);
+    }
+  };
 
   const analyzeFit = useCallback(
     async (jobData: Job) => {
@@ -491,16 +509,34 @@ export default function JobDetailPage() {
               </svg>
             </div>
             <div className="flex-1">
-              <h3 className="text-sm font-medium text-amber-400">CV Advice</h3>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-medium text-amber-400">CV Advice</h3>
+                {!isPremium && (
+                  <span className="px-2 py-0.5 rounded text-xs bg-purple-500/20 text-purple-400 border border-purple-500/30">
+                    Premium
+                  </span>
+                )}
+              </div>
               <p className="mono text-xs text-zinc-400 mt-2 leading-relaxed">{cvAdvice}</p>
               <button
-                onClick={() => setShowOptimizeModal(true)}
+                onClick={handleOptimizeClick}
                 className="agent-button mt-3 inline-flex"
               >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-                Optimize CV
+                {!isPremium && (
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                )}
+                {isPremium ? (
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                ) : (
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                )}
+                {isPremium ? "Optimize CV" : "Unlock Optimization"}
               </button>
             </div>
           </div>
@@ -545,6 +581,13 @@ export default function JobDetailPage() {
           </a>
         </div>
       </div>
+
+      <PaywallModal
+        isOpen={showPaywall}
+        onClose={() => setShowPaywall(false)}
+        feature="cv_optimization"
+        title="CV Optimization"
+      />
 
       {showOptimizeModal && cvOptimization && (
         <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/80 p-4 overflow-y-auto">

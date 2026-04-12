@@ -297,7 +297,7 @@ export default function AlertsPage() {
                     search
                   </Link>
                   <button onClick={() => deleteSearch(search.id)} className="mono text-xs px-2 py-1 rounded border border-zinc-800 text-zinc-500 hover:border-red-500/50 hover:text-red-400 transition-colors">
-                    rm
+                    Remove
                   </button>
                 </div>
               </div>
