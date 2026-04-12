@@ -153,6 +153,7 @@ export default function JobDetailPage() {
 
     fetchJobFromAPI();
   }, [analyzeFit, checkApplication, fetchJobFromAPI, jobId]);
+
   const handleApply = async () => {
     if (!userId || !job) return;
 
@@ -215,7 +216,7 @@ export default function JobDetailPage() {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
       year: "numeric",
-      month: "long",
+      month: "short",
       day: "numeric",
     });
   };
@@ -223,18 +224,17 @@ export default function JobDetailPage() {
   const formatSalary = (min?: number, max?: number, country?: string) => {
     if (!min && !max) return null;
 
-    // Currency symbols by region
     const currencyMap: Record<string, string> = {
-      ZA: "R", // South Africa
-      AFRICA: "$", // General Africa (USD approximation)
-      GH: "GH₵", // Ghana
-      NG: "₦", // Nigeria
-      KE: "KSh", // Kenya
-      EU: "€", // Europe
-      USA: "$", // USA
-      UK: "£", // UK
-      ASIA: "$", // Asia
-      GLOBAL: "$", // Global
+      ZA: "R",
+      AFRICA: "$",
+      GH: "GH₵",
+      NG: "₦",
+      KE: "KSh",
+      EU: "€",
+      USA: "$",
+      UK: "£",
+      ASIA: "$",
+      GLOBAL: "$",
     };
 
     const currency = currencyMap[country || "GLOBAL"] || "$";
@@ -254,32 +254,21 @@ export default function JobDetailPage() {
     return "Reach Position";
   };
 
-  const getFitStyle = (score: number) => {
-    if (score >= 80) {
-      return {
-        badge: "bg-emerald-500/20 text-emerald-400",
-        bar: "bg-emerald-500",
-      };
-    }
-    if (score >= 60) {
-      return {
-        badge: "bg-amber-500/20 text-amber-400",
-        bar: "bg-amber-500",
-      };
-    }
-    return {
-      badge: "bg-red-500/20 text-red-400",
-      bar: "bg-red-500",
-    };
+  const getFitColor = (score: number) => {
+    if (score >= 80) return { bg: "bg-purple-500/20", text: "text-purple-400", bar: "bg-gradient-to-r from-purple-500 to-cyan-500" };
+    if (score >= 60) return { bg: "bg-amber-500/20", text: "text-amber-400", bar: "bg-gradient-to-r from-amber-500 to-orange-500" };
+    return { bg: "bg-red-500/20", text: "text-red-400", bar: "bg-gradient-to-r from-red-500 to-rose-500" };
   };
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-4xl px-6 py-8">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 w-1/3 rounded bg-slate-800"></div>
-          <div className="h-6 w-1/4 rounded bg-slate-800"></div>
-          <div className="h-32 w-full rounded bg-slate-800"></div>
+      <div className="max-w-3xl mx-auto">
+        <div className="agent-card p-8">
+          <div className="animate-pulse space-y-4">
+            <div className="h-8 w-1/3 rounded bg-zinc-800" />
+            <div className="h-6 w-1/4 rounded bg-zinc-800" />
+            <div className="h-32 w-full rounded bg-zinc-800" />
+          </div>
         </div>
       </div>
     );
@@ -287,51 +276,49 @@ export default function JobDetailPage() {
 
   if (!job) {
     return (
-      <div className="mx-auto max-w-4xl px-6 py-8 text-center">
-        <h1 className="text-2xl font-bold text-white">Job Not Found</h1>
-        <p className="mt-2 text-slate-400">
-          This job may have expired, been removed, or its details were only
-          available during your current browsing session.
-        </p>
-        <Link
-          href="/jobs"
-          className="mt-4 inline-block text-emerald-400 hover:text-emerald-300"
-        >
-          Back to Jobs
-        </Link>
+      <div className="max-w-3xl mx-auto">
+        <div className="agent-card p-8 text-center">
+          <div className="h-16 w-16 mx-auto rounded-xl bg-red-500/20 flex items-center justify-center mb-4">
+            <svg className="h-8 w-8 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <h1 className="text-2xl font-bold text-white mb-2">Job Not Found</h1>
+          <p className="mono text-sm text-zinc-500 mb-6">
+            This job may have expired or been removed.
+          </p>
+          <Link href="/jobs" className="agent-button inline-flex">
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Back to Jobs
+          </Link>
+        </div>
       </div>
     );
   }
 
+  const fitColor = fitScore !== null ? getFitColor(fitScore) : null;
+
   return (
-    <div className="mx-auto max-w-4xl px-6 py-8">
+    <div className="max-w-3xl mx-auto space-y-6">
       <Link
         href="/jobs"
-        className="mb-6 inline-flex items-center gap-2 text-sm text-slate-400 hover:text-slate-300"
+        className="inline-flex items-center gap-2 mono text-sm text-zinc-500 hover:text-purple-400 transition-colors"
       >
-        <svg
-          className="h-4 w-4"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M15 19l-7-7 7-7"
-          />
+        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
         </svg>
-        Back to Jobs
+        back_to_jobs()
       </Link>
 
-      <div className="rounded-2xl glass-card p-8">
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-white">{job.title}</h1>
-            <p className="mt-2 text-xl text-slate-400">{job.companyName}</p>
+      <div className="agent-card p-6 animate-fade-up">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1 min-w-0">
+            <h1 className="text-2xl font-bold text-white truncate">{job.title}</h1>
+            <p className="mono text-sm text-zinc-400 mt-1">{job.companyName}</p>
             {job.salaryMin || job.salaryMax ? (
-              <p className="mt-1 text-lg font-medium text-emerald-400">
+              <p className="gradient-text mt-1 font-medium">
                 {formatSalary(job.salaryMin, job.salaryMax, job.country)}
               </p>
             ) : null}
@@ -339,464 +326,328 @@ export default function JobDetailPage() {
           {userId && (
             <button
               onClick={toggleSave}
-              aria-label={
-                job.isSaved
-                  ? `Remove ${job.title} from saved jobs`
-                  : `Save ${job.title}`
-              }
-              className={`flex items-center gap-2 rounded-lg border px-4 py-2 ${
-                job.isSaved
-                  ? "border-amber-500/50 bg-amber-500/20 text-amber-400"
-                  : "border-slate-700 text-slate-400 hover:bg-slate-800"
-              }`}
+              className={`agent-button flex-shrink-0 ${job.isSaved ? "border-cyan-500/50 text-cyan-400" : ""}`}
             >
-              <svg
-                className="h-5 w-5"
-                fill={job.isSaved ? "currentColor" : "none"}
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
-                />
+              <svg className="h-4 w-4" fill={job.isSaved ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
               </svg>
-              {job.isSaved ? "Saved" : "Save Job"}
+              {job.isSaved ? "saved" : "save"}
             </button>
           )}
         </div>
 
-        <div className="mt-6 flex flex-wrap gap-3">
-          <div className="flex items-center gap-2 rounded-lg bg-slate-800 px-4 py-2">
-            <svg
-              className="h-5 w-5 text-slate-400"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-              />
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-              />
-            </svg>
-            <span className="font-medium text-white">{job.location}</span>
-          </div>
-          <div className="flex items-center gap-2 rounded-lg bg-slate-800 px-4 py-2">
-            <svg
-              className="h-5 w-5 text-slate-400"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-              />
-            </svg>
-            <span className="font-medium text-white">{job.workMode}</span>
-          </div>
-          <div className="flex items-center gap-2 rounded-lg bg-slate-800 px-4 py-2">
-            <svg
-              className="h-5 w-5 text-slate-400"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <span className="font-medium text-white">{job.seniorityLevel}</span>
-          </div>
-          <div className="flex items-center gap-2 rounded-lg bg-slate-800 px-4 py-2">
-            <span className="font-medium text-white">{job.employmentType}</span>
-          </div>
+        <div className="mt-5 flex flex-wrap gap-2">
+          {[
+            { icon: "M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z M15 11a3 3 0 11-6 0 3 3 0 016 0z", label: job.location },
+            { icon: "M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z", label: job.workMode },
+            { icon: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z", label: job.seniorityLevel },
+          ].map((item, i) => (
+            <div key={i} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-zinc-900/50 border border-zinc-800">
+              <svg className="h-4 w-4 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d={item.icon} />
+              </svg>
+              <span className="mono text-xs text-zinc-400">{item.label}</span>
+            </div>
+          ))}
         </div>
 
-        {analyzing && (
-          <div className="mt-6 flex items-center gap-3 text-slate-400">
-            <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-600 border-t-emerald-500" />
-            <span>Analyzing your CV against this job...</span>
-          </div>
-        )}
+        <div className="mt-4 mono text-xs text-zinc-600">
+          {formatDate(job.postedAt)} • {job.employmentType}
+        </div>
+      </div>
 
-        {!userId && (
-          <div className="mt-6 rounded-xl border border-slate-700 bg-slate-800/50 p-6">
-            <div className="flex items-start gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/20">
-                <svg className="h-6 w-6 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+      {analyzing && (
+        <div className="agent-card p-6 animate-fade-up">
+          <div className="flex items-center gap-4">
+            <div className="h-10 w-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
+              <div className="h-4 w-4 rounded-full border-2 border-purple-500/30 border-t-purple-400 animate-spin" />
+            </div>
+            <div>
+              <div className="text-sm text-white">Analyzing your CV</div>
+              <div className="mono text-xs text-zinc-500">Computing match score...</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {!userId && (
+        <div className="agent-card p-6 animate-fade-up">
+          <div className="flex items-start gap-4">
+            <div className="h-10 w-10 rounded-lg bg-purple-500/20 flex items-center justify-center flex-shrink-0">
+              <svg className="h-5 w-5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <h3 className="text-sm font-medium text-white">Sign in for personalized analysis</h3>
+              <p className="mono text-xs text-zinc-500 mt-1">Upload your CV and get AI-powered job fit analysis.</p>
+              <Link href="/sign-in" className="agent-button mt-3 inline-flex">
+                Sign In
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {userId && !hasResume && !analyzing && fitScore === null && (
+        <div className="agent-card p-6 animate-fade-up border-amber-500/20">
+          <div className="flex items-start gap-4">
+            <div className="h-10 w-10 rounded-lg bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+              <svg className="h-5 w-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <h3 className="text-sm font-medium text-amber-400">Upload your CV</h3>
+              <p className="mono text-xs text-zinc-500 mt-1">Get match scores, skill gaps, and AI advice.</p>
+              <Link href="/resumes" className="agent-button mt-3 inline-flex">
+                Upload CV
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {fitScore !== null && !analyzing && (
+        <div className="agent-card p-6 animate-fade-up">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
+                <svg className="h-5 w-5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                 </svg>
               </div>
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold text-white">Sign in for personalized analysis</h3>
-                <p className="mt-1 text-sm text-slate-400">
-                  Create an account to upload your CV and get AI-powered job fit analysis.
-                </p>
-                <Link
-                  href="/sign-in"
-                  className="mt-3 inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-400 px-4 py-2 text-sm font-medium text-white hover:opacity-90"
-                >
-                  Sign In
-                </Link>
+              <div>
+                <span className="mono text-xs text-zinc-500 uppercase tracking-wider">fit_score()</span>
+                <div className="text-lg font-bold text-white">{getFitVerdict(fitScore)}</div>
               </div>
+            </div>
+            <div className={`px-3 py-1.5 rounded-lg ${fitColor?.bg}`}>
+              <span className={`mono text-lg font-bold ${fitColor?.text}`}>{fitScore}%</span>
             </div>
           </div>
-        )}
 
-        {userId && !hasResume && !analyzing && fitScore === null && (
-          <div className="mt-6 rounded-xl border border-amber-500/30 bg-amber-500/10 p-6">
-            <div className="flex items-start gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-500/20">
-                <svg className="h-6 w-6 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-              </div>
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold text-amber-400">Upload your CV for personalized analysis</h3>
-                <p className="mt-1 text-sm text-slate-400">
-                  Get match scores, skill gaps, and AI-powered advice tailored to this job.
-                </p>
-                <Link
-                  href="/resumes"
-                  className="mt-3 inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-amber-500 to-amber-400 px-4 py-2 text-sm font-medium text-white hover:opacity-90"
-                >
-                  Upload CV
-                </Link>
-              </div>
-            </div>
+          <div className="h-2 w-full rounded-full bg-zinc-900 overflow-hidden">
+            <div className={`h-full rounded-full ${fitColor?.bar} transition-all duration-500`} style={{ width: `${fitScore}%` }} />
           </div>
-        )}
 
-        {fitScore !== null && !analyzing && (
-          <div className="mt-6 rounded-xl bg-slate-800 p-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-white">
-                Your Fit for This Role
-              </h2>
-              <div
-                className={`rounded-full px-4 py-1 text-sm font-medium ${getFitStyle(fitScore).badge}`}
-              >
-                {fitScore}% Match
-              </div>
-            </div>
-            <div
-              className="mt-4 h-3 w-full overflow-hidden rounded-full bg-slate-700"
-              aria-label={`Role fit score: ${fitScore}%`}
-              role="progressbar"
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={fitScore}
-            >
-              <div
-                className={`h-full rounded-full transition-all duration-500 ${getFitStyle(fitScore).bar}`}
-                style={{ width: `${fitScore}%` }}
-              />
-            </div>
-            <p className="mt-4 text-lg font-medium text-white">
-              {getFitVerdict(fitScore)}
-            </p>
-
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
             {matchedSkills.length > 0 && (
-              <div className="mt-4">
-                <p className="text-sm font-medium text-slate-300">
-                  Your matching skills:
-                </p>
-                <div className="mt-2 flex flex-wrap gap-2">
+              <div>
+                <div className="mono text-xs text-zinc-600 uppercase tracking-wider mb-2">matched_skills</div>
+                <div className="flex flex-wrap gap-1.5">
                   {matchedSkills.map((skill, i) => (
-                    <span
-                      key={i}
-                      className="rounded-full bg-emerald-500/20 px-3 py-1 text-sm text-emerald-400"
-                    >
+                    <span key={i} className="px-2 py-1 rounded text-xs bg-purple-500/20 text-purple-300 border border-purple-500/30">
                       {skill}
                     </span>
                   ))}
                 </div>
               </div>
             )}
-
             {missingSkills.length > 0 && (
-              <div className="mt-4">
-                <p className="text-sm font-medium text-slate-300">
-                  Skills to develop:
-                </p>
-                <div className="mt-2 flex flex-wrap gap-2">
+              <div>
+                <div className="mono text-xs text-zinc-600 uppercase tracking-wider mb-2">skills_to_add</div>
+                <div className="flex flex-wrap gap-1.5">
                   {missingSkills.map((skill, i) => (
-                    <span
-                      key={i}
-                      className="rounded-full bg-slate-700 px-3 py-1 text-sm text-slate-300"
-                    >
+                    <span key={i} className="px-2 py-1 rounded text-xs bg-zinc-800 text-zinc-400 border border-zinc-700">
                       {skill}
                     </span>
                   ))}
                 </div>
               </div>
             )}
+          </div>
 
-            <div className="mt-4 flex items-center justify-between border-t border-slate-700 pt-4">
-              <div className="flex items-center gap-2">
-                <p className="text-xs text-slate-500">
-                  {hasResume ? "CV-based analysis" : "Profile-based analysis"}
-                </p>
-                {aiEnabled && (
-                  <span className="rounded bg-purple-500/20 px-2 py-0.5 text-xs text-purple-400">
-                    AI-powered
-                  </span>
-                )}
-              </div>
+          <div className="mt-4 pt-4 border-t border-zinc-800/50 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="mono text-xs text-zinc-600">
+                {hasResume ? "cv_analysis" : "profile_analysis"}
+              </span>
+              {aiEnabled && (
+                <span className="px-2 py-0.5 rounded text-xs bg-purple-500/20 text-purple-400 border border-purple-500/30">
+                  AI
+                </span>
+              )}
+            </div>
+            <button
+              onClick={() => job && analyzeFit(job)}
+              className="mono text-xs text-cyan-400 hover:text-cyan-300 flex items-center gap-1"
+            >
+              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              re_analyze
+            </button>
+          </div>
+        </div>
+      )}
+
+      {cvAdvice && (
+        <div className="agent-card p-6 animate-fade-up border-amber-500/20">
+          <div className="flex items-start gap-4">
+            <div className="h-10 w-10 rounded-lg bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+              <svg className="h-5 w-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <h3 className="text-sm font-medium text-amber-400">CV Advice</h3>
+              <p className="mono text-xs text-zinc-400 mt-2 leading-relaxed">{cvAdvice}</p>
               <button
-                onClick={() => job && analyzeFit(job)}
-                className="flex items-center gap-1 text-sm text-emerald-400 hover:text-emerald-300"
+                onClick={() => setShowOptimizeModal(true)}
+                className="agent-button mt-3 inline-flex"
               >
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
-                Re-analyze
+                Optimize CV
               </button>
             </div>
           </div>
-        )}
-
-        {cvAdvice && (
-          <div className="mt-6 rounded-xl border border-amber-500/30 bg-amber-500/10 p-6">
-            <div className="flex items-start gap-3">
-              <svg
-                className="h-6 w-6 flex-shrink-0 text-amber-400"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
-                />
-              </svg>
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold text-amber-400">
-                  AI CV Advice for This Role
-                </h3>
-                <p className="mt-2 text-slate-300 leading-relaxed">
-                  {cvAdvice}
-                </p>
-                <div className="mt-4 flex flex-wrap gap-3">
-                  <button
-                    onClick={() => setShowOptimizeModal(true)}
-                    className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-amber-500 to-amber-400 px-4 py-2 text-sm font-medium text-white hover:opacity-90"
-                  >
-                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
-                    Optimize CV for This Job
-                  </button>
-                  <Link
-                    href="/resumes"
-                    className="inline-flex items-center gap-1 text-sm font-medium text-amber-400 hover:text-amber-300"
-                  >
-                    Update your CV
-                    <svg
-                      className="h-4 w-4"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 5l7 7-7 7"
-                      />
-                    </svg>
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        <div className="mt-8">
-          <h2 className="text-xl font-semibold text-white">About This Role</h2>
-          <p className="mt-4 leading-relaxed text-slate-300 whitespace-pre-wrap">
-            {job.description}
-          </p>
         </div>
+      )}
 
-        <div className="mt-8 border-t border-slate-700 pt-6">
-          <p className="text-sm text-slate-500">
-            Posted on {formatDate(job.postedAt)}
-          </p>
+      <div className="agent-card p-6 animate-fade-up">
+        <div className="mono text-xs text-zinc-600 uppercase tracking-wider mb-3">job_description</div>
+        <div className="text-sm text-zinc-300 whitespace-pre-wrap leading-relaxed">
+          {job.description}
         </div>
+      </div>
 
-        <div className="mt-8 flex gap-4">
+      <div className="agent-card p-6 animate-fade-up">
+        <div className="flex gap-3">
           {hasApplied ? (
-            <Link
-              href="/applications"
-              className="flex-1 rounded-xl bg-emerald-500/20 py-4 text-center text-lg font-semibold text-emerald-400"
-            >
+            <Link href="/applications" className="flex-1 agent-button text-center justify-center">
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
               Application Tracked
             </Link>
           ) : (
             <button
               onClick={handleApply}
               disabled={applying}
-              className="flex-1 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-400 py-4 text-center text-lg font-semibold text-white hover:opacity-90 disabled:opacity-50"
+              className="flex-1 agent-button-primary text-center justify-center"
             >
-              {applying ? "Tracking..." : "Track My Application"}
+              {applying ? "Tracking..." : "Track Application"}
             </button>
           )}
           <a
             href={job.applicationUrl}
             target="_blank"
             rel="noopener noreferrer"
-            aria-label={`Apply for ${job.title} on ${job.companyName} website`}
-            className="flex-1 rounded-xl border-2 border-slate-700 py-4 text-center text-lg font-semibold text-white hover:bg-slate-800"
+            className="flex-1 agent-button text-center justify-center"
           >
             Apply on Company Site
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+            </svg>
           </a>
         </div>
       </div>
 
       {showOptimizeModal && cvOptimization && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl glass-card">
-            <div className="sticky top-0 flex items-center justify-between border-b border-slate-700 bg-slate-900/90 p-6 backdrop-blur-sm">
-              <div>
-                <h2 className="text-xl font-bold text-white">Optimize CV for {job?.title}</h2>
-                <p className="mt-1 text-sm text-slate-400">Tailored content and format recommendations</p>
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/80 p-4 overflow-y-auto">
+          <div className="w-full max-w-2xl my-8">
+            <div className="agent-card">
+              <div className="p-4 border-b border-zinc-800 flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-bold text-white">CV Optimization</h2>
+                  <p className="mono text-xs text-zinc-500">for {job?.title}</p>
+                </div>
+                <button
+                  onClick={() => setShowOptimizeModal(false)}
+                  className="rounded-lg p-2 text-zinc-500 hover:text-white hover:bg-white/5"
+                >
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
               </div>
-              <button
-                onClick={() => setShowOptimizeModal(false)}
-                className="rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-white"
-              >
-                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
 
-            <div className="p-6 space-y-6">
-              {cvOptimization.content.length > 0 && (
-                <div>
-                  <h3 className="mb-3 flex items-center gap-2 text-lg font-semibold text-white">
-                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400">1</span>
-                    Content Changes
-                  </h3>
-                  <ul className="space-y-2">
-                    {cvOptimization.content.map((tip, i) => (
-                      <li key={i} className="flex items-start gap-3 rounded-lg bg-slate-800/50 p-3">
-                        <svg className="mt-0.5 h-5 w-5 flex-shrink-0 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <span className="text-slate-300">{tip}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {cvOptimization.keywordsToAdd.length > 0 && (
-                <div>
-                  <h3 className="mb-3 flex items-center gap-2 text-lg font-semibold text-white">
-                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-purple-500/20 text-purple-400">2</span>
-                    Keywords to Add
-                  </h3>
-                  <div className="flex flex-wrap gap-2">
-                    {cvOptimization.keywordsToAdd.map((keyword, i) => (
-                      <span key={i} className="rounded-full bg-purple-500/20 px-3 py-1.5 text-sm text-purple-400">
-                        {keyword}
-                      </span>
-                    ))}
+              <div className="p-4 space-y-4">
+                {cvOptimization.content.length > 0 && (
+                  <div>
+                    <div className="mono text-xs text-purple-400 uppercase tracking-wider mb-2">content_changes[]</div>
+                    <ul className="space-y-2">
+                      {cvOptimization.content.map((tip, i) => (
+                        <li key={i} className="flex items-start gap-2 p-2 rounded bg-zinc-900/50 border border-zinc-800">
+                          <span className="text-purple-400 mt-0.5">→</span>
+                          <span className="mono text-xs text-zinc-400">{tip}</span>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
-                </div>
-              )}
+                )}
 
-              {cvOptimization.phrasesToUse.length > 0 && (
-                <div>
-                  <h3 className="mb-3 flex items-center gap-2 text-lg font-semibold text-white">
-                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-500/20 text-blue-400">3</span>
-                    Power Phrases
-                  </h3>
-                  <div className="space-y-2">
-                    {cvOptimization.phrasesToUse.map((phrase, i) => (
-                      <div key={i} className="rounded-lg border border-blue-500/30 bg-blue-500/10 p-3">
-                        <p className="text-sm text-blue-300">&quot;{phrase}&quot;</p>
-                      </div>
-                    ))}
+                {cvOptimization.keywordsToAdd.length > 0 && (
+                  <div>
+                    <div className="mono text-xs text-cyan-400 uppercase tracking-wider mb-2">keywords_to_add[]</div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {cvOptimization.keywordsToAdd.map((keyword, i) => (
+                        <span key={i} className="px-2 py-1 rounded text-xs bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 mono">
+                          {keyword}
+                        </span>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {cvOptimization.format.length > 0 && (
-                <div>
-                  <h3 className="mb-3 flex items-center gap-2 text-lg font-semibold text-white">
-                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-500/20 text-amber-400">4</span>
-                    Format Recommendations
-                  </h3>
-                  <ul className="space-y-2">
-                    {cvOptimization.format.map((tip, i) => (
-                      <li key={i} className="flex items-start gap-3 rounded-lg bg-slate-800/50 p-3">
-                        <svg className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
-                        </svg>
-                        <span className="text-slate-300">{tip}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+                {cvOptimization.phrasesToUse.length > 0 && (
+                  <div>
+                    <div className="mono text-xs text-amber-400 uppercase tracking-wider mb-2">power_phrases</div>
+                    <div className="space-y-2">
+                      {cvOptimization.phrasesToUse.map((phrase, i) => (
+                        <div key={i} className="p-2 rounded bg-amber-500/10 border border-amber-500/30">
+                          <span className="mono text-xs text-amber-300">&ldquo;{phrase}&rdquo;</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
-              {cvOptimization.atsTips.length > 0 && (
-                <div>
-                  <h3 className="mb-3 flex items-center gap-2 text-lg font-semibold text-white">
-                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-red-500/20 text-red-400">5</span>
-                    ATS Optimization Tips
-                  </h3>
-                  <ul className="space-y-2">
-                    {cvOptimization.atsTips.map((tip, i) => (
-                      <li key={i} className="flex items-start gap-3 rounded-lg bg-slate-800/50 p-3">
-                        <svg className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                        </svg>
-                        <span className="text-slate-300">{tip}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+                {cvOptimization.format.length > 0 && (
+                  <div>
+                    <div className="mono text-xs text-green-400 uppercase tracking-wider mb-2">format_tips</div>
+                    <ul className="space-y-2">
+                      {cvOptimization.format.map((tip, i) => (
+                        <li key={i} className="flex items-start gap-2 p-2 rounded bg-zinc-900/50 border border-zinc-800">
+                          <span className="text-green-400 mt-0.5">→</span>
+                          <span className="mono text-xs text-zinc-400">{tip}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
 
-              <div className="flex gap-3 border-t border-slate-700 pt-6">
+                {cvOptimization.atsTips.length > 0 && (
+                  <div>
+                    <div className="mono text-xs text-red-400 uppercase tracking-wider mb-2">ats_optimization[]</div>
+                    <ul className="space-y-2">
+                      {cvOptimization.atsTips.map((tip, i) => (
+                        <li key={i} className="flex items-start gap-2 p-2 rounded bg-zinc-900/50 border border-zinc-800">
+                          <span className="text-red-400 mt-0.5">!</span>
+                          <span className="mono text-xs text-zinc-400">{tip}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+
+              <div className="p-4 border-t border-zinc-800 flex gap-3">
+                <Link href="/resumes" onClick={() => setShowOptimizeModal(false)} className="flex-1 agent-button-primary text-center justify-center">
+                  Update My CV
+                </Link>
                 <button
                   onClick={() => {
                     setShowOptimizeModal(false);
                     analyzeFit(job!);
                   }}
-                  className="flex-1 rounded-lg border border-slate-700 py-3 text-sm font-medium text-slate-300 hover:bg-slate-800"
+                  className="flex-1 agent-button text-center justify-center"
                 >
                   Re-analyze
                 </button>
-                <Link
-                  href="/resumes"
-                  onClick={() => setShowOptimizeModal(false)}
-                  className="flex-1 rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-400 py-3 text-center text-sm font-medium text-white hover:opacity-90"
-                >
-                  Update My CV
-                </Link>
               </div>
             </div>
           </div>

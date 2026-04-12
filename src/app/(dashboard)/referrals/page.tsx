@@ -32,13 +32,13 @@ export default function ReferralPage() {
   const copyToClipboard = () => {
     navigator.clipboard.writeText(referralUrl);
     setCopied(true);
-    toast.success("Copied to clipboard!");
+    toast.success("Copied!");
     setTimeout(() => setCopied(false), 2000);
   };
 
   const sendInvite = async () => {
     if (!refereeEmail) {
-      toast.error("Please enter an email address");
+      toast.error("Enter an email address");
       return;
     }
 
@@ -65,102 +65,82 @@ export default function ReferralPage() {
 
   if (!isLoaded) {
     return (
-      <div className="mx-auto max-w-2xl px-6 py-8">
-        <div className="text-slate-400">Loading...</div>
+      <div className="flex items-center justify-center py-20">
+        <div className="flex items-center gap-3">
+          <div className="h-5 w-5 rounded-full border-2 border-purple-500/30 border-t-purple-500 animate-spin" />
+          <span className="mono text-sm text-zinc-400">Loading...</span>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-2xl px-6 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white">Refer Friends</h1>
-        <p className="mt-2 text-slate-400">
-          Share CareerOS with friends and help them land their dream jobs.
-        </p>
+    <div className="max-w-xl mx-auto">
+      <div className="agent-card p-6 mb-6 animate-fade-up">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-lg bg-green-500/20 flex items-center justify-center">
+            <svg className="h-5 w-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-white">Refer & Earn</h1>
+            <p className="mono text-xs text-zinc-500">referral_program</p>
+          </div>
+        </div>
       </div>
 
-      <div className="space-y-6">
-        <div className="rounded-xl glass-card p-6">
-          <h2 className="mb-4 text-lg font-semibold text-white">Your Referral Link</h2>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={referralUrl}
-              readOnly
-              className="flex-1 rounded-lg border border-slate-700 bg-slate-800/50 px-4 py-2 text-slate-400"
-            />
-            <button
-              onClick={copyToClipboard}
-              className={`rounded-lg px-4 py-2 font-medium ${
-                copied
-                  ? "bg-emerald-500/20 text-emerald-400"
-                  : "bg-gradient-to-r from-emerald-500 to-emerald-400 text-white hover:opacity-90"
-              }`}
-            >
-              {copied ? "Copied!" : "Copy"}
-            </button>
+      <div className="space-y-4">
+        <div className="agent-card p-5">
+          <span className="mono text-xs text-zinc-500 uppercase tracking-wider">referral_link</span>
+          <div className="mt-4">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={referralUrl}
+                readOnly
+                className="agent-input flex-1 text-xs"
+              />
+              <button onClick={copyToClipboard} className={copied ? "agent-button" : "agent-button-primary"}>
+                {copied ? "copied" : "copy"}
+              </button>
+            </div>
+            <p className="mono text-xs text-zinc-600 mt-2">Share this link with friends.</p>
           </div>
-          <p className="mt-2 text-sm text-slate-400">
-            Share this link with friends. They&apos;ll get priority access when they sign up!
-          </p>
         </div>
 
-        <div className="rounded-xl glass-card p-6">
-          <h2 className="mb-4 text-lg font-semibold text-white">Send an Invite</h2>
-          <div className="space-y-4">
+        <div className="agent-card p-5">
+          <span className="mono text-xs text-zinc-500 uppercase tracking-wider">send_invite</span>
+          <div className="mt-4 space-y-3">
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-400">
-                Friend&apos;s Email
-              </label>
+              <label className="mono text-xs text-zinc-500 mb-1 block">referee_email</label>
               <input
                 type="email"
                 value={refereeEmail}
                 onChange={(e) => setRefereeEmail(e.target.value)}
                 placeholder="friend@email.com"
-                className="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-white placeholder:text-slate-500 focus:border-emerald-500 focus:outline-none focus:ring-emerald-500/20"
+                className="agent-input w-full"
               />
             </div>
-            <button
-              onClick={sendInvite}
-              disabled={sending}
-              className="w-full rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-400 py-2 text-white hover:opacity-90 disabled:opacity-50"
-            >
-              {sending ? "Sending..." : "Send Invitation"}
+            <button onClick={sendInvite} disabled={sending} className="agent-button-primary w-full justify-center">
+              {sending ? "sending..." : "send_invite()"}
             </button>
           </div>
         </div>
 
-        <div className="rounded-xl glass-card p-6">
-          <h2 className="mb-4 text-lg font-semibold text-white">Why Refer Friends?</h2>
-          <div className="space-y-4">
-            <div className="flex items-start gap-3">
-              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-emerald-500/20">
-                <span className="text-lg">🎯</span>
+        <div className="agent-card p-5">
+          <span className="mono text-xs text-zinc-500 uppercase tracking-wider">why_refer</span>
+          <div className="mt-4 space-y-3">
+            {[
+              { icon: "→", color: "purple", text: "Help someone land their dream job" },
+              { icon: "→", color: "cyan", text: "Priority access for you and referrals" },
+              { icon: "→", color: "green", text: "Build the African tech community" },
+            ].map((item, i) => (
+              <div key={i} className="flex items-center gap-3 p-2 rounded-lg bg-zinc-900/30">
+                <span className={`text-${item.color}-400`}>{item.icon}</span>
+                <span className="mono text-xs text-zinc-400">{item.text}</span>
               </div>
-              <div>
-                <p className="font-medium text-white">Help Someone Land Their Dream Job</p>
-                <p className="text-sm text-slate-400">Share a tool that can transform careers</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-amber-500/20">
-                <span className="text-lg">🚀</span>
-              </div>
-              <div>
-                <p className="font-medium text-white">Priority Access</p>
-                <p className="text-sm text-slate-400">You and your referrals get early access to new features</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-purple-500/20">
-                <span className="text-lg">🌍</span>
-              </div>
-              <div>
-                <p className="font-medium text-white">Build the African Tech Community</p>
-                <p className="text-sm text-slate-400">Help more Africans get quality job opportunities</p>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       </div>

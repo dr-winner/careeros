@@ -20,6 +20,9 @@ interface Job {
   applicationUrl: string;
 }
 
+const WORK_MODES = ["Full-time", "Contract", "Remote", "Hybrid", "On-site"];
+const SENIORITY_LEVELS = ["Entry-Level", "Mid-Level", "Senior"];
+
 export default function JobsPage() {
   const { userId, isLoaded } = useAuth();
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -30,18 +33,16 @@ export default function JobsPage() {
   const [seniority, setSeniority] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [showFilters, setShowFilters] = useState(false);
 
   const persistJobs = useCallback((jobList: Job[]) => {
     if (typeof window === "undefined" || jobList.length === 0) return;
-
     try {
       const existing = sessionStorage.getItem("dashboard-job-cache");
       const cache = existing ? JSON.parse(existing) : {};
-
       for (const job of jobList) {
         cache[job.id] = job;
       }
-
       sessionStorage.setItem("dashboard-job-cache", JSON.stringify(cache));
     } catch (error) {
       console.error("Error caching jobs:", error);
@@ -77,7 +78,6 @@ export default function JobsPage() {
 
   const toggleSave = async (jobId: string) => {
     if (!userId) return;
-
     try {
       const jobToToggle = jobs.find((job) => job.id === jobId);
       const response = await fetch("/api/jobs/save", {
@@ -113,279 +113,250 @@ export default function JobsPage() {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
-    const diff = Math.floor(
-      (now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24),
-    );
-
+    const diff = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
     if (diff === 0) return "Today";
     if (diff === 1) return "Yesterday";
-    if (diff < 7) return `${diff} days ago`;
-    if (diff < 30) return `${Math.floor(diff / 7)} weeks ago`;
+    if (diff < 7) return `${diff}d ago`;
+    if (diff < 30) return `${Math.floor(diff / 7)}w ago`;
     return date.toLocaleDateString();
   };
+
+  const clearFilters = () => {
+    setSearch("");
+    setLocation("");
+    setWorkMode("");
+    setSeniority("");
+    setPage(1);
+  };
+
+  const hasFilters = search || location || workMode || seniority;
 
   if (!isLoaded) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="text-emerald-400">Loading...</div>
+        <div className="flex items-center gap-3">
+          <div className="h-5 w-5 rounded-full border-2 border-purple-500/30 border-t-purple-500 animate-spin" />
+          <span className="mono text-sm text-zinc-400">Searching jobs...</span>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-6xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white">Find Jobs</h1>
-        <p className="mt-2 text-slate-400">
-          Discover opportunities across Africa that match your skills.
-        </p>
-      </div>
-
-      <div className="mb-6 rounded-xl glass-card p-4">
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-          <input
-            type="text"
-            aria-label="Search jobs"
-            placeholder="Search jobs..."
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-            className="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2.5 text-white placeholder:text-slate-500 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-          />
-          <input
-            type="text"
-            aria-label="Filter jobs by location"
-            placeholder="Location..."
-            value={location}
-            onChange={(e) => {
-              setLocation(e.target.value);
-              setPage(1);
-            }}
-            className="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2.5 text-white placeholder:text-slate-500 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-          />
-          <select
-            aria-label="Filter jobs by work mode"
-            value={workMode}
-            onChange={(e) => {
-              setWorkMode(e.target.value);
-              setPage(1);
-            }}
-            className="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2.5 text-white focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-          >
-            <option value="">All Work Modes</option>
-            <option value="Full-time">Full-time</option>
-            <option value="Contract">Contract</option>
-            <option value="Remote">Remote</option>
-            <option value="Hybrid">Hybrid</option>
-            <option value="On-site">On-site</option>
-          </select>
-          <select
-            aria-label="Filter jobs by seniority"
-            value={seniority}
-            onChange={(e) => {
-              setSeniority(e.target.value);
-              setPage(1);
-            }}
-            className="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2.5 text-white focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-          >
-            <option value="">All Levels</option>
-            <option value="Entry-Level">Entry-Level</option>
-            <option value="Mid-Level">Mid-Level</option>
-            <option value="Senior">Senior</option>
-          </select>
-          <button
-            onClick={() => {
-              setSearch("");
-              setLocation("");
-              setWorkMode("");
-              setSeniority("");
-              setPage(1);
-            }}
-            className="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2.5 text-slate-300 hover:border-slate-600 hover:bg-slate-700 transition-colors"
-          >
-            Clear
-          </button>
+    <div className="max-w-4xl mx-auto">
+      {/* Header */}
+      <div className="mb-6">
+        <div className="flex items-center gap-3 mb-2">
+          <div className="h-10 w-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
+            <svg className="h-5 w-5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+            </svg>
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-white">Job Search</h1>
+            <p className="mono text-xs text-zinc-500">AI-matched opportunities</p>
+          </div>
         </div>
       </div>
 
+      {/* Search Bar */}
+      <div className="mb-6">
+        <div className="agent-card p-2">
+          <div className="flex gap-2">
+            <div className="flex-1 relative">
+              <svg className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+              </svg>
+              <input
+                type="text"
+                placeholder="Search jobs, skills, roles..."
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                onKeyDown={(e) => e.key === "Enter" && fetchJobs()}
+                className="w-full bg-transparent pl-12 pr-4 py-3 text-white placeholder:text-zinc-500 focus:outline-none"
+              />
+            </div>
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className={`px-4 py-3 rounded-lg border transition-all ${
+                hasFilters 
+                  ? "bg-purple-500/20 border-purple-500/40 text-purple-400" 
+                  : "border-white/10 text-zinc-400 hover:bg-white/5"
+              }`}
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 7.586V4z" />
+              </svg>
+            </button>
+            <button
+              onClick={fetchJobs}
+              className="px-6 py-3 rounded-lg bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-medium hover:opacity-90 transition-opacity"
+            >
+              Search
+            </button>
+          </div>
+
+          {showFilters && (
+            <div className="mt-3 pt-3 border-t border-white/5 grid grid-cols-2 gap-3">
+              <div>
+                <label className="mono text-xs text-zinc-500 mb-1 block">Location</label>
+                <input
+                  type="text"
+                  placeholder="City, country..."
+                  value={location}
+                  onChange={(e) => { setLocation(e.target.value); setPage(1); }}
+                  className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-zinc-600 focus:border-purple-500/50 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="mono text-xs text-zinc-500 mb-1 block">Work Mode</label>
+                <select
+                  value={workMode}
+                  onChange={(e) => { setWorkMode(e.target.value); setPage(1); }}
+                  className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-purple-500/50 focus:outline-none"
+                >
+                  <option value="">All modes</option>
+                  {WORK_MODES.map(mode => (
+                    <option key={mode} value={mode}>{mode}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="col-span-2 flex items-center justify-between">
+                <div>
+                  <label className="mono text-xs text-zinc-500 mb-1 block">Seniority</label>
+                  <select
+                    value={seniority}
+                    onChange={(e) => { setSeniority(e.target.value); setPage(1); }}
+                    className="bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-purple-500/50 focus:outline-none"
+                  >
+                    <option value="">All levels</option>
+                    {SENIORITY_LEVELS.map(level => (
+                      <option key={level} value={level}>{level}</option>
+                    ))}
+                  </select>
+                </div>
+                {hasFilters && (
+                  <button
+                    onClick={clearFilters}
+                    className="mono text-xs text-zinc-500 hover:text-white transition-colors"
+                  >
+                    Clear filters
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Results */}
       {loading ? (
-        <div className="grid gap-4">
+        <div className="space-y-3">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="animate-pulse rounded-xl glass-card p-6">
-              <div className="h-6 w-1/3 rounded bg-slate-700"></div>
-              <div className="mt-2 h-4 w-1/4 rounded bg-slate-700"></div>
-              <div className="mt-4 h-4 w-full rounded bg-slate-700"></div>
+            <div key={i} className="agent-card p-5 animate-pulse">
+              <div className="flex justify-between">
+                <div className="space-y-2">
+                  <div className="h-5 w-48 rounded bg-white/5"></div>
+                  <div className="h-4 w-32 rounded bg-white/5"></div>
+                </div>
+                <div className="h-8 w-20 rounded bg-white/5"></div>
+              </div>
             </div>
           ))}
         </div>
       ) : jobs.length === 0 ? (
-        <div className="rounded-xl glass-card p-12 text-center">
-          <svg
-            className="mx-auto h-12 w-12 text-slate-500 mb-4"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={1.5}
-              d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"
-            />
-          </svg>
-          <p className="text-slate-400">
-            No jobs found matching your criteria.
-          </p>
-          <button
-            onClick={() => {
-              setSearch("");
-              setLocation("");
-              setWorkMode("");
-              setSeniority("");
-            }}
-            className="mt-4 text-emerald-400 hover:text-emerald-300 transition-colors"
-          >
-            Clear filters
-          </button>
+        <div className="agent-card p-12 text-center">
+          <div className="h-12 w-12 rounded-xl bg-purple-500/20 mx-auto mb-4 flex items-center justify-center">
+            <svg className="h-6 w-6 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+            </svg>
+          </div>
+          <p className="text-zinc-400 mb-4">No jobs found matching your criteria</p>
+          {hasFilters && (
+            <button onClick={clearFilters} className="mono text-sm text-purple-400 hover:text-purple-300">
+              Clear filters
+            </button>
+          )}
         </div>
       ) : (
         <>
-          <div className="mb-4 flex items-center justify-between">
-            <p className="text-sm text-slate-400">
-              Showing {jobs.length} job{jobs.length !== 1 ? "s" : ""}
+          <div className="flex items-center justify-between mb-4">
+            <p className="mono text-xs text-zinc-500">
+              {jobs.length} result{jobs.length !== 1 ? "s" : ""}
             </p>
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-2 rounded-full bg-green-400 animate-pulse" />
+              <span className="mono text-xs text-zinc-500">Live</span>
+            </div>
           </div>
 
-          <div className="grid gap-4">
+          <div className="space-y-3">
             {jobs.map((job) => (
-              <div
-                key={job.id}
-                className="rounded-xl glass-card p-6 transition-all hover:border-emerald-500/30 hover:shadow-lg hover:shadow-emerald-500/5"
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
+              <div key={job.id} className="agent-card p-5 glass-card-hover">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3">
-                      <h3 className="text-xl font-semibold text-white">
-                        {job.title}
-                      </h3>
+                      <h3 className="text-base font-semibold text-white truncate">{job.title}</h3>
                       {userId && (
                         <button
                           onClick={() => toggleSave(job.id)}
-                          aria-label={
-                            job.isSaved
-                              ? `Remove ${job.title} from saved jobs`
-                              : `Save ${job.title}`
-                          }
-                          className={`p-1 transition-colors ${job.isSaved ? "text-amber-400" : "text-slate-500 hover:text-amber-400"}`}
+                          className={`p-1.5 rounded-lg transition-all ${
+                            job.isSaved 
+                              ? "bg-amber-500/20 text-amber-400" 
+                              : "text-zinc-600 hover:text-amber-400 hover:bg-amber-500/10"
+                          }`}
                         >
-                          <svg
-                            className="h-6 w-6"
-                            fill={job.isSaved ? "currentColor" : "none"}
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
-                            />
+                          <svg className="h-5 w-5" fill={job.isSaved ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
                           </svg>
                         </button>
                       )}
                     </div>
-                    <p className="mt-1 font-medium text-emerald-400">
-                      {job.companyName}
-                    </p>
-                    <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-slate-400">
-                      <span className="flex items-center gap-1.5">
-                        <svg
-                          className="h-4 w-4 text-slate-500"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={1.5}
-                            d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                          />
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={1.5}
-                            d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                          />
+                    <p className="mono text-sm text-purple-400 mt-0.5">{job.companyName}</p>
+                    
+                    <div className="flex flex-wrap items-center gap-3 mt-3">
+                      <span className="inline-flex items-center gap-1.5 mono text-xs text-zinc-500">
+                        <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                         </svg>
                         {job.location}
                       </span>
-                      <span className="flex items-center gap-1.5">
-                        <svg
-                          className="h-4 w-4 text-slate-500"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={1.5}
-                            d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                          />
-                        </svg>
+                      <span className={`mono text-xs px-2 py-0.5 rounded ${
+                        job.workMode === "Remote" 
+                          ? "bg-green-500/20 text-green-400" 
+                          : "bg-cyan-500/20 text-cyan-400"
+                      }`}>
                         {job.workMode}
                       </span>
-                      <span className="flex items-center gap-1.5">
-                        <svg
-                          className="h-4 w-4 text-slate-500"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={1.5}
-                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                          />
-                        </svg>
-                        {job.seniorityLevel}
-                      </span>
-                      <span className="rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs text-emerald-400 border border-emerald-500/20">
-                        {job.employmentType}
-                      </span>
+                      <span className="mono text-xs text-zinc-600">{job.seniorityLevel}</span>
                     </div>
+                  </div>
+
+                  <div className="flex flex-col items-end gap-2">
+                    <span className="mono text-xs text-zinc-600">{formatDate(job.postedAt)}</span>
                   </div>
                 </div>
 
-                <p className="mt-4 line-clamp-2 text-sm text-slate-400">
+                <p className="mt-3 text-sm text-zinc-500 line-clamp-2 leading-relaxed">
                   {job.description}
                 </p>
 
-                <div className="mt-4 flex items-center justify-between">
-                  <span className="text-xs text-slate-500">
-                    Posted {formatDate(job.postedAt)}
-                  </span>
-                  <div className="flex gap-2">
-                    <Link
-                      href={`/jobs/${job.id}`}
-                      onClick={() => persistJobs([job])}
-                      className="rounded-lg border border-emerald-500/50 px-4 py-2 text-sm font-medium text-emerald-400 hover:bg-emerald-500/10 transition-all"
-                    >
-                      View Details
-                    </Link>
-                    <a
-                      href={job.applicationUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-400 px-4 py-2 text-sm font-medium text-white shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/40 transition-all"
-                    >
-                      Apply
-                    </a>
-                  </div>
+                <div className="mt-4 flex items-center gap-3">
+                  <Link
+                    href={`/jobs/${job.id}`}
+                    onClick={() => persistJobs([job])}
+                    className="flex-1 text-center py-2.5 rounded-lg border border-purple-500/30 text-purple-400 hover:bg-purple-500/10 transition-all text-sm font-medium"
+                  >
+                    View Details
+                  </Link>
+                  <a
+                    href={job.applicationUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 text-center py-2.5 rounded-lg bg-gradient-to-r from-purple-500 to-indigo-600 text-white text-sm font-medium hover:opacity-90 transition-opacity"
+                  >
+                    Apply
+                  </a>
                 </div>
               </div>
             ))}
@@ -396,19 +367,23 @@ export default function JobsPage() {
               <button
                 onClick={() => setPage(Math.max(1, page - 1))}
                 disabled={page === 1}
-                className="rounded-lg border border-slate-700 px-4 py-2 text-slate-300 disabled:cursor-not-allowed disabled:opacity-50 hover:border-slate-600 hover:bg-slate-800 transition-colors"
+                className="px-4 py-2 rounded-lg border border-white/10 text-zinc-400 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white/5 transition-all"
               >
-                Previous
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
               </button>
-              <span className="px-4 text-slate-400">
-                Page {page} of {totalPages}
+              <span className="mono text-sm text-zinc-500">
+                {page} / {totalPages}
               </span>
               <button
                 onClick={() => setPage(Math.min(totalPages, page + 1))}
                 disabled={page === totalPages}
-                className="rounded-lg border border-slate-700 px-4 py-2 text-slate-300 disabled:cursor-not-allowed disabled:opacity-50 hover:border-slate-600 hover:bg-slate-800 transition-colors"
+                className="px-4 py-2 rounded-lg border border-white/10 text-zinc-400 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white/5 transition-all"
               >
-                Next
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
               </button>
             </div>
           )}

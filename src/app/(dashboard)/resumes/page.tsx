@@ -79,7 +79,7 @@ export default function ResumesPage() {
   };
 
   const deleteResume = async (id: string) => {
-    if (!confirm("Delete this resume? This cannot be undone.")) return;
+    if (!confirm("Delete this resume?")) return;
 
     setDeleting(id);
     try {
@@ -123,9 +123,8 @@ export default function ResumesPage() {
     if (!resume.parsedText || resume.parsedText.length < 200) {
       suggestions.push({
         category: "Content",
-        issue: "Limited resume content detected",
-        suggestion:
-          "Add more details about your work experience, achievements, and responsibilities.",
+        issue: "Limited resume content",
+        suggestion: "Add more details about your experience and achievements.",
         priority: "high",
       });
     }
@@ -143,8 +142,7 @@ export default function ResumesPage() {
       suggestions.push({
         category: "Experience",
         issue: "Limited work experience entries",
-        suggestion:
-          "Include all relevant positions, even internships or part-time roles.",
+        suggestion: "Include all relevant positions.",
         priority: "medium",
       });
     }
@@ -153,8 +151,7 @@ export default function ResumesPage() {
       suggestions.push({
         category: "Education",
         issue: "No education entries found",
-        suggestion:
-          "Add your educational background including degrees and certifications.",
+        suggestion: "Add your educational background.",
         priority: "high",
       });
     }
@@ -167,8 +164,7 @@ export default function ResumesPage() {
       suggestions.push({
         category: "Writing",
         issue: "Consider using action verbs",
-        suggestion:
-          "Start bullet points with strong action verbs like 'Led', 'Developed', 'Increased'.",
+        suggestion: "Start bullets with strong action verbs.",
         priority: "low",
       });
     }
@@ -177,8 +173,7 @@ export default function ResumesPage() {
       suggestions.push({
         category: "Overall",
         issue: "Looking good!",
-        suggestion:
-          "Your resume appears well-structured. Consider tailoring it for specific job applications.",
+        suggestion: "Your resume is well-structured.",
         priority: "low",
       });
     }
@@ -189,11 +184,11 @@ export default function ResumesPage() {
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case "high":
-        return "border-red-500/30 bg-red-500/10";
+        return "border-red-500/30 text-red-400";
       case "medium":
-        return "border-amber-500/30 bg-amber-500/10";
+        return "border-amber-500/30 text-amber-400";
       default:
-        return "border-emerald-500/30 bg-emerald-500/10";
+        return "border-green-500/30 text-green-400";
     }
   };
 
@@ -202,33 +197,48 @@ export default function ResumesPage() {
   if (!isLoaded) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="text-emerald-400">Loading...</div>
+        <div className="flex items-center gap-3">
+          <div className="h-5 w-5 rounded-full border-2 border-purple-500/30 border-t-purple-500 animate-spin" />
+          <span className="mono text-sm text-zinc-400">Loading...</span>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-6xl mx-auto">
-      <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-white">My Resumes</h1>
-          <p className="mt-2 text-slate-400">
-            Upload, manage, and optimize your CVs for job applications.
-          </p>
+    <div className="max-w-5xl mx-auto space-y-6">
+      <div className="rounded-2xl border border-white/10 bg-[#14141f] p-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
+              <svg className="h-5 w-5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-white">Resumes</h1>
+              <p className="mono text-xs text-zinc-500">{resumes.length} uploaded</p>
+            </div>
+          </div>
+          <button
+            onClick={() => setShowUpload(!showUpload)}
+            className="rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 px-4 py-2 text-sm font-medium text-white hover:opacity-90 transition-opacity"
+          >
+            {showUpload ? "Cancel" : "Upload CV"}
+          </button>
         </div>
-        <button
-          onClick={() => setShowUpload(!showUpload)}
-          className="rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-400 px-4 py-2 text-sm font-medium text-white hover:opacity-90"
-        >
-          {showUpload ? "Cancel" : "Upload CV"}
-        </button>
       </div>
 
       {showUpload && (
-        <div className="mb-8 rounded-xl glass-card p-6">
-          <h2 className="mb-4 text-lg font-semibold text-white">
-            Upload Your CV
-          </h2>
+        <div className="rounded-2xl border border-white/10 bg-[#14141f] p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="h-8 w-8 rounded-lg bg-purple-500/20 flex items-center justify-center">
+              <svg className="h-4 w-4 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </div>
+            <h2 className="text-sm font-medium text-white">Upload CV</h2>
+          </div>
           <CVUpload onUploadSuccess={handleUploadSuccess} />
         </div>
       )}
@@ -236,51 +246,40 @@ export default function ResumesPage() {
       {loading ? (
         <div className="space-y-4">
           {[1, 2].map((i) => (
-            <div key={i} className="animate-pulse rounded-xl glass-card p-6">
-              <div className="h-6 w-1/3 rounded bg-slate-700"></div>
+            <div key={i} className="rounded-2xl border border-white/10 bg-[#14141f] p-6">
+              <div className="animate-pulse space-y-3">
+                <div className="h-5 w-1/3 rounded bg-white/5" />
+                <div className="h-4 w-1/4 rounded bg-white/5" />
+              </div>
             </div>
           ))}
         </div>
       ) : resumes.length === 0 && !showUpload ? (
-        <div className="rounded-xl glass-card p-12 text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/20">
-            <svg
-              className="h-8 w-8 text-emerald-400"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-              />
+        <div className="rounded-2xl border border-white/10 bg-[#14141f] p-12 text-center">
+          <div className="h-14 w-14 mx-auto rounded-xl bg-purple-500/10 flex items-center justify-center mb-4">
+            <svg className="h-7 w-7 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
           </div>
-          <h3 className="text-lg font-semibold text-white">No Resumes Yet</h3>
-          <p className="mt-2 text-slate-400">
-            Upload your CV to get started with job applications.
-          </p>
+          <h3 className="text-lg font-medium text-white">No resumes</h3>
+          <p className="mono text-xs text-zinc-500 mt-2">Upload your CV to get started.</p>
           <button
             onClick={() => setShowUpload(true)}
-            className="mt-4 inline-block rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-400 px-4 py-2 text-white hover:opacity-90"
+            className="rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 px-4 py-2 text-sm font-medium text-white mt-4 hover:opacity-90 transition-opacity"
           >
-            Upload your first CV
+            Upload CV
           </button>
         </div>
       ) : resumes.length > 0 ? (
         <div className="grid gap-6 lg:grid-cols-2">
-          <div className="space-y-4">
+          <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-white">
-                Your Resumes ({resumes.length})
-              </h2>
+              <span className="mono text-xs text-zinc-500 uppercase tracking-wider">resumes</span>
               <button
                 onClick={() => setShowUpload(true)}
-                className="text-sm text-emerald-400 hover:text-emerald-300"
+                className="mono text-xs text-purple-400 hover:text-purple-300"
               >
-                + Add another
+                + add
               </button>
             </div>
             {resumes.map((resume) => {
@@ -288,9 +287,7 @@ export default function ResumesPage() {
 
               const handleSelect = () => setSelectedResume(resume);
 
-              const handleKeyDown = (
-                event: KeyboardEvent<HTMLButtonElement>,
-              ) => {
+              const handleKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
                 if (event.key === "Enter" || event.key === " ") {
                   event.preventDefault();
                   handleSelect();
@@ -300,68 +297,50 @@ export default function ResumesPage() {
               return (
                 <div
                   key={resume.id}
-                  className={`rounded-xl glass-card p-5 transition ${
-                    isSelected
-                      ? "border-emerald-500/50 shadow-lg shadow-emerald-500/10"
-                      : "hover:border-slate-600"
-                  }`}
+                  className={`rounded-xl border p-4 transition-all ${isSelected ? "border-purple-500/50 bg-purple-500/5" : "border-white/10 bg-[#14141f] hover:border-white/20"}`}
                 >
-                  <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-3">
                     <button
                       type="button"
                       onClick={handleSelect}
                       onKeyDown={handleKeyDown}
                       aria-pressed={isSelected}
-                      aria-label={`Select resume ${resume.originalName}`}
-                      className="flex flex-1 items-start gap-3 text-left focus:outline-none focus:ring-2 focus:ring-emerald-500/40 rounded-lg"
+                      className="flex flex-1 items-start gap-3 text-left focus:outline-none"
                     >
-                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-500/20">
-                        <svg
-                          className="h-5 w-5 text-emerald-400"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                          />
+                      <div className="h-9 w-9 rounded-lg bg-purple-500/20 flex items-center justify-center flex-shrink-0">
+                        <svg className="h-4 w-4 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <div className="flex items-center gap-2">
-                          <h3 className="font-medium text-white">
-                            {resume.originalName}
-                          </h3>
+                          <span className="text-sm font-medium text-white truncate">{resume.originalName}</span>
                           {resume.isPrimary && (
-                            <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-xs font-medium text-emerald-400">
-                              Primary
+                            <span className="mono text-xs px-1.5 py-0.5 rounded border bg-purple-500/20 border-purple-500/30 text-purple-400">
+                              primary
                             </span>
                           )}
                         </div>
-                        <p className="mt-0.5 text-xs text-slate-500">
-                          Uploaded {formatDate(resume.createdAt)} •{" "}
-                          {resume.skills.length} skills
+                        <p className="mono text-xs text-zinc-500 mt-1">
+                          {formatDate(resume.createdAt)} • {resume.skills.length} skills
                         </p>
                       </div>
                     </button>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
                       {!resume.isPrimary && (
                         <button
                           onClick={() => setPrimary(resume.id)}
-                          className="rounded-lg border border-emerald-500/50 px-2 py-1 text-xs font-medium text-emerald-400 hover:bg-emerald-500/10"
+                          className="mono text-xs px-2 py-1 rounded border border-white/10 text-zinc-500 hover:border-purple-500/50 hover:text-purple-400 transition-colors"
                         >
-                          Set Primary
+                          set
                         </button>
                       )}
                       <button
                         onClick={() => deleteResume(resume.id)}
                         disabled={deleting === resume.id}
-                        className="rounded-lg border border-red-500/50 px-2 py-1 text-xs font-medium text-red-400 hover:bg-red-500/10 disabled:opacity-50"
+                        className="mono text-xs px-2 py-1 rounded border border-white/10 text-zinc-500 hover:border-red-500/50 hover:text-red-400 transition-colors disabled:opacity-50"
                       >
-                        {deleting === resume.id ? "..." : "Delete"}
+                        {deleting === resume.id ? "..." : "rm"}
                       </button>
                     </div>
                   </div>
@@ -372,60 +351,37 @@ export default function ResumesPage() {
 
           {selectedResume && (
             <div className="space-y-4">
-              <div className="rounded-xl glass-card p-6">
+              <div className="rounded-2xl border border-white/10 bg-[#14141f] p-5">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold text-white">
-                    Optimization Tips
-                  </h2>
-                  <span className="rounded-full bg-slate-700 px-2 py-0.5 text-xs text-slate-400">
-                    {selectedResume.originalName}
-                  </span>
+                  <span className="mono text-xs text-zinc-500 uppercase tracking-wider">optimization</span>
+                  <span className="mono text-xs text-zinc-600 truncate max-w-[150px]">{selectedResume.originalName}</span>
                 </div>
 
-                <div className="mb-4 grid grid-cols-3 gap-3">
-                  <div className="rounded-lg bg-emerald-500/10 p-3 text-center">
-                    <p className="text-xl font-bold text-emerald-400">
-                      {selectedResume.skills.length}
-                    </p>
-                    <p className="text-xs text-slate-400">Skills</p>
+                <div className="grid grid-cols-3 gap-3 mb-4">
+                  <div className="rounded-lg bg-purple-500/10 p-3 text-center">
+                    <p className="text-xl font-bold text-purple-400">{selectedResume.skills.length}</p>
+                    <p className="mono text-xs text-zinc-500">skills</p>
+                  </div>
+                  <div className="rounded-lg bg-cyan-500/10 p-3 text-center">
+                    <p className="text-xl font-bold text-cyan-400">{selectedResume.experiences.length}</p>
+                    <p className="mono text-xs text-zinc-500">exp</p>
                   </div>
                   <div className="rounded-lg bg-amber-500/10 p-3 text-center">
-                    <p className="text-xl font-bold text-amber-400">
-                      {selectedResume.experiences.length}
-                    </p>
-                    <p className="text-xs text-slate-400">Experiences</p>
-                  </div>
-                  <div className="rounded-lg bg-purple-500/10 p-3 text-center">
-                    <p className="text-xl font-bold text-purple-400">
-                      {selectedResume.education.length}
-                    </p>
-                    <p className="text-xs text-slate-400">Education</p>
+                    <p className="text-xl font-bold text-amber-400">{selectedResume.education.length}</p>
+                    <p className="mono text-xs text-zinc-500">edu</p>
                   </div>
                 </div>
 
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {suggestions.map((item, index) => (
-                    <div
-                      key={index}
-                      className={`rounded-lg border p-4 ${getPriorityColor(item.priority)}`}
-                    >
-                      <div className="flex items-start gap-3">
-                        <span
-                          className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                            item.priority === "high"
-                              ? "bg-red-500/20 text-red-300"
-                              : item.priority === "medium"
-                                ? "bg-amber-500/20 text-amber-300"
-                                : "bg-emerald-500/20 text-emerald-300"
-                          }`}
-                        >
-                          {item.priority}
+                    <div key={index} className={`rounded-lg border p-3 ${getPriorityColor(item.priority)}`}>
+                      <div className="flex items-start gap-2">
+                        <span className={`mono text-xs ${item.priority === "high" ? "text-red-400" : item.priority === "medium" ? "text-amber-400" : "text-green-400"}`}>
+                          [{item.priority}]
                         </span>
                         <div>
-                          <p className="font-medium text-white">{item.issue}</p>
-                          <p className="mt-1 text-sm text-slate-400">
-                            {item.suggestion}
-                          </p>
+                          <p className="text-sm font-medium text-white">{item.issue}</p>
+                          <p className="mono text-xs text-zinc-500 mt-1">{item.suggestion}</p>
                         </div>
                       </div>
                     </div>
@@ -433,25 +389,20 @@ export default function ResumesPage() {
                 </div>
               </div>
 
-              <div className="rounded-xl glass-card p-6">
-                <h3 className="mb-3 font-medium text-white">Best Practices</h3>
-                <ul className="space-y-2 text-sm text-slate-400">
-                  <li className="flex items-start gap-2">
-                    <span className="text-emerald-400">✓</span>
-                    Keep it to 1-2 pages
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-emerald-400">✓</span>
-                    Use keywords from job postings
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-emerald-400">✓</span>
-                    Quantify achievements with numbers
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-emerald-400">✓</span>
-                    Proofread for errors
-                  </li>
+              <div className="rounded-2xl border border-white/10 bg-[#14141f] p-5">
+                <span className="mono text-xs text-zinc-500 uppercase tracking-wider">best_practices</span>
+                <ul className="mt-3 space-y-2">
+                  {[
+                    "Keep it to 1-2 pages",
+                    "Use keywords from job postings",
+                    "Quantify achievements with numbers",
+                    "Proofread for errors",
+                  ].map((item, i) => (
+                    <li key={i} className="flex items-center gap-2 text-sm text-zinc-400">
+                      <span className="text-green-400">✓</span>
+                      <span className="mono text-xs">{item}</span>
+                    </li>
+                  ))}
                 </ul>
               </div>
             </div>

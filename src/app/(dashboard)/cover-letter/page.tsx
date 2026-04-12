@@ -50,7 +50,7 @@ export default function CoverLetterPage() {
 
   const generateCoverLetter = async () => {
     if (!formData.jobTitle || !formData.companyName) {
-      toast.error("Please fill in job title and company name");
+      toast.error("Fill in job title and company name");
       return;
     }
 
@@ -74,10 +74,10 @@ export default function CoverLetterPage() {
         setCoverLetter(data.coverLetter);
         toast.success("Cover letter generated!");
       } else if (data.error === "AI not configured") {
-        toast.error("AI not configured. Using template instead.");
+        toast.error("AI not configured. Using template.");
         generateTemplateCoverLetter();
       } else {
-        toast.error(data.error || "Failed to generate cover letter");
+        toast.error(data.error || "Failed to generate");
         generateTemplateCoverLetter();
       }
     } catch {
@@ -118,146 +118,162 @@ ${name}`;
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(coverLetter);
-    toast.success("Copied to clipboard!");
+    toast.success("Copied!");
   };
 
   if (!isLoaded || loading) {
     return (
-      <div className="mx-auto max-w-4xl px-6 py-8">
-        <div className="text-slate-400">Loading...</div>
+      <div className="flex items-center justify-center py-20">
+        <div className="flex items-center gap-3">
+          <div className="h-5 w-5 rounded-full border-2 border-purple-500/30 border-t-purple-500 animate-spin" />
+          <span className="mono text-sm text-zinc-400">Loading...</span>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-4xl px-6 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white">Cover Letter Generator</h1>
-        <p className="mt-2 text-slate-400">
-          Create a professional cover letter tailored to your target role.
-        </p>
+    <div className="max-w-5xl mx-auto">
+      <div className="agent-card p-6 mb-6 animate-fade-up">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-lg bg-cyan-500/20 flex items-center justify-center">
+            <svg className="h-5 w-5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-white">Cover Letter</h1>
+            <p className="mono text-xs text-zinc-500">ai_generator</p>
+          </div>
+        </div>
       </div>
 
-      <div className="grid gap-8 lg:grid-cols-2">
-        <div className="space-y-6">
-          <div className="rounded-xl glass-card p-6">
-            <h2 className="mb-4 text-lg font-semibold text-white">Job Details</h2>
-            
-            <div className="space-y-4">
+      <div className="grid gap-6 lg:grid-cols-2">
+        <div className="space-y-4">
+          <div className="agent-card p-5">
+            <span className="mono text-xs text-zinc-500 uppercase tracking-wider">job_details</span>
+            <div className="mt-4 space-y-4">
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate-400">
-                  Recipient Name (optional)
-                </label>
+                <label className="mono text-xs text-zinc-500 mb-1 block">recipient_name</label>
                 <input
                   type="text"
                   placeholder="Hiring Manager"
                   value={formData.recipientName}
                   onChange={(e) => setFormData({ ...formData, recipientName: e.target.value })}
-                  className="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-white placeholder:text-slate-500 focus:border-emerald-500 focus:outline-none focus:ring-emerald-500/20"
+                  className="agent-input w-full"
                 />
               </div>
-
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate-400">
-                  Company Name *
-                </label>
+                <label className="mono text-xs text-zinc-500 mb-1 block">company_name *</label>
                 <input
                   type="text"
                   placeholder="Acme Corporation"
                   value={formData.companyName}
                   onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
-                  className="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-white placeholder:text-slate-500 focus:border-emerald-500 focus:outline-none focus:ring-emerald-500/20"
+                  className="agent-input w-full"
                 />
               </div>
-
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate-400">
-                  Job Title *
-                </label>
+                <label className="mono text-xs text-zinc-500 mb-1 block">job_title *</label>
                 <input
                   type="text"
                   placeholder="Software Engineer"
                   value={formData.jobTitle}
                   onChange={(e) => setFormData({ ...formData, jobTitle: e.target.value })}
-                  className="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-white placeholder:text-slate-500 focus:border-emerald-500 focus:outline-none focus:ring-emerald-500/20"
+                  className="agent-input w-full"
                 />
               </div>
-
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate-400">
-                  Job Description (optional)
-                </label>
+                <label className="mono text-xs text-zinc-500 mb-1 block">job_description</label>
                 <textarea
-                  rows={5}
-                  placeholder="Paste the job description here for a more tailored letter..."
+                  rows={4}
+                  placeholder="Paste job description for tailored letter..."
                   value={formData.jobDescription}
                   onChange={(e) => setFormData({ ...formData, jobDescription: e.target.value })}
-                  className="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-white placeholder:text-slate-500 focus:border-emerald-500 focus:outline-none focus:ring-emerald-500/20 resize-none"
+                  className="agent-input w-full resize-none"
                 />
               </div>
-
               <button
                 onClick={generateCoverLetter}
                 disabled={generating}
-                className="w-full rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-400 py-3 text-center font-medium text-white hover:opacity-90 disabled:opacity-50"
+                className="agent-button-primary w-full justify-center py-3"
               >
-                {generating ? "Generating..." : "Generate Cover Letter"}
+                {generating ? (
+                  <>
+                    <div className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                    generating...
+                  </>
+                ) : (
+                  <>
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    generate()
+                  </>
+                )}
               </button>
             </div>
           </div>
 
           {profile && (
-            <div className="rounded-xl glass-card p-6">
-              <h2 className="mb-2 text-lg font-semibold text-white">Your Profile</h2>
-              <p className="text-sm text-slate-400">
-                Used to personalize your cover letter
-              </p>
-              <div className="mt-4 space-y-2 text-sm">
-                <p><span className="font-medium text-slate-300">Name:</span> {profile.fullName || "Not set"}</p>
-                <p><span className="font-medium text-slate-300">Email:</span> {profile.email || "Not set"}</p>
-                <p><span className="font-medium text-slate-300">Headline:</span> {profile.headline || profile.experience || "Not set"}</p>
+          <div className="agent-card p-5">
+            <span className="mono text-xs text-zinc-500 uppercase tracking-wider">user_profile</span>
+              <div className="mt-3 space-y-2">
+                <div className="flex justify-between">
+                  <span className="mono text-xs text-zinc-600">name</span>
+                  <span className="mono text-xs text-zinc-400">{profile.fullName || "not_set"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="mono text-xs text-zinc-600">email</span>
+                  <span className="mono text-xs text-zinc-400">{profile.email || "not_set"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="mono text-xs text-zinc-600">headline</span>
+                  <span className="mono text-xs text-zinc-400 truncate max-w-[150px]">{profile.headline || profile.experience || "not_set"}</span>
+                </div>
               </div>
             </div>
           )}
         </div>
 
-        <div>
-          <div className="rounded-xl glass-card p-6">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-white">Your Cover Letter</h2>
+        <div className="space-y-4">
+          <div className="agent-card p-5">
+            <div className="flex items-center justify-between mb-4">
+              <span className="mono text-xs text-zinc-500 uppercase tracking-wider">output</span>
               {coverLetter && (
-                <button
-                  onClick={copyToClipboard}
-                  className="text-sm text-emerald-400 hover:text-emerald-300"
-                >
-                  Copy
+                <button onClick={copyToClipboard} className="mono text-xs text-purple-400 hover:text-purple-300">
+                  copy
                 </button>
               )}
             </div>
 
             {coverLetter ? (
-              <div className="rounded-lg bg-slate-800 p-6">
-                <pre className="whitespace-pre-wrap text-sm text-slate-300 font-sans">
+              <div className="p-4 rounded-lg bg-zinc-900/50 border border-zinc-800">
+                <pre className="whitespace-pre-wrap text-xs text-zinc-400 font-mono">
                   {coverLetter}
                 </pre>
               </div>
             ) : (
-              <div className="flex h-64 items-center justify-center rounded-lg border-2 border-dashed border-slate-700">
-                <p className="text-slate-500">
-                  Fill in the details and click generate
-                </p>
+              <div className="flex items-center justify-center h-48 rounded-lg border-2 border-dashed border-zinc-800">
+                <p className="mono text-xs text-zinc-600">fill_details_and_generate()</p>
               </div>
             )}
           </div>
 
-          <div className="mt-4 rounded-xl glass-card p-4">
-            <h3 className="font-semibold text-white">Tips for a Great Cover Letter</h3>
-            <ul className="mt-2 space-y-1 text-sm text-slate-400">
-              <li>• Address it to a specific person when possible</li>
-              <li>• Keep it to one page</li>
-              <li>• Customize for each application</li>
-              <li>• Highlight relevant achievements</li>
-              <li>• Show enthusiasm for the company</li>
+          <div className="agent-card p-5">
+            <span className="mono text-xs text-zinc-500 uppercase tracking-wider">tips</span>
+            <ul className="mt-3 space-y-2">
+              {[
+                "Address to a specific person when possible",
+                "Keep it to one page",
+                "Customize for each application",
+                "Highlight relevant achievements",
+                "Show enthusiasm for the company",
+              ].map((item, i) => (
+                <li key={i} className="mono text-xs text-zinc-500 flex items-center gap-2">
+                  <span className="text-cyan-400">→</span> {item}
+                </li>
+              ))}
             </ul>
           </div>
         </div>

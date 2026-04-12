@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useAuth, useUser } from "@clerk/nextjs";
+import { useUser } from "@clerk/nextjs";
 import Link from "next/link";
 import CVUpload from "@/app/components/cv-upload";
 
 export default function DashboardPage() {
-  const { isLoaded } = useAuth();
+  const { isLoaded } = useUser();
   const { user } = useUser();
   const [showUpload, setShowUpload] = useState(false);
   const [stats, setStats] = useState({
@@ -50,82 +50,77 @@ export default function DashboardPage() {
   const firstName = user?.firstName || "there";
 
   return (
-    <div className="max-w-5xl mx-auto">
+    <div className="max-w-5xl mx-auto space-y-6">
       {/* Agent Header */}
-      <div className="mb-8 animate-fade-up">
-        <div className="agent-card p-6">
-          <div className="flex items-center gap-4">
-            <div className="relative">
-              <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center">
-                <span className="text-xl font-bold text-white">
-                  {firstName.charAt(0).toUpperCase()}
-                </span>
-              </div>
-              <div className="absolute -bottom-1 -right-1 h-5 w-5 rounded-full bg-green-500 border-2 border-[#0a0a0f]" />
+      <div className="rounded-2xl border border-white/10 bg-[#14141f] p-6">
+        <div className="flex items-center gap-4">
+          <div className="relative">
+            <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center">
+              <span className="text-xl font-bold text-white">
+                {firstName.charAt(0).toUpperCase()}
+              </span>
             </div>
-            <div className="flex-1">
-              <div className="flex items-center gap-3">
-                <h1 className="text-xl font-bold text-white">
-                  Hey, {firstName}
-                </h1>
-                <div className="agent-status rounded-full border border-purple-500/20 bg-purple-500/10 px-3 py-1">
-                  <div className="status-dot" />
-                  <span className="mono text-xs text-purple-300">Agent Active</span>
-                </div>
+            <div className="absolute -bottom-1 -right-1 h-5 w-5 rounded-full bg-green-500 border-2 border-[#0a0a0f]" />
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center gap-3 flex-wrap">
+              <h1 className="text-xl font-bold text-white">
+                Hey, {firstName}
+              </h1>
+              <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-green-500/10 border border-green-500/20">
+                <div className="h-2 w-2 rounded-full bg-green-400 animate-pulse" />
+                <span className="mono text-xs text-green-400">Agent Active</span>
               </div>
-              <p className="mono text-sm text-zinc-500 mt-1">
-                Your career agent is ready to help you find opportunities
-              </p>
             </div>
+            <p className="mono text-sm text-zinc-500 mt-1">
+              Your career agent is ready to help you find opportunities
+            </p>
           </div>
         </div>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid gap-4 sm:grid-cols-3 mb-8 animate-fade-up delay-100">
+      <div className="grid gap-4 sm:grid-cols-3">
         {[
           {
             label: "Applications",
             value: stats.applications,
             sublabel: "tracked",
             color: "purple",
+            icon: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2",
           },
           {
             label: "Saved Jobs",
             value: stats.savedJobs,
             sublabel: "bookmarked",
             color: "cyan",
+            icon: "M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z",
           },
           {
             label: "Interviews",
             value: stats.interviews,
             sublabel: "scheduled",
             color: "green",
+            icon: "M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z",
           },
         ].map((stat, i) => (
-          <div key={i} className="agent-card p-5">
+          <div key={i} className="rounded-2xl border border-white/10 bg-[#14141f] p-5">
             <div className="flex items-center justify-between mb-3">
               <span className="mono text-xs text-zinc-500 uppercase tracking-wider">
                 {stat.label}
               </span>
-              <div
-                className={`h-8 w-8 rounded-lg flex items-center justify-center ${
-                  stat.color === "purple"
-                    ? "bg-purple-500/20"
-                    : stat.color === "cyan"
-                    ? "bg-cyan-500/20"
-                    : "bg-green-500/20"
-                }`}
-              >
-                <div
-                  className={`h-2 w-2 rounded-full ${
-                    stat.color === "purple"
-                      ? "bg-purple-400"
-                      : stat.color === "cyan"
-                      ? "bg-cyan-400"
-                      : "bg-green-400"
-                  }`}
-                />
+              <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${
+                stat.color === "purple" ? "bg-purple-500/20" :
+                stat.color === "cyan" ? "bg-cyan-500/20" :
+                "bg-green-500/20"
+              }`}>
+                <svg className={`h-4 w-4 ${
+                  stat.color === "purple" ? "text-purple-400" :
+                  stat.color === "cyan" ? "text-cyan-400" :
+                  "text-green-400"
+                }`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d={stat.icon} />
+                </svg>
               </div>
             </div>
             <div className="text-3xl font-bold text-white">{stat.value}</div>
@@ -134,82 +129,69 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {/* Agent Actions */}
-      <div className="mb-8 animate-fade-up delay-200">
-        <div className="agent-card p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center">
-              <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+      {/* Quick Actions */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <button
+          onClick={() => setShowUpload(!showUpload)}
+          className="rounded-2xl border border-purple-500/20 bg-purple-500/5 p-5 text-left transition-all hover:border-purple-500/40 hover:bg-purple-500/10"
+        >
+          <div className="flex items-center gap-4">
+            <div className="h-12 w-12 rounded-xl bg-purple-500/20 flex items-center justify-center">
+              <svg className="h-6 w-6 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
             </div>
-            <h2 className="text-lg font-semibold text-white">Career Agent</h2>
+            <div>
+              <div className="font-semibold text-white text-lg">Upload CV</div>
+              <div className="mono text-xs text-zinc-500 mt-1">Enable job matching</div>
+            </div>
           </div>
-          <p className="mono text-sm text-zinc-500 mb-4">
-            What would you like to do today?
-          </p>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <button
-              onClick={() => setShowUpload(!showUpload)}
-              className="flex items-center gap-3 rounded-xl border border-purple-500/20 bg-purple-500/5 p-4 text-left transition-all hover:border-purple-500/40 hover:bg-purple-500/10"
-            >
-              <div className="h-10 w-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
-                <svg className="h-5 w-5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-              </div>
-              <div>
-                <div className="font-medium text-white">Upload CV</div>
-                <div className="mono text-xs text-zinc-500">Enable job matching</div>
-              </div>
-            </button>
-            <Link
-              href="/jobs"
-              className="flex items-center gap-3 rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-4 text-left transition-all hover:border-cyan-500/40 hover:bg-cyan-500/10"
-            >
-              <div className="h-10 w-10 rounded-lg bg-cyan-500/20 flex items-center justify-center">
-                <svg className="h-5 w-5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-                </svg>
-              </div>
-              <div>
-                <div className="font-medium text-white">Find Jobs</div>
-                <div className="mono text-xs text-zinc-500">AI-matched opportunities</div>
-              </div>
-            </Link>
+        </button>
+        <Link
+          href="/jobs"
+          className="rounded-2xl border border-cyan-500/20 bg-cyan-500/5 p-5 transition-all hover:border-cyan-500/40 hover:bg-cyan-500/10"
+        >
+          <div className="flex items-center gap-4">
+            <div className="h-12 w-12 rounded-xl bg-cyan-500/20 flex items-center justify-center">
+              <svg className="h-6 w-6 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+              </svg>
+            </div>
+            <div>
+              <div className="font-semibold text-white text-lg">Find Jobs</div>
+              <div className="mono text-xs text-zinc-500 mt-1">AI-matched opportunities</div>
+            </div>
           </div>
-        </div>
+        </Link>
       </div>
 
       {/* CV Upload Panel */}
       {showUpload && (
-        <div className="mb-8 animate-fade-up">
-          <div className="agent-card p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="h-8 w-8 rounded-lg bg-purple-500/20 flex items-center justify-center">
-                  <svg className="h-4 w-4 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                </div>
-                <h2 className="text-lg font-semibold text-white">Upload Your CV</h2>
-              </div>
-              <button
-                onClick={() => setShowUpload(false)}
-                className="rounded-lg p-2 text-zinc-500 hover:text-white hover:bg-white/5 transition-colors"
-              >
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+        <div className="rounded-2xl border border-white/10 bg-[#14141f] p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-lg bg-purple-500/20 flex items-center justify-center">
+                <svg className="h-4 w-4 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
-              </button>
+              </div>
+              <h2 className="text-lg font-semibold text-white">Upload Your CV</h2>
             </div>
-            <CVUpload />
+            <button
+              onClick={() => setShowUpload(false)}
+              className="rounded-lg p-2 text-zinc-500 hover:text-white hover:bg-white/5 transition-colors"
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           </div>
+          <CVUpload />
         </div>
       )}
 
-      {/* Quick Actions */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 animate-fade-up delay-300">
+      {/* Quick Links */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[
           {
             href: "/interview",
@@ -239,28 +221,20 @@ export default function DashboardPage() {
           <Link
             key={i}
             href={action.href}
-            className="agent-card p-5 glass-card-hover"
+            className="rounded-2xl border border-white/10 bg-[#14141f] p-5 transition-all hover:border-white/20 hover:bg-[#1a1a28]"
           >
-            <div
-              className={`h-10 w-10 rounded-lg mb-3 flex items-center justify-center ${
-                action.color === "purple"
-                  ? "bg-purple-500/20"
-                  : action.color === "cyan"
-                  ? "bg-cyan-500/20"
-                  : action.color === "amber"
-                  ? "bg-amber-500/20"
-                  : "bg-green-500/20"
-              }`}
-            >
+            <div className={`h-10 w-10 rounded-lg mb-3 flex items-center justify-center ${
+              action.color === "purple" ? "bg-purple-500/20" :
+              action.color === "cyan" ? "bg-cyan-500/20" :
+              action.color === "amber" ? "bg-amber-500/20" :
+              "bg-green-500/20"
+            }`}>
               <svg
                 className={`h-5 w-5 ${
-                  action.color === "purple"
-                    ? "text-purple-400"
-                    : action.color === "cyan"
-                    ? "text-cyan-400"
-                    : action.color === "amber"
-                    ? "text-amber-400"
-                    : "text-green-400"
+                  action.color === "purple" ? "text-purple-400" :
+                  action.color === "cyan" ? "text-cyan-400" :
+                  action.color === "amber" ? "text-amber-400" :
+                  "text-green-400"
                 }`}
                 fill="none"
                 viewBox="0 0 24 24"
@@ -270,9 +244,7 @@ export default function DashboardPage() {
               </svg>
             </div>
             <div className="font-medium text-white">{action.label}</div>
-            <div className="mono text-xs text-zinc-500 mt-1">
-              →
-            </div>
+            <div className="mono text-xs text-zinc-600 mt-1">→</div>
           </Link>
         ))}
       </div>

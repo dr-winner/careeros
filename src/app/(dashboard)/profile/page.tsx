@@ -91,130 +91,142 @@ export default function ProfilePage() {
 
   if (!isLoaded || loading) {
     return (
-      <div className="mx-auto max-w-2xl px-6 py-8">
-        <div className="text-slate-400">Loading...</div>
+      <div className="flex items-center justify-center py-20">
+        <div className="flex items-center gap-3">
+          <div className="h-5 w-5 rounded-full border-2 border-purple-500/30 border-t-purple-500 animate-spin" />
+          <span className="mono text-sm text-zinc-400">Loading...</span>
+        </div>
       </div>
     );
   }
 
+  const inputClass = "w-full rounded-lg border border-white/10 bg-[#0d0d15] px-4 py-3 text-white placeholder:text-zinc-600 focus:border-purple-500/50 focus:outline-none focus:ring-2 focus:ring-purple-500/20 transition-all";
+  const labelClass = "block mb-2 text-sm font-medium text-zinc-400";
+  const selectClass = "w-full rounded-lg border border-white/10 bg-[#0d0d15] px-4 py-3 text-white focus:border-purple-500/50 focus:outline-none focus:ring-2 focus:ring-purple-500/20 transition-all cursor-pointer";
+
   return (
-    <div className="mx-auto max-w-2xl px-6 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white">My Profile</h1>
-        <p className="mt-2 text-slate-400">
-          Manage your profile information and preferences.
-        </p>
-      </div>
-
-      <div className="space-y-6">
-        <div className="rounded-xl glass-card p-6">
-          <h2 className="mb-4 text-lg font-semibold text-white">Account</h2>
-          <div className="space-y-4">
-            <div>
-              <label className="mb-1 block text-sm font-medium text-slate-400">Email</label>
-              <input
-                type="email"
-                value={profile?.email || user?.primaryEmailAddress?.emailAddress || ""}
-                disabled
-                className="w-full rounded-lg border border-slate-700 bg-slate-800/50 px-4 py-2 text-slate-400"
-              />
-              <p className="mt-1 text-xs text-slate-500">Email cannot be changed</p>
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-slate-400">Full Name</label>
-              <input
-                type="text"
-                value={formData.fullName}
-                onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                placeholder="Enter your full name"
-                className="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-white placeholder:text-slate-500 focus:border-emerald-500 focus:outline-none focus:ring-emerald-500/20"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-slate-400">Phone Number</label>
-              <input
-                type="tel"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                placeholder="+233 XX XXX XXXX"
-                className="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-white placeholder:text-slate-500 focus:border-emerald-500 focus:outline-none focus:ring-emerald-500/20"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-slate-400">Country</label>
-              <select
-                value={formData.country}
-                onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-                className="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-white focus:border-emerald-500 focus:outline-none focus:ring-emerald-500/20"
-              >
-                {COUNTRIES.map((c) => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
-            </div>
+    <div className="max-w-xl mx-auto space-y-6">
+      <div className="rounded-2xl border border-white/10 bg-[#14141f] p-6">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
+            <svg className="h-5 w-5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-white">Profile Settings</h1>
+            <p className="mono text-xs text-zinc-500">user_configuration</p>
           </div>
         </div>
+      </div>
 
-        <div className="rounded-xl glass-card p-6">
-          <h2 className="mb-4 text-lg font-semibold text-white">Professional Info</h2>
-          <div className="space-y-4">
-            <div>
-              <label className="mb-1 block text-sm font-medium text-slate-400">Professional Headline</label>
-              <input
-                type="text"
-                value={formData.headline}
-                onChange={(e) => setFormData({ ...formData, headline: e.target.value })}
-                placeholder="e.g., Software Developer | React & Node.js"
-                className="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-white placeholder:text-slate-500 focus:border-emerald-500 focus:outline-none focus:ring-emerald-500/20"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-slate-400">Role Type</label>
-              <select
-                value={formData.roleType}
-                onChange={(e) => setFormData({ ...formData, roleType: e.target.value })}
-                className="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-white focus:border-emerald-500 focus:outline-none focus:ring-emerald-500/20"
-              >
-                <option value="">Select role type</option>
-                {ROLE_TYPES.map((r) => (
-                  <option key={r} value={r}>{r}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-slate-400">Experience Level</label>
-              <select
-                value={formData.experience}
-                onChange={(e) => setFormData({ ...formData, experience: e.target.value })}
-                className="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-white focus:border-emerald-500 focus:outline-none focus:ring-emerald-500/20"
-              >
-                <option value="">Select experience</option>
-                {EXPERIENCE_LEVELS.map((e) => (
-                  <option key={e} value={e}>{e}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-slate-400">Desired Role</label>
-              <input
-                type="text"
-                value={formData.desiredRole}
-                onChange={(e) => setFormData({ ...formData, desiredRole: e.target.value })}
-                placeholder="e.g., Senior Software Engineer"
-                className="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-white placeholder:text-slate-500 focus:border-emerald-500 focus:outline-none focus:ring-emerald-500/20"
-              />
-            </div>
+      <div className="rounded-2xl border border-white/10 bg-[#14141f] p-6">
+        <h2 className="text-lg font-semibold text-white mb-4">Account</h2>
+        <div className="space-y-4">
+          <div>
+            <label className={labelClass}>Email</label>
+            <input
+              type="email"
+              value={profile?.email || user?.primaryEmailAddress?.emailAddress || ""}
+              disabled
+              className={`${inputClass} opacity-60`}
+            />
+            <p className="mono text-xs text-zinc-600 mt-1">Email cannot be changed</p>
+          </div>
+          <div>
+            <label className={labelClass}>Full Name</label>
+            <input
+              type="text"
+              value={formData.fullName}
+              onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+              placeholder="Enter your full name"
+              className={inputClass}
+            />
+          </div>
+          <div>
+            <label className={labelClass}>Phone Number</label>
+            <input
+              type="tel"
+              value={formData.phone}
+              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              placeholder="+233 XX XXX XXXX"
+              className={inputClass}
+            />
+          </div>
+          <div>
+            <label className={labelClass}>Country</label>
+            <select
+              value={formData.country}
+              onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+              className={selectClass}
+            >
+              {COUNTRIES.map((c) => (
+                <option key={c} value={c} className="bg-[#0d0d15]">{c}</option>
+              ))}
+            </select>
           </div>
         </div>
-
-        <button
-          onClick={saveProfile}
-          disabled={saving}
-          className="w-full rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-400 py-3 text-center font-medium text-white hover:opacity-90 disabled:opacity-50"
-        >
-          {saving ? "Saving..." : "Save Changes"}
-        </button>
       </div>
+
+      <div className="rounded-2xl border border-white/10 bg-[#14141f] p-6">
+        <h2 className="text-lg font-semibold text-white mb-4">Professional Info</h2>
+        <div className="space-y-4">
+          <div>
+            <label className={labelClass}>Professional Headline</label>
+            <input
+              type="text"
+              value={formData.headline}
+              onChange={(e) => setFormData({ ...formData, headline: e.target.value })}
+              placeholder="e.g., Software Developer | React & Node.js"
+              className={inputClass}
+            />
+          </div>
+          <div>
+            <label className={labelClass}>Role Type</label>
+            <select
+              value={formData.roleType}
+              onChange={(e) => setFormData({ ...formData, roleType: e.target.value })}
+              className={selectClass}
+            >
+              <option value="" className="bg-[#0d0d15]">Select role type</option>
+              {ROLE_TYPES.map((r) => (
+                <option key={r} value={r} className="bg-[#0d0d15]">{r}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className={labelClass}>Experience Level</label>
+            <select
+              value={formData.experience}
+              onChange={(e) => setFormData({ ...formData, experience: e.target.value })}
+              className={selectClass}
+            >
+              <option value="" className="bg-[#0d0d15]">Select experience</option>
+              {EXPERIENCE_LEVELS.map((e) => (
+                <option key={e} value={e} className="bg-[#0d0d15]">{e}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className={labelClass}>Desired Role</label>
+            <input
+              type="text"
+              value={formData.desiredRole}
+              onChange={(e) => setFormData({ ...formData, desiredRole: e.target.value })}
+              placeholder="e.g., Senior Software Engineer"
+              className={inputClass}
+            />
+          </div>
+        </div>
+      </div>
+
+      <button
+        onClick={saveProfile}
+        disabled={saving}
+        className="w-full rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 py-3 text-center font-medium text-white hover:opacity-90 transition-opacity disabled:opacity-50"
+      >
+        {saving ? "Saving..." : "Save Changes"}
+      </button>
     </div>
   );
 }

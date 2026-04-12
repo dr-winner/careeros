@@ -194,15 +194,15 @@ body {
 
 /* Agentic glass effects */
 .glass-dark {
-  background: rgba(10, 10, 15, 0.8);
+  background: rgba(10, 10, 15, 0.95);
   backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .glass-card {
-  background: rgba(20, 20, 30, 0.6);
+  background: #14141f;
   backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .glass-card-hover {
@@ -251,12 +251,12 @@ body {
 
 /* Agent input styling */
 .agent-input {
-  background: rgba(20, 20, 30, 0.8);
+  background: #0d0d15;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
-  padding: 16px 20px;
+  padding: 12px 16px;
   color: #fafafa;
-  font-size: 16px;
+  font-size: 14px;
   transition: all 0.3s ease;
   width: 100%;
 }
@@ -312,9 +312,9 @@ body {
 /* Agent card */
 .agent-card {
   position: relative;
-  background: rgba(20, 20, 30, 0.6);
+  background: #14141f;
   backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 16px;
   padding: 24px;
   overflow: hidden;
