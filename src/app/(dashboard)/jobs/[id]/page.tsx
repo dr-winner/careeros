@@ -309,7 +309,7 @@ export default function JobDetailPage() {
         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
         </svg>
-        back_to_jobs()
+        Back to Jobs
       </Link>
 
       <div className="agent-card p-6 animate-fade-up">

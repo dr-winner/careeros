@@ -123,7 +123,7 @@ export default function ReferralPage() {
               />
             </div>
             <button onClick={sendInvite} disabled={sending} className="agent-button-primary w-full justify-center">
-              {sending ? "sending..." : "send_invite()"}
+              {sending ? "Sending..." : "Send Invite"}
             </button>
           </div>
         </div>
