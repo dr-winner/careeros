@@ -75,6 +75,7 @@ jobs:
         run: npm run build
         env:
           NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
   deploy:
     name: Deploy to Vercel
@@ -122,11 +123,13 @@ jobs:
         run: npm run build
         env:
           NEXT_PUBLIC_APP_URL: http://localhost:3000
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
       - name: Run dev server
         run: npm run dev &
         env:
           NEXT_PUBLIC_APP_URL: http://localhost:3000
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
       - name: Wait for server
         run: npx wait-on http://localhost:3000 --timeout 120000
