@@ -8,6 +8,7 @@ import dynamic from "next/dynamic";
 import CVUpload from "@/app/components/cv-upload";
 import { PDFDownloadLink } from "@react-pdf/renderer";
 import CVPDF from "@/components/cv-pdf";
+import CVAnalysisScreen from "@/components/cv-analysis-screen";
 
 const CVPDFWithDynamic = dynamic(() => import("@/components/cv-pdf"), {
   ssr: false,
@@ -54,6 +55,8 @@ export default function CVsPage() {
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
   const [showRoleSelector, setShowRoleSelector] = useState(false);
   const [tailoringForJob, setTailoringForJob] = useState(false);
+  const [showAnalysis, setShowAnalysis] = useState(false);
+  const [analysisCvId, setAnalysisCvId] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -92,6 +95,24 @@ export default function CVsPage() {
 
   const handleUploadSuccess = useCallback(() => {
     setShowUpload(false);
+    fetchCVs();
+  }, [fetchCVs]);
+
+  const handleAnalysisStart = useCallback((cvId: string) => {
+    setShowUpload(false);
+    setShowAnalysis(true);
+    setAnalysisCvId(cvId);
+  }, []);
+
+  const handleAnalysisComplete = useCallback(() => {
+    setShowAnalysis(false);
+    setAnalysisCvId(null);
+    fetchCVs();
+  }, [fetchCVs]);
+
+  const handleCloseAnalysis = useCallback(() => {
+    setShowAnalysis(false);
+    setAnalysisCvId(null);
     fetchCVs();
   }, [fetchCVs]);
 
@@ -338,7 +359,15 @@ export default function CVsPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
+    <>
+      {showAnalysis && analysisCvId && (
+        <CVAnalysisScreen
+          cvId={analysisCvId}
+          onComplete={handleAnalysisComplete}
+          onClose={handleCloseAnalysis}
+        />
+      )}
+      <div className="max-w-6xl mx-auto space-y-6">
       <div className="rounded-2xl border border-white/10 bg-[#14141f] p-6">
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-3">
@@ -516,7 +545,7 @@ export default function CVsPage() {
             </div>
             <h2 className="text-sm font-medium text-white">Upload CV</h2>
           </div>
-          <CVUpload onUploadSuccess={handleUploadSuccess} />
+          <CVUpload onUploadSuccess={handleUploadSuccess} onAnalysisStart={handleAnalysisStart} />
         </div>
       )}
 
@@ -690,5 +719,6 @@ export default function CVsPage() {
         </div>
       ) : null}
     </div>
+    </>
   );
 }
