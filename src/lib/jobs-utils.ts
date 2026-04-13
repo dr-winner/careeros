@@ -222,3 +222,50 @@ export function paginateJobs<T>(jobs: T[], page: number, pageSize = 20) {
     },
   };
 }
+
+export interface CursorPaginationOptions {
+  cursor?: string;
+  pageSize?: number;
+}
+
+export interface CursorPaginatedResult<T> {
+  items: T[];
+  pagination: {
+    cursor: string | null;
+    hasMore: boolean;
+    total: number;
+    pageSize: number;
+  };
+}
+
+export function paginateWithCursor<T>(
+  jobs: T[],
+  options: CursorPaginationOptions,
+  getCursorId: (item: T) => string,
+): CursorPaginatedResult<T> {
+  const { cursor, pageSize = 20 } = options;
+  const total = jobs.length;
+  
+  let startIndex = 0;
+  
+  if (cursor) {
+    const cursorIndex = jobs.findIndex((job) => getCursorId(job) === cursor);
+    if (cursorIndex !== -1) {
+      startIndex = cursorIndex + 1;
+    }
+  }
+  
+  const items = jobs.slice(startIndex, startIndex + pageSize);
+  const lastItem = items[items.length - 1];
+  const nextCursor = lastItem ? getCursorId(lastItem) : null;
+  
+  return {
+    items,
+    pagination: {
+      cursor: nextCursor,
+      hasMore: startIndex + pageSize < total,
+      total,
+      pageSize,
+    },
+  };
+}

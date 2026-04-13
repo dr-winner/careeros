@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
 import { Resend } from "resend";
 import { isValidCronSecret } from "@/lib/validation";
 import { readEnv } from "@/lib/env";
@@ -8,9 +7,29 @@ import type { Prisma } from "@prisma/client";
 const resendApiKey = readEnv("RESEND_API_KEY");
 const resend = resendApiKey ? new Resend(resendApiKey) : null;
 
-type SearchWithUser = Awaited<
-  ReturnType<typeof prisma.savedSearch.findMany>
->[number] & {
+const PROVIDER_TIMEOUT_MS = 6_000;
+
+const ADZUNA_COUNTRIES = [
+  { name: "South Africa", code: "ZA", region: "Africa" },
+  { name: "Nigeria", code: "NG", region: "Africa" },
+  { name: "Kenya", code: "KE", region: "Africa" },
+  { name: "Ghana", code: "GH", region: "Africa" },
+];
+
+const REMOTIVE_CATEGORIES = [
+  "software-dev",
+  "marketing",
+  "customer-service",
+  "design",
+  "sales",
+  "product",
+  "business",
+  "data",
+  "devops-sysadmin",
+];
+
+type SavedSearchRecord = Awaited<ReturnType<typeof import("@/lib/db").prisma.savedSearch.findMany>>[number];
+type SavedSearchWithUser = SavedSearchRecord & {
   user: {
     id: string;
     email: string;
@@ -18,37 +37,159 @@ type SearchWithUser = Awaited<
   };
 };
 
-type MatchedJob = {
+interface JobAlert {
   id: string;
   title: string;
-  companyName: string | null;
-  location: string | null;
-  workMode: string | null;
-  applicationUrl: string | null;
-  postedAt: Date | null;
-};
+  companyName: string;
+  location: string;
+  workMode: string;
+  applicationUrl: string;
+  postedAt: Date;
+  source: string;
+}
+
+interface AdzunaJob {
+  id: string;
+  title: string;
+  company: { display_name: string };
+  location: { display_name: string };
+  redirect_url: string;
+  created: string;
+}
+
+interface RemotiveJob {
+  id: string;
+  title: string;
+  company_name: string;
+  candidate_required_location: string;
+  url: string;
+  publication_date: string;
+}
 
 function getBaseUrl(): string {
-  return (process.env.NEXT_PUBLIC_APP_URL || "https://careeros.app").replace(
-    /\/+$/,
-    "",
-  );
+  return (process.env.NEXT_PUBLIC_APP_URL || "https://careeros.app").replace(/\/+$/, "");
 }
 
-function getNotificationCutoff(now: Date, frequency: string): Date {
-  const intervalMs =
-    frequency === "weekly" ? 7 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
+async function fetchJsonWithTimeout(
+  input: string,
+  init: RequestInit = {},
+  timeoutMs = PROVIDER_TIMEOUT_MS,
+): Promise<unknown> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
 
-  return new Date(now.getTime() - intervalMs);
+  try {
+    const response = await fetch(input, {
+      ...init,
+      signal: controller.signal,
+      headers: {
+        Accept: "application/json",
+        ...(init.headers || {}),
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    return await response.json();
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
-function shouldNotify(
-  lastNotified: Date | null,
-  now: Date,
-  frequency: string,
-): boolean {
-  if (!lastNotified) return true;
-  return lastNotified < getNotificationCutoff(now, frequency);
+function normalizeDate(dateStr: string): Date {
+  const date = new Date(dateStr);
+  return isNaN(date.getTime()) ? new Date() : date;
+}
+
+async function fetchFromAdzuna(query: string, country: string): Promise<JobAlert[]> {
+  const appId = process.env.ADZUNA_APP_ID;
+  const appKey = process.env.ADZUNA_APP_KEY;
+
+  if (!appId || !appKey) return [];
+
+  const countryMap: Record<string, string> = {
+    "South Africa": "za",
+    Nigeria: "ng",
+    Kenya: "ke",
+    Ghana: "gh",
+  };
+
+  const countryCode = countryMap[country] || "za";
+
+  try {
+    const url = `https://api.adzuna.com/v1/api/jobs/${countryCode}/search/1?app_id=${encodeURIComponent(appId)}&app_key=${encodeURIComponent(appKey)}&what=${encodeURIComponent(query)}&results_per_page=20`;
+    const data = (await fetchJsonWithTimeout(url)) as { results?: AdzunaJob[] };
+
+    if (!Array.isArray(data.results)) return [];
+
+    return data.results.map((job) => ({
+      id: `adzuna-${job.id}`,
+      title: job.title,
+      companyName: job.company?.display_name || "Unknown",
+      location: job.location?.display_name || "Not specified",
+      workMode: "Not specified",
+      applicationUrl: job.redirect_url || "#",
+      postedAt: normalizeDate(job.created || new Date().toISOString()),
+      source: "Adzuna",
+    }));
+  } catch (error) {
+    console.error("Adzuna error:", error);
+    return [];
+  }
+}
+
+async function fetchFromRemotive(query: string): Promise<JobAlert[]> {
+  try {
+    const searchData = (await fetchJsonWithTimeout(
+      `https://remotive.com/api/remote-jobs?search=${encodeURIComponent(query)}&limit=50`,
+    )) as { jobs?: RemotiveJob[] };
+
+    if (!Array.isArray(searchData.jobs)) return [];
+
+    return searchData.jobs.map((job) => ({
+      id: `remotive-${job.id}`,
+      title: job.title,
+      companyName: job.company_name || "Unknown",
+      location: job.candidate_required_location || "Remote",
+      workMode: "Remote",
+      applicationUrl: job.url || "#",
+      postedAt: normalizeDate(job.publication_date || new Date().toISOString()),
+      source: "Remotive",
+    }));
+  } catch (error) {
+    console.error("Remotive error:", error);
+    return [];
+  }
+}
+
+async function fetchJobsForQuery(query: string, location?: string | null): Promise<JobAlert[]> {
+  const allJobs: JobAlert[] = [];
+
+  const [adzunaJobs, remotiveJobs] = await Promise.all([
+    Promise.all(
+      ADZUNA_COUNTRIES.map((c) =>
+        location && location.toLowerCase().includes(c.name.toLowerCase())
+          ? fetchFromAdzuna(query, c.name)
+          : fetchFromAdzuna(query, "South Africa"),
+      ),
+    ),
+    fetchFromRemotive(query),
+  ]);
+
+  for (const jobs of adzunaJobs) {
+    allJobs.push(...jobs);
+  }
+  allJobs.push(...remotiveJobs);
+
+  const seen = new Set<string>();
+  return allJobs.filter((job) => {
+    const key = `${job.title.toLowerCase()}::${job.companyName.toLowerCase()}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 function tokenizeSearchQuery(value: string): string[] {
@@ -69,142 +210,43 @@ function escapeHtml(value: string): string {
     .replaceAll("'", "&#39;");
 }
 
-function buildManageAlertsUrl(): string {
-  return `${getBaseUrl()}/alerts`;
-}
-
-function buildJobUrl(job: MatchedJob): string {
-  if (job.applicationUrl && job.applicationUrl.trim().length > 0) {
-    return job.applicationUrl;
-  }
-
-  return `${getBaseUrl()}/jobs/${encodeURIComponent(job.id)}`;
-}
-
-function buildJobSearchClause(search: SearchWithUser): Prisma.JobWhereInput {
-  const tokens = tokenizeSearchQuery(search.searchQuery);
+function matchesJobAlert(search: string, job: JobAlert): boolean {
+  const tokens = tokenizeSearchQuery(search);
+  const searchableText = `${job.title} ${job.companyName} ${job.location}`.toLowerCase();
 
   if (tokens.length > 0) {
-    return {
-      OR: tokens.map((token) => ({
-        OR: [
-          { title: { contains: token, mode: "insensitive" } },
-          { companyName: { contains: token, mode: "insensitive" } },
-          { description: { contains: token, mode: "insensitive" } },
-          { requirementsText: { contains: token, mode: "insensitive" } },
-        ],
-      })),
-    };
+    return tokens.some((token) => searchableText.includes(token));
   }
 
-  return {
-    OR: [
-      {
-        title: {
-          contains: search.searchQuery,
-          mode: "insensitive",
-        },
-      },
-      {
-        description: {
-          contains: search.searchQuery,
-          mode: "insensitive",
-        },
-      },
-      {
-        requirementsText: {
-          contains: search.searchQuery,
-          mode: "insensitive",
-        },
-      },
-    ],
-  };
+  return searchableText.includes(search.toLowerCase());
 }
 
-async function findMatchesForSearch(
-  search: SearchWithUser,
-  now: Date,
-): Promise<MatchedJob[]> {
-  const cutoff =
-    search.lastNotified ?? getNotificationCutoff(now, search.alertFrequency);
-
-  const andClauses: Prisma.JobWhereInput[] = [
-    {
-      status: {
-        not: "archived",
-      },
-    },
-    buildJobSearchClause(search),
-  ];
-
-  const locationValue = search.location?.trim();
-  if (locationValue) {
-    andClauses.push({
-      OR: [
-        { location: { contains: locationValue, mode: "insensitive" } },
-        { country: { contains: locationValue, mode: "insensitive" } },
-      ],
-    });
-  }
-
-  const workModeValue = search.workMode?.trim();
-  if (workModeValue) {
-    andClauses.push({
-      workMode: {
-        contains: workModeValue,
-        mode: "insensitive",
-      },
-    });
-  }
-
-  const seniorityValue = search.seniority?.trim();
-  if (seniorityValue) {
-    andClauses.push({
-      seniorityLevel: {
-        contains: seniorityValue,
-        mode: "insensitive",
-      },
-    });
-  }
-
-  const jobs = await prisma.job.findMany({
-    where: {
-      AND: andClauses,
-    },
-    select: {
-      id: true,
-      title: true,
-      companyName: true,
-      location: true,
-      workMode: true,
-      applicationUrl: true,
-      postedAt: true,
-    },
-    orderBy: [{ postedAt: "desc" }, { id: "desc" }],
-    take: 20,
-  });
-
-  return jobs.filter((job) => {
-    if (!job.postedAt) return true;
-    return job.postedAt > cutoff;
-  });
+function getJobsWithinPeriod(jobs: JobAlert[], hoursBack: number): JobAlert[] {
+  const cutoff = new Date(Date.now() - hoursBack * 60 * 60 * 1000);
+  return jobs.filter((job) => job.postedAt >= cutoff);
 }
 
-function renderEmailHtml(search: SearchWithUser, jobs: MatchedJob[]): string {
+function renderEmailHtml(
+  search: SavedSearchWithUser,
+  jobs: JobAlert[],
+  baseUrl: string,
+): string {
   const jobList = jobs
     .slice(0, 5)
     .map((job) => {
       const title = escapeHtml(job.title);
-      const company = escapeHtml(job.companyName || "Unknown Company");
-      const location = escapeHtml(job.location || "Location not specified");
-      const workMode = escapeHtml(job.workMode || "Not specified");
-      const href = escapeHtml(buildJobUrl(job));
+      const company = escapeHtml(job.companyName);
+      const location = escapeHtml(job.location);
+      const workMode = escapeHtml(job.workMode);
+      const href = escapeHtml(job.applicationUrl);
+      const daysAgo = Math.floor((Date.now() - job.postedAt.getTime()) / (1000 * 60 * 60 * 24));
 
       return `
-        <li style="margin-bottom: 12px; padding: 12px; background: #f9fafb; border-radius: 8px;">
-          <strong style="color: #059669;">${title}</strong> at ${company}<br>
-          <span style="color: #6b7280; font-size: 14px;">${location} • ${workMode}</span><br>
-          <a href="${href}" style="color: #059669; font-size: 14px;">View Job →</a>
+        <li style="margin-bottom: 12px; padding: 16px; background: #1a1a2e; border-radius: 8px; border: 1px solid rgba(139, 92, 246, 0.2);">
+          <strong style="color: #a78bfa; font-size: 16px;">${title}</strong>
+          <span style="color: #6b7280; font-size: 14px;"> at ${company}</span><br>
+          <span style="color: #9ca3af; font-size: 13px;">${location} • ${workMode} • ${daysAgo === 0 ? "Today" : `${daysAgo}d ago`}</span><br>
+          <a href="${href}" target="_blank" style="color: #22d3ee; font-size: 14px; text-decoration: none; display: inline-block; margin-top: 8px;">View Job →</a>
         </li>
       `;
     })
@@ -212,43 +254,51 @@ function renderEmailHtml(search: SearchWithUser, jobs: MatchedJob[]): string {
 
   const alertName = escapeHtml(search.name);
   const searchQuery = escapeHtml(search.searchQuery);
-  const locationText = search.location
-    ? ` in ${escapeHtml(search.location)}`
-    : "";
-  const manageAlertsUrl = escapeHtml(buildManageAlertsUrl());
+  const locationText = search.location ? ` in ${escapeHtml(search.location)}` : "";
+  const manageAlertsUrl = `${baseUrl}/alerts`;
   const greetingName = escapeHtml(search.user.fullName?.trim() || "there");
 
   return `
-    <div style="font-family: system-ui, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-      <div style="text-align: center; margin-bottom: 24px;">
-        <h1 style="color: #059669; margin: 0;">CareerOS</h1>
-        <p style="color: #6b7280; margin: 8px 0 0;">New jobs matching your alert</p>
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body style="margin: 0; padding: 0; background-color: #0a0a0f; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+      <div style="max-width: 600px; margin: 0 auto; padding: 24px;">
+        <div style="text-align: center; margin-bottom: 32px;">
+          <h1 style="color: #a78bfa; margin: 0; font-size: 28px;">CareerOS</h1>
+          <p style="color: #6b7280; margin: 8px 0 0; font-size: 14px;">New jobs matching your alert</p>
+        </div>
+
+        <div style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(6, 182, 212, 0.1)); padding: 20px; border-radius: 12px; margin-bottom: 24px; border: 1px solid rgba(139, 92, 246, 0.3);">
+          <p style="color: #fafafa; margin: 0; font-size: 16px;">Hi ${greetingName},</p>
+          <p style="color: #a78bfa; margin: 12px 0 0; font-size: 14px;">
+            <strong>Alert:</strong> ${alertName}<br>
+            <span style="color: #9ca3af;">${searchQuery}${locationText}</span>
+          </p>
+        </div>
+
+        <h2 style="color: #fafafa; margin-bottom: 16px; font-size: 18px;">${jobs.length} new job${jobs.length !== 1 ? "s" : ""} found</h2>
+
+        <ul style="list-style: none; padding: 0; margin: 0 0 24px 0;">
+          ${jobList}
+        </ul>
+
+        <div style="text-align: center; margin-top: 24px;">
+          <a href="${manageAlertsUrl}" style="display: inline-block; background: linear-gradient(135deg, #8b5cf6, #6d28d9); color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px;">
+            Manage Alerts
+          </a>
+        </div>
+
+        <p style="color: #4b5563; font-size: 12px; text-align: center; margin-top: 32px;">
+          You're receiving this because you set up a job alert on CareerOS.
+          <a href="${manageAlertsUrl}" style="color: #8b5cf6; text-decoration: none;">Manage preferences</a>
+        </p>
       </div>
-
-      <p style="color: #111827;">Hi ${greetingName},</p>
-
-      <div style="background: #ecfdf5; padding: 16px; border-radius: 8px; margin-bottom: 24px;">
-        <strong style="color: #059669;">Alert:</strong> ${alertName}<br>
-        <span style="color: #6b7280; font-size: 14px;">${searchQuery}${locationText}</span>
-      </div>
-
-      <h2 style="color: #1f2937; margin-bottom: 16px;">${jobs.length} new job${jobs.length > 1 ? "s" : ""} found</h2>
-
-      <ul style="list-style: none; padding: 0; margin: 0;">
-        ${jobList}
-      </ul>
-
-      <div style="margin-top: 24px; text-align: center;">
-        <a href="${manageAlertsUrl}" style="display: inline-block; background: #059669; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600;">
-          Manage Alerts
-        </a>
-      </div>
-
-      <p style="color: #9ca3af; font-size: 12px; text-align: center; margin-top: 32px;">
-        You're receiving this because you set up a job alert on CareerOS.
-        <a href="${manageAlertsUrl}" style="color: #059669;">Manage preferences</a>
-      </p>
-    </div>
+    </body>
+    </html>
   `;
 }
 
@@ -259,26 +309,17 @@ export async function GET(request: NextRequest) {
     }
 
     if (!resend) {
-      return NextResponse.json(
-        { error: "Email delivery is not configured" },
-        { status: 503 },
-      );
+      return NextResponse.json({ error: "Email delivery is not configured" }, { status: 503 });
     }
 
+    const { prisma } = await import("@/lib/db");
     const now = new Date();
+    const baseUrl = getBaseUrl();
 
     const searches = await prisma.savedSearch.findMany({
-      where: {
-        alertEnabled: true,
-      },
+      where: { alertEnabled: true },
       include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            fullName: true,
-          },
-        },
+        user: { select: { id: true, email: true, fullName: true } },
       },
       orderBy: [{ createdAt: "asc" }],
     });
@@ -287,38 +328,46 @@ export async function GET(request: NextRequest) {
     let searchesChecked = 0;
     let searchesMatched = 0;
 
-    for (const search of searches as SearchWithUser[]) {
+    for (const search of searches as SavedSearchWithUser[]) {
       searchesChecked++;
 
-      if (!search.user?.email) {
-        continue;
+      if (!search.user?.email) continue;
+
+      const frequencyHours = search.alertFrequency === "weekly" ? 168 : 24;
+
+      if (search.lastNotified) {
+        const hoursSince = (now.getTime() - search.lastNotified.getTime()) / (1000 * 60 * 60);
+        if (hoursSince < frequencyHours) continue;
       }
 
-      if (!shouldNotify(search.lastNotified, now, search.alertFrequency)) {
-        continue;
+      try {
+        const jobs = await fetchJobsForQuery(search.searchQuery, search.location);
+        const recentJobs = getJobsWithinPeriod(jobs, frequencyHours);
+
+        if (recentJobs.length === 0) continue;
+
+        const matchedJobs = recentJobs.filter((job) => matchesJobAlert(search.searchQuery, job));
+
+        if (matchedJobs.length === 0) continue;
+
+        searchesMatched++;
+
+        await resend.emails.send({
+          from: "CareerOS <noreply@careeros.app>",
+          to: search.user.email,
+          subject: `New jobs matching "${search.searchQuery}" (${matchedJobs.length})`,
+          html: renderEmailHtml(search, matchedJobs, baseUrl),
+        });
+
+        await prisma.savedSearch.update({
+          where: { id: search.id },
+          data: { lastNotified: now },
+        });
+
+        emailsSent++;
+      } catch (error) {
+        console.error(`Error processing search ${search.id}:`, error);
       }
-
-      const matches = await findMatchesForSearch(search, now);
-
-      if (matches.length === 0) {
-        continue;
-      }
-
-      searchesMatched++;
-
-      await resend.emails.send({
-        from: "CareerOS <noreply@careeros.app>",
-        to: search.user.email,
-        subject: `New jobs matching "${search.searchQuery}"`,
-        html: renderEmailHtml(search, matches),
-      });
-
-      await prisma.savedSearch.update({
-        where: { id: search.id },
-        data: { lastNotified: now },
-      });
-
-      emailsSent++;
     }
 
     return NextResponse.json({
@@ -330,9 +379,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Cron job error:", error);
-    return NextResponse.json(
-      { error: "Failed to send alerts" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to send alerts" }, { status: 500 });
   }
 }

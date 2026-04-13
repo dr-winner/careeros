@@ -27,12 +27,14 @@ export default function JobsPage() {
   const { userId, isLoaded } = useAuth();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [search, setSearch] = useState("");
   const [location, setLocation] = useState("");
   const [workMode, setWorkMode] = useState("");
   const [seniority, setSeniority] = useState("");
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
+  const [cursor, setCursor] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(true);
+  const [totalJobs, setTotalJobs] = useState(0);
   const [showFilters, setShowFilters] = useState(false);
 
   const persistJobs = useCallback((jobList: Job[]) => {
@@ -49,32 +51,74 @@ export default function JobsPage() {
     }
   }, []);
 
-  const fetchJobs = useCallback(async () => {
-    setLoading(true);
+  const fetchJobs = useCallback(async (isNewSearch = true) => {
+    if (isNewSearch) {
+      setLoading(true);
+    } else {
+      setLoadingMore(true);
+    }
+    
     try {
       const params = new URLSearchParams();
+      params.set("useCursor", "true");
+      params.set("pageSize", "20");
+      
       if (search) params.set("search", search);
       if (location) params.set("location", location);
       if (workMode) params.set("workMode", workMode);
       if (seniority) params.set("seniority", seniority);
-      params.set("page", page.toString());
+      if (!isNewSearch && cursor) {
+        params.set("cursor", cursor);
+      }
 
       const response = await fetch(`/api/jobs?${params}`);
       const data = await response.json();
       const nextJobs = data.jobs || [];
-      setJobs(nextJobs);
-      setTotalPages(data.pagination?.totalPages || 1);
-      persistJobs(nextJobs);
+      
+      if (isNewSearch) {
+        setJobs(nextJobs);
+      } else {
+        setJobs(prev => [...prev, ...nextJobs]);
+      }
+      
+      setCursor(data.pagination?.cursor || null);
+      setHasMore(data.pagination?.hasMore || false);
+      setTotalJobs(data.pagination?.total || nextJobs.length);
+      
+      if (isNewSearch) {
+        persistJobs(nextJobs);
+      } else {
+        persistJobs([...jobs, ...nextJobs]);
+      }
     } catch (error) {
       console.error("Error fetching jobs:", error);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
-  }, [location, page, persistJobs, search, seniority, workMode]);
+  }, [search, location, workMode, seniority, cursor, jobs, persistJobs]);
 
   useEffect(() => {
-    fetchJobs();
-  }, [fetchJobs, userId]);
+    if (userId) {
+      fetchJobs(true);
+    }
+  }, [userId]);
+
+  const handleSearch = () => {
+    setCursor(null);
+    setHasMore(true);
+    fetchJobs(true);
+  };
+
+  const handleClearFilters = () => {
+    setSearch("");
+    setLocation("");
+    setWorkMode("");
+    setSeniority("");
+    setCursor(null);
+    setHasMore(true);
+    fetchJobs(true);
+  };
 
   const toggleSave = async (jobId: string) => {
     if (!userId) return;
@@ -115,18 +159,10 @@ export default function JobsPage() {
     const now = new Date();
     const diff = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
     if (diff === 0) return "Today";
-    if (diff === 1) return "Yesterday";
-    if (diff < 7) return `${diff}d ago`;
-    if (diff < 30) return `${Math.floor(diff / 7)}w ago`;
-    return date.toLocaleDateString();
-  };
-
-  const clearFilters = () => {
-    setSearch("");
-    setLocation("");
-    setWorkMode("");
-    setSeniority("");
-    setPage(1);
+    if (diff === 1) return "1d";
+    if (diff < 7) return `${diff}d`;
+    if (diff < 30) return `${Math.floor(diff / 7)}w`;
+    return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   };
 
   const hasFilters = search || location || workMode || seniority;
@@ -171,8 +207,8 @@ export default function JobsPage() {
                 type="text"
                 placeholder="Search jobs, skills, roles..."
                 value={search}
-                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                onKeyDown={(e) => e.key === "Enter" && fetchJobs()}
+                onChange={(e) => setSearch(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
                 className="w-full bg-transparent pl-12 pr-4 py-3 text-white placeholder:text-zinc-500 focus:outline-none"
               />
             </div>
@@ -189,7 +225,7 @@ export default function JobsPage() {
               </svg>
             </button>
             <button
-              onClick={fetchJobs}
+              onClick={handleSearch}
               className="px-6 py-3 rounded-lg bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-medium hover:opacity-90 transition-opacity"
             >
               Search
@@ -204,16 +240,17 @@ export default function JobsPage() {
                   type="text"
                   placeholder="City, country..."
                   value={location}
-                  onChange={(e) => { setLocation(e.target.value); setPage(1); }}
-                  className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-zinc-600 focus:border-purple-500/50 focus:outline-none"
+                  onChange={(e) => setLocation(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                  className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-purple-500/50"
                 />
               </div>
               <div>
                 <label className="mono text-xs text-zinc-500 mb-1 block">Work Mode</label>
                 <select
                   value={workMode}
-                  onChange={(e) => { setWorkMode(e.target.value); setPage(1); }}
-                  className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-purple-500/50 focus:outline-none"
+                  onChange={(e) => setWorkMode(e.target.value)}
+                  className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500/50"
                 >
                   <option value="">All modes</option>
                   {WORK_MODES.map(mode => (
@@ -226,8 +263,8 @@ export default function JobsPage() {
                   <label className="mono text-xs text-zinc-500 mb-1 block">Seniority</label>
                   <select
                     value={seniority}
-                    onChange={(e) => { setSeniority(e.target.value); setPage(1); }}
-                    className="bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-purple-500/50 focus:outline-none"
+                    onChange={(e) => setSeniority(e.target.value)}
+                    className="bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500/50"
                   >
                     <option value="">All levels</option>
                     {SENIORITY_LEVELS.map(level => (
@@ -237,7 +274,7 @@ export default function JobsPage() {
                 </div>
                 {hasFilters && (
                   <button
-                    onClick={clearFilters}
+                    onClick={handleClearFilters}
                     className="mono text-xs text-zinc-500 hover:text-white transition-colors"
                   >
                     Clear filters
@@ -273,7 +310,7 @@ export default function JobsPage() {
           </div>
           <p className="text-zinc-400 mb-4">No jobs found matching your criteria</p>
           {hasFilters && (
-            <button onClick={clearFilters} className="mono text-sm text-purple-400 hover:text-purple-300">
+            <button onClick={handleClearFilters} className="mono text-sm text-purple-400 hover:text-purple-300">
               Clear filters
             </button>
           )}
@@ -282,7 +319,7 @@ export default function JobsPage() {
         <>
           <div className="flex items-center justify-between mb-4">
             <p className="mono text-xs text-zinc-500">
-              {jobs.length} result{jobs.length !== 1 ? "s" : ""}
+              {totalJobs} result{totalJobs !== 1 ? "s" : ""}
             </p>
             <div className="flex items-center gap-2">
               <div className="h-2 w-2 rounded-full bg-green-400 animate-pulse" />
@@ -362,28 +399,26 @@ export default function JobsPage() {
             ))}
           </div>
 
-          {totalPages > 1 && (
-            <div className="mt-6 flex items-center justify-center gap-2">
+          {hasMore && (
+            <div className="mt-6 flex justify-center">
               <button
-                onClick={() => setPage(Math.max(1, page - 1))}
-                disabled={page === 1}
-                className="px-4 py-2 rounded-lg border border-white/10 text-zinc-400 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white/5 transition-all"
+                onClick={() => fetchJobs(false)}
+                disabled={loadingMore}
+                className="px-8 py-3 rounded-lg border border-white/10 text-zinc-400 hover:bg-white/5 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
-              <span className="mono text-sm text-zinc-500">
-                {page} / {totalPages}
-              </span>
-              <button
-                onClick={() => setPage(Math.min(totalPages, page + 1))}
-                disabled={page === totalPages}
-                className="px-4 py-2 rounded-lg border border-white/10 text-zinc-400 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white/5 transition-all"
-              >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
+                {loadingMore ? (
+                  <>
+                    <div className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                    Loading...
+                  </>
+                ) : (
+                  <>
+                    Load More Jobs
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </>
+                )}
               </button>
             </div>
           )}

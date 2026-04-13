@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 
@@ -16,22 +16,65 @@ interface Application {
   notes: string | null;
 }
 
-const STATUS_CONFIG: Record<string, { color: string; bg: string; border: string }> = {
-  Applied: { color: "text-cyan-400", bg: "bg-cyan-500/15", border: "border-cyan-500/30" },
-  Screening: { color: "text-amber-400", bg: "bg-amber-500/15", border: "border-amber-500/30" },
-  Interview: { color: "text-purple-400", bg: "bg-purple-500/15", border: "border-purple-500/30" },
-  Offer: { color: "text-green-400", bg: "bg-green-500/15", border: "border-green-500/30" },
-  Rejected: { color: "text-red-400", bg: "bg-red-500/15", border: "border-red-500/30" },
-  Withdrawn: { color: "text-zinc-400", bg: "bg-zinc-500/15", border: "border-zinc-500/30" },
+interface HistoryEntry {
+  id: string;
+  previousStatus: string | null;
+  newStatus: string;
+  notes: string | null;
+  createdAt: string;
+}
+
+interface ApplicationWithHistory extends Application {
+  history?: HistoryEntry[];
+}
+
+const STATUS_CONFIG: Record<string, { color: string; bg: string; border: string; icon: string }> = {
+  Applied: { 
+    color: "text-cyan-400", 
+    bg: "bg-cyan-500/15", 
+    border: "border-cyan-500/30",
+    icon: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+  },
+  Screening: { 
+    color: "text-amber-400", 
+    bg: "bg-amber-500/15", 
+    border: "border-amber-500/30",
+    icon: "M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+  },
+  Interview: { 
+    color: "text-purple-400", 
+    bg: "bg-purple-500/15", 
+    border: "border-purple-500/30",
+    icon: "M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+  },
+  Offer: { 
+    color: "text-green-400", 
+    bg: "bg-green-500/15", 
+    border: "border-green-500/30",
+    icon: "M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"
+  },
+  Rejected: { 
+    color: "text-red-400", 
+    bg: "bg-red-500/15", 
+    border: "border-red-500/30",
+    icon: "M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+  },
+  Withdrawn: { 
+    color: "text-zinc-400", 
+    bg: "bg-zinc-500/15", 
+    border: "border-zinc-500/30",
+    icon: "M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"
+  },
 };
 
 const STATUS_OPTIONS = ["Applied", "Screening", "Interview", "Offer", "Rejected", "Withdrawn"];
 
 export default function ApplicationsPage() {
   const { userId, isLoaded } = useAuth();
-  const [applications, setApplications] = useState<Application[]>([]);
+  const [applications, setApplications] = useState<ApplicationWithHistory[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   useEffect(() => {
     if (userId) {
@@ -51,6 +94,20 @@ export default function ApplicationsPage() {
     }
   };
 
+  const fetchApplicationHistory = async (id: string) => {
+    try {
+      const response = await fetch(`/api/applications/${id}`);
+      const data = await response.json();
+      if (data.application) {
+        setApplications(prev => prev.map(app => 
+          app.id === id ? { ...app, history: data.application.history || [] } : app
+        ));
+      }
+    } catch (error) {
+      console.error("Error fetching history:", error);
+    }
+  };
+
   const updateStatus = async (id: string, status: string) => {
     try {
       const response = await fetch(`/api/applications/${id}`, {
@@ -60,11 +117,17 @@ export default function ApplicationsPage() {
       });
 
       if (response.ok) {
-        setApplications(
-          applications.map((app) =>
-            app.id === id ? { ...app, status } : app
-          )
-        );
+        const data = await response.json();
+        setApplications(prev => prev.map(app => {
+          if (app.id === id) {
+            const newApp = { ...app, status };
+            if (data.application?.history) {
+              newApp.history = data.application.history;
+            }
+            return newApp;
+          }
+          return app;
+        }));
       }
     } catch (error) {
       console.error("Error updating application:", error);
@@ -80,12 +143,33 @@ export default function ApplicationsPage() {
       });
 
       if (response.ok) {
-        setApplications(applications.filter((app) => app.id !== id));
+        setApplications(prev => prev.filter((app) => app.id !== id));
       }
     } catch (error) {
       console.error("Error deleting application:", error);
     }
   };
+
+  const toggleExpand = (id: string) => {
+    if (expandedId === id) {
+      setExpandedId(null);
+    } else {
+      setExpandedId(id);
+      const app = applications.find(a => a.id === id);
+      if (app && !app.history) {
+        fetchApplicationHistory(id);
+      }
+    }
+  };
+
+  const stats = useMemo(() => {
+    const total = applications.length;
+    const active = applications.filter(a => !["Rejected", "Withdrawn"].includes(a.status)).length;
+    const interviews = applications.filter(a => a.status === "Interview").length;
+    const offers = applications.filter(a => a.status === "Offer").length;
+    const responseRate = total > 0 ? Math.round(((applications.filter(a => !["Applied"].includes(a.status)).length) / total) * 100) : 0;
+    return { total, active, interviews, offers, responseRate };
+  }, [applications]);
 
   const filteredApplications =
     filter === "all"
@@ -98,6 +182,15 @@ export default function ApplicationsPage() {
       month: "short",
       day: "numeric",
       year: "numeric",
+    });
+  };
+
+  const formatDateTime = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
     });
   };
 
@@ -130,6 +223,25 @@ export default function ApplicationsPage() {
           <Link href="/jobs" className="rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 px-4 py-2 text-sm font-medium text-white hover:opacity-90 transition-opacity">
             Find Jobs
           </Link>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="rounded-xl border border-white/10 bg-[#14141f] p-4 text-center">
+          <div className="mono text-2xl font-bold text-white">{stats.total}</div>
+          <div className="mono text-xs text-zinc-500">Total</div>
+        </div>
+        <div className="rounded-xl border border-white/10 bg-[#14141f] p-4 text-center">
+          <div className="mono text-2xl font-bold text-cyan-400">{stats.active}</div>
+          <div className="mono text-xs text-zinc-500">Active</div>
+        </div>
+        <div className="rounded-xl border border-white/10 bg-[#14141f] p-4 text-center">
+          <div className="mono text-2xl font-bold text-purple-400">{stats.interviews}</div>
+          <div className="mono text-xs text-zinc-500">Interviews</div>
+        </div>
+        <div className="rounded-xl border border-white/10 bg-[#14141f] p-4 text-center">
+          <div className="mono text-2xl font-bold text-green-400">{stats.offers}</div>
+          <div className="mono text-xs text-zinc-500">Offers</div>
         </div>
       </div>
 
@@ -195,49 +307,105 @@ export default function ApplicationsPage() {
         <div className="space-y-3">
           {filteredApplications.map((application) => {
             const config = STATUS_CONFIG[application.status] || STATUS_CONFIG.Applied;
+            const isExpanded = expandedId === application.id;
             return (
-              <div key={application.id} className="rounded-2xl border border-white/10 bg-[#14141f] p-5">
-                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-3">
-                      <h3 className="text-base font-medium text-white truncate">
-                        {application.jobTitle || `Job #${application.jobId.slice(0, 8)}`}
-                      </h3>
-                      <span className={`mono text-xs px-2 py-0.5 rounded border ${config.bg} ${config.border} ${config.color}`}>
-                        {application.status}
-                      </span>
+              <div key={application.id} className="rounded-2xl border border-white/10 bg-[#14141f] overflow-hidden">
+                <div className="p-5">
+                  <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => toggleExpand(application.id)}
+                          className="flex-shrink-0 text-zinc-500 hover:text-zinc-300 transition-colors"
+                        >
+                          <svg className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </button>
+                        <h3 className="text-base font-medium text-white truncate">
+                          {application.jobTitle || `Job #${application.jobId.slice(0, 8)}`}
+                        </h3>
+                        <span className={`mono text-xs px-2 py-0.5 rounded border ${config.bg} ${config.border} ${config.color}`}>
+                          {application.status}
+                        </span>
+                      </div>
+                      {application.companyName && (
+                        <p className="mono text-xs text-cyan-400 mt-1 ml-7">{application.companyName}</p>
+                      )}
+                      <div className="mono text-xs text-zinc-500 mt-2 ml-7 flex flex-wrap gap-x-3 gap-y-1">
+                        {application.location && <span>@ {application.location}</span>}
+                        {application.workMode && <span>• {application.workMode}</span>}
+                        <span>• {formatDate(application.appliedAt)}</span>
+                      </div>
+                      {application.notes && (
+                        <p className="mono text-xs text-zinc-500 mt-2 ml-7 line-clamp-2">{application.notes}</p>
+                      )}
                     </div>
-                    {application.companyName && (
-                      <p className="mono text-xs text-cyan-400 mt-1">{application.companyName}</p>
-                    )}
-                    <div className="mono text-xs text-zinc-500 mt-2 flex flex-wrap gap-x-3 gap-y-1">
-                      {application.location && <span>@ {application.location}</span>}
-                      {application.workMode && <span>• {application.workMode}</span>}
-                      <span>• {formatDate(application.appliedAt)}</span>
-                    </div>
-                    {application.notes && (
-                      <p className="mono text-xs text-zinc-500 mt-2 line-clamp-2">{application.notes}</p>
-                    )}
-                  </div>
 
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <select
-                      value={application.status}
-                      onChange={(e) => updateStatus(application.id, e.target.value)}
-                      className="mono text-xs px-3 py-2 rounded-lg border border-white/10 bg-[#0d0d15] text-zinc-300 focus:border-purple-500/50 focus:outline-none cursor-pointer"
-                    >
-                      {STATUS_OPTIONS.map((opt) => (
-                        <option key={opt} value={opt} className="bg-[#0d0d15]">{opt}</option>
-                      ))}
-                    </select>
-                    <button
-                      onClick={() => deleteApplication(application.id)}
-                      className="mono text-xs px-3 py-2 rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500/10 transition-colors"
-                    >
-                      Remove
-                    </button>
+                    <div className="flex items-center gap-2 flex-shrink-0 ml-7 md:ml-0">
+                      <select
+                        value={application.status}
+                        onChange={(e) => updateStatus(application.id, e.target.value)}
+                        className="mono text-xs px-3 py-2 rounded-lg border border-white/10 bg-[#0d0d15] text-zinc-300 focus:border-purple-500/50 focus:outline-none cursor-pointer"
+                      >
+                        {STATUS_OPTIONS.map((opt) => (
+                          <option key={opt} value={opt} className="bg-[#0d0d15]">{opt}</option>
+                        ))}
+                      </select>
+                      <button
+                        onClick={() => deleteApplication(application.id)}
+                        className="mono text-xs px-3 py-2 rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500/10 transition-colors"
+                      >
+                        Remove
+                      </button>
+                    </div>
                   </div>
                 </div>
+
+                {isExpanded && (
+                  <div className="border-t border-white/5 px-5 py-4 bg-[#0d0d15]/50">
+                    <div className="flex items-center gap-2 mb-3">
+                      <svg className="h-4 w-4 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span className="mono text-xs text-zinc-500 font-medium">Timeline</span>
+                    </div>
+                    
+                    <div className="relative pl-6 space-y-4">
+                      <div className="absolute left-[7px] top-2 bottom-2 w-px bg-zinc-800" />
+                      
+                      <div className="relative">
+                        <div className={`absolute left-0 -translate-x-1/2 w-3 h-3 rounded-full ${config.bg} border-2 ${config.border}`} />
+                        <div className="mono text-xs text-zinc-400">
+                          Applied - {formatDateTime(application.appliedAt || new Date().toISOString())}
+                        </div>
+                      </div>
+
+                      {application.history?.map((entry, idx) => {
+                        const entryConfig = STATUS_CONFIG[entry.newStatus] || STATUS_CONFIG.Applied;
+                        return (
+                          <div key={entry.id} className="relative">
+                            <div className={`absolute left-0 -translate-x-1/2 w-3 h-3 rounded-full ${entryConfig.bg} border-2 ${entryConfig.border}`} />
+                            <div className="mono text-xs text-zinc-400">
+                              <span className={entryConfig.color}>{entry.newStatus}</span>
+                              {entry.previousStatus && (
+                                <span className="text-zinc-600"> from {entry.previousStatus}</span>
+                              )}
+                              <span className="text-zinc-600 ml-2">- {formatDateTime(entry.createdAt)}</span>
+                            </div>
+                            {entry.notes && (
+                              <p className="mono text-xs text-zinc-500 mt-1">{entry.notes}</p>
+                            )}
+                          </div>
+                        );
+                      })}
+                      
+                      {!application.history && (
+                        <div className="mono text-xs text-zinc-600">Loading history...</div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}

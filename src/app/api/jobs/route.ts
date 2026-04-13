@@ -14,6 +14,7 @@ import {
   getCountry,
   getWorkMode,
   paginateJobs,
+  paginateWithCursor,
   parseSalary,
 } from "@/lib/jobs-utils";
 import { checkRateLimit, getRateLimitHeaders, RATE_LIMITS } from "@/lib/ratelimit";
@@ -535,7 +536,10 @@ export async function GET(request: NextRequest) {
     const location = searchParams.get("location") || "";
     const workMode = searchParams.get("workMode") || "";
     const seniority = searchParams.get("seniority") || "";
+    const cursor = searchParams.get("cursor") || undefined;
     const page = Number.parseInt(searchParams.get("page") || "1", 10);
+    const pageSize = Number.parseInt(searchParams.get("pageSize") || "20", 10);
+    const useCursor = searchParams.get("useCursor") === "true";
 
     let savedJobs: SavedJobRecord[] = [];
     let savedJobIds: string[] = [];
@@ -607,10 +611,26 @@ export async function GET(request: NextRequest) {
     });
 
     const uniqueJobs = dedupeJobsByTitleAndCompany(filteredJobs);
-    const { items, pagination } = paginateJobs(uniqueJobs, page, 20);
+
+    let pagination;
+    let jobs;
+
+    if (useCursor) {
+      const cursorResult = paginateWithCursor(uniqueJobs, { cursor, pageSize }, (job) => job.id);
+      jobs = cursorResult.items;
+      pagination = cursorResult.pagination;
+    } else {
+      const offsetResult = paginateJobs(uniqueJobs, page, pageSize);
+      jobs = offsetResult.items;
+      pagination = {
+        ...offsetResult.pagination,
+        cursor: null,
+        hasMore: page < offsetResult.pagination.totalPages,
+      };
+    }
 
     return NextResponse.json({
-      jobs: items,
+      jobs,
       pagination,
       sources: cachedPayload.sourcesBreakdown,
       filters: { search, location, workMode, seniority },

@@ -1,12 +1,48 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { requireDbUser } from "@/lib/auth";
+import { requireDbUser, getDbUser } from "@/lib/auth";
 import {
   applicationStatuses,
   getZodErrorMessage,
   updateApplicationSchema,
 } from "@/lib/validation";
 import { ZodError } from "zod";
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    const dbUser = await getDbUser();
+    if (!dbUser) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { id } = await params;
+
+    const application = await prisma.application.findUnique({
+      where: { id },
+      include: {
+        history: {
+          orderBy: { createdAt: "asc" },
+        },
+      },
+    });
+
+    if (!application) {
+      return NextResponse.json({ error: "Application not found" }, { status: 404 });
+    }
+
+    if (application.userId !== dbUser.id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    return NextResponse.json({ application });
+  } catch (error) {
+    console.error("Error fetching application:", error);
+    return NextResponse.json({ error: "Failed to fetch application" }, { status: 500 });
+  }
+}
 
 export async function PATCH(
   request: NextRequest,
@@ -42,9 +78,29 @@ export async function PATCH(
       },
     });
 
+    if (status !== undefined && application.status !== status) {
+      await prisma.applicationHistory.create({
+        data: {
+          applicationId: id,
+          previousStatus: application.status,
+          newStatus: status,
+          notes: notes || undefined,
+        },
+      });
+    }
+
+    const applicationWithHistory = await prisma.application.findUnique({
+      where: { id },
+      include: {
+        history: {
+          orderBy: { createdAt: "asc" },
+        },
+      },
+    });
+
     return NextResponse.json({
       success: true,
-      application: updated,
+      application: applicationWithHistory,
       validStatuses: applicationStatuses,
     });
   } catch (error) {

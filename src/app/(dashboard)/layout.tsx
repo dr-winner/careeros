@@ -21,7 +21,6 @@ const navItems = [
 ];
 
 const primaryNav = navItems.slice(0, 5);
-const secondaryNav = navItems.slice(5);
 
 const colorMap: Record<string, { bg: string; text: string; border: string }> = {
   purple: { bg: "bg-purple-500/15", text: "text-purple-400", border: "border-purple-500/30" },
@@ -51,9 +50,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   }, [userId, synced]);
 
-  useEffect(() => {
+  const handleNavClick = () => {
     setSidebarOpen(false);
-  }, [pathname]);
+  };
 
   if (!isLoaded) {
     return (
@@ -179,6 +178,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   <Link
                     key={item.href}
                     href={item.href}
+                    onClick={handleNavClick}
                     className={`group flex items-center gap-3 rounded-lg px-3 py-2.5 transition-all ${
                       isActive ? `${colors.bg} ${colors.text}` : "text-zinc-500 hover:bg-white/5 hover:text-zinc-300"
                     }`}

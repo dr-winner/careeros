@@ -79,6 +79,11 @@ export async function GET() {
     const applications = await prisma.application.findMany({
       where: { userId: dbUser.id },
       orderBy: { appliedAt: "desc" },
+      include: {
+        history: {
+          orderBy: { createdAt: "asc" },
+        },
+      },
     });
 
     return NextResponse.json({ applications });
