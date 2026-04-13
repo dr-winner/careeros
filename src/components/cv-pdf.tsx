@@ -139,6 +139,25 @@ const styles = StyleSheet.create({
     lineHeight: 1.6,
     color: "#475569",
   },
+  fallbackText: {
+    fontSize: 10,
+    lineHeight: 1.6,
+    color: "#374151",
+  },
+  fallbackSection: {
+    marginBottom: 12,
+  },
+  fallbackTitle: {
+    fontSize: 11,
+    fontWeight: 600,
+    color: "#1e1b4b",
+    marginBottom: 4,
+    borderBottom: "1 solid #e5e7eb",
+    paddingBottom: 4,
+  },
+  fallbackItem: {
+    marginBottom: 8,
+  },
 });
 
 interface ParsedCV {
@@ -181,7 +200,7 @@ function parseCVContent(rawContent: string): ParsedCV {
       parsed.name = trimmed;
     } else if (trimmed.includes("@")) {
       parsed.contact.push(trimmed);
-    } else if (/^\+?[\d\s-]{10,}$/.test(trimmed)) {
+    } else if (/^\+?[\d\s\-\(\)]{10,}$/.test(trimmed.replace(/\s/g, ""))) {
       parsed.contact.push(trimmed);
     } else if (/^PROFESSIONAL SUMMARY$/i.test(trimmed) || /^SUMMARY$/i.test(trimmed)) {
       currentSection = "summary";
@@ -196,11 +215,11 @@ function parseCVContent(rawContent: string): ParsedCV {
     } else if (currentSection === "skills") {
       const skillParts = trimmed.split(/[,;•|]/).map((s) => s.trim()).filter(Boolean);
       parsed.skills.push(...skillParts);
-    } else if (currentSection === "experience" && trimmed.startsWith("•")) {
+    } else if (currentSection === "experience" && (trimmed.startsWith("•") || trimmed.startsWith("-") || trimmed.startsWith("*"))) {
       if (currentExperience) {
         currentExperience.bullets.push(trimmed.substring(1).trim());
       }
-    } else if (currentSection === "experience" && /^[A-Z]/.test(trimmed) && !trimmed.startsWith("•")) {
+    } else if (currentSection === "experience" && /^[A-Z]/.test(trimmed) && !trimmed.startsWith("•") && !trimmed.startsWith("-")) {
       if (currentExperience) {
         parsed.experience.push(currentExperience);
       }
@@ -228,89 +247,132 @@ function parseCVContent(rawContent: string): ParsedCV {
   return parsed;
 }
 
+function renderFallbackContent(content: string) {
+  const sections = content.split(/^---$/m).filter(s => s.trim());
+  
+  if (sections.length === 0) {
+    const lines = content.split("\n").filter(l => l.trim());
+    return (
+      <View>
+        {lines.slice(0, 30).map((line, i) => (
+          <Text key={i} style={styles.textContent}>{line}</Text>
+        ))}
+        {lines.length > 30 && (
+          <Text style={styles.textContent}>... (content truncated)</Text>
+        )}
+      </View>
+    );
+  }
+
+  return (
+    <View>
+      {sections.map((section, sIndex) => {
+        const lines = section.trim().split("\n");
+        const title = lines[0]?.trim();
+        const isTitleCase = title && /^[A-Z]/.test(title) && title.length < 50;
+        
+        return (
+          <View key={sIndex} style={styles.fallbackSection}>
+            {isTitleCase && (
+              <Text style={styles.fallbackTitle}>{title}</Text>
+            )}
+            <View>
+              {lines.slice(1).filter(l => l.trim()).map((line, i) => (
+                <Text key={i} style={styles.textContent}>{line}</Text>
+              ))}
+            </View>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
 interface CVPDFProps {
   content: string;
 }
 
 export default function CVPDF({ content }: CVPDFProps) {
   const parsed = parseCVContent(content);
+  
+  const hasStructuredContent = parsed.name || parsed.summary || parsed.experience.length > 0;
 
   return (
     <Document>
       <Page size="A4" style={styles.page}>
-        {parsed.name && (
-          <View style={styles.header}>
-            <Text style={styles.name}>{parsed.name}</Text>
-            <View style={styles.contact}>
-              {parsed.contact.map((item, index) => (
-                <Text key={index} style={styles.contactItem}>
-                  {item}
-                </Text>
-              ))}
-            </View>
-          </View>
-        )}
-
-        {parsed.summary && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Professional Summary</Text>
-            <Text style={styles.summary}>{parsed.summary}</Text>
-          </View>
-        )}
-
-        {parsed.experience.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Work Experience</Text>
-            {parsed.experience.map((exp, index) => (
-              <View key={index} style={styles.experienceItem}>
-                <View style={styles.experienceHeader}>
-                  <Text style={styles.jobTitle}>{exp.title}</Text>
-                  {exp.duration && <Text style={styles.date}>{exp.duration}</Text>}
+        {hasStructuredContent ? (
+          <>
+            {parsed.name && (
+              <View style={styles.header}>
+                <Text style={styles.name}>{parsed.name}</Text>
+                <View style={styles.contact}>
+                  {parsed.contact.map((item, index) => (
+                    <Text key={index} style={styles.contactItem}>
+                      {item}
+                    </Text>
+                  ))}
                 </View>
-                {exp.company && <Text style={styles.company}>{exp.company}</Text>}
-                {exp.bullets.map((bullet, bIndex) => (
-                  <View key={bIndex} style={styles.bullet}>
-                    <Text style={styles.bulletDot}>•</Text>
-                    <Text style={styles.bulletText}>{bullet}</Text>
+              </View>
+            )}
+
+            {parsed.summary && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Professional Summary</Text>
+                <Text style={styles.summary}>{parsed.summary}</Text>
+              </View>
+            )}
+
+            {parsed.experience.length > 0 && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Work Experience</Text>
+                {parsed.experience.map((exp, index) => (
+                  <View key={index} style={styles.experienceItem}>
+                    <View style={styles.experienceHeader}>
+                      <Text style={styles.jobTitle}>{exp.title}</Text>
+                      {exp.duration && <Text style={styles.date}>{exp.duration}</Text>}
+                    </View>
+                    {exp.company && <Text style={styles.company}>{exp.company}</Text>}
+                    {exp.bullets.map((bullet, bIndex) => (
+                      <View key={bIndex} style={styles.bullet}>
+                        <Text style={styles.bulletDot}>•</Text>
+                        <Text style={styles.bulletText}>{bullet}</Text>
+                      </View>
+                    ))}
                   </View>
                 ))}
               </View>
-            ))}
-          </View>
-        )}
+            )}
 
-        {parsed.education.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Education</Text>
-            {parsed.education.map((edu, index) => (
-              <View key={index} style={styles.educationItem}>
-                <Text style={styles.degree}>{edu.degree}</Text>
-                <Text style={styles.institution}>
-                  {edu.institution}
-                  {edu.year && ` • ${edu.year}`}
-                </Text>
+            {parsed.education.length > 0 && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Education</Text>
+                {parsed.education.map((edu, index) => (
+                  <View key={index} style={styles.educationItem}>
+                    <Text style={styles.degree}>{edu.degree}</Text>
+                    <Text style={styles.institution}>
+                      {edu.institution}
+                      {edu.year && ` • ${edu.year}`}
+                    </Text>
+                  </View>
+                ))}
               </View>
-            ))}
-          </View>
-        )}
+            )}
 
-        {parsed.skills.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Skills</Text>
-            <View style={styles.skillsContainer}>
-              {parsed.skills.slice(0, 25).map((skill, index) => (
-                <Text key={index} style={styles.skill}>
-                  {skill}
-                </Text>
-              ))}
-            </View>
-          </View>
-        )}
-
-        {!parsed.name && !parsed.summary && (
-          <View style={styles.section}>
-            <Text style={styles.textContent}>{content}</Text>
-          </View>
+            {parsed.skills.length > 0 && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Skills</Text>
+                <View style={styles.skillsContainer}>
+                  {parsed.skills.slice(0, 25).map((skill, index) => (
+                    <Text key={index} style={styles.skill}>
+                      {skill}
+                    </Text>
+                  ))}
+                </View>
+              </View>
+            )}
+          </>
+        ) : (
+          renderFallbackContent(content)
         )}
       </Page>
     </Document>
