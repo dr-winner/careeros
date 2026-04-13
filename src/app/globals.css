@@ -442,3 +442,24 @@ input:-webkit-autofill:focus {
   -webkit-box-shadow: 0 0 0px 1000px #0a0a0f inset;
   transition: background-color 5000s ease-in-out 0s;
 }
+
+/* Mobile drawer animation */
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.2s ease-out;
+}
+
+/* Safe area padding for mobile */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
