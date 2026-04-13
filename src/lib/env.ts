@@ -71,7 +71,13 @@ export function getSupabaseConfig() {
 
 export function hasSupabaseConfigured(): boolean {
   const config = getSupabaseConfig();
-  return Boolean(config.url && config.anonKey);
+  if (!config.url || !config.anonKey) {
+    return false;
+  }
+  if (config.url.includes("placeholder")) {
+    return false;
+  }
+  return true;
 }
 
 export function getUpstashRedisConfig() {
@@ -83,5 +89,11 @@ export function getUpstashRedisConfig() {
 
 export function hasUpstashRedisConfigured(): boolean {
   const config = getUpstashRedisConfig();
-  return Boolean(config.url && config.token);
+  if (!config.url || !config.token) {
+    return false;
+  }
+  if (config.url.includes("placeholder")) {
+    return false;
+  }
+  return true;
 }
