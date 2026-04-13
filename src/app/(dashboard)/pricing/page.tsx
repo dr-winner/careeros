@@ -47,7 +47,16 @@ export default function PricingPage() {
     setLoading(plan);
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const response = await fetch("/api/user/premium", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to process payment");
+      }
+
       toast.success(`Successfully subscribed to ${plan}!`);
       localStorage.setItem("isPremium", "true");
       const pendingUpgrade = localStorage.getItem("pendingUpgrade");

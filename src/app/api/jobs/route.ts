@@ -16,6 +16,7 @@ import {
   paginateJobs,
   parseSalary,
 } from "@/lib/jobs-utils";
+import { checkRateLimit, getRateLimitHeaders, RATE_LIMITS } from "@/lib/ratelimit";
 
 interface Job {
   id: string;
@@ -511,6 +512,19 @@ async function fetchSearchResults(
 
 export async function GET(request: NextRequest) {
   try {
+    const ip = request.headers.get("x-forwarded-for")?.split(",")[0] || "anonymous";
+    const rateLimitResult = await checkRateLimit("jobs", RATE_LIMITS.jobs, ip);
+
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: "Too many requests. Please wait before trying again." },
+        {
+          status: 429,
+          headers: getRateLimitHeaders(rateLimitResult),
+        },
+      );
+    }
+
     pruneExpiredCacheEntries();
 
     const userId = await getDbUserId();

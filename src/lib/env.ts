@@ -1,4 +1,4 @@
-function readEnv(name: string): string | undefined {
+export function readEnv(name: string): string | undefined {
   const value = process.env[name];
 
   if (typeof value !== "string") {
@@ -59,4 +59,29 @@ export function getAiProviderKeys() {
 export function hasAiProviderConfigured(): boolean {
   const keys = getAiProviderKeys();
   return Boolean(keys.openai || keys.deepseek || keys.groq || keys.gemini);
+}
+
+export function getSupabaseConfig() {
+  return {
+    url: readEnv("SUPABASE_URL"),
+    anonKey: readEnv("SUPABASE_ANON_KEY"),
+    serviceKey: readEnv("SUPABASE_SERVICE_KEY"),
+  };
+}
+
+export function hasSupabaseConfigured(): boolean {
+  const config = getSupabaseConfig();
+  return Boolean(config.url && config.anonKey);
+}
+
+export function getUpstashRedisConfig() {
+  return {
+    url: readEnv("UPSTASH_REDIS_REST_URL"),
+    token: readEnv("UPSTASH_REDIS_REST_TOKEN"),
+  };
+}
+
+export function hasUpstashRedisConfigured(): boolean {
+  const config = getUpstashRedisConfig();
+  return Boolean(config.url && config.token);
 }

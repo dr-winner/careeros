@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { Resend } from "resend";
 import { isValidCronSecret } from "@/lib/validation";
+import { readEnv } from "@/lib/env";
 import type { Prisma } from "@prisma/client";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resendApiKey = readEnv("RESEND_API_KEY");
+const resend = resendApiKey ? new Resend(resendApiKey) : null;
 
 type SearchWithUser = Awaited<
   ReturnType<typeof prisma.savedSearch.findMany>
@@ -256,7 +258,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (!process.env.RESEND_API_KEY) {
+    if (!resend) {
       return NextResponse.json(
         { error: "Email delivery is not configured" },
         { status: 503 },

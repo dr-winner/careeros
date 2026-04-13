@@ -57,3 +57,16 @@ export async function requireDbUserId(): Promise<string> {
   const user = await requireDbUser();
   return user.id;
 }
+
+export async function isUserPremium(): Promise<boolean> {
+  const user = await getDbUser();
+  return user?.isPremium ?? false;
+}
+
+export async function requirePremium(): Promise<void> {
+  const isPremium = await isUserPremium();
+
+  if (!isPremium) {
+    throw new Error("PREMIUM_REQUIRED");
+  }
+}

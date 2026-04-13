@@ -17,6 +17,8 @@ model User {
   headline       String?
   experience     String?
   desiredRole    String?
+  isPremium      Boolean       @default(false)
+  premiumSince   DateTime?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
   resumes        Resume[]
@@ -26,6 +28,9 @@ model User {
   applications   Application[]
   savedSearches  SavedSearch[]
   referrals      Referral[]
+
+  @@index([clerkId])
+  @@index([email])
 }
 
 model Resume {
@@ -42,6 +47,9 @@ model Resume {
   experiences     ResumeExperience[]
   education       ResumeEducation[]
   skills          ResumeSkill[]
+
+  @@index([userId])
+  @@index([userId, isPrimary])
 }
 
 model ResumeExperience {
@@ -119,6 +127,9 @@ model FitAnalysis {
   createdAt        DateTime     @default(now())
   user             User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   job              Job          @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([userId, jobId])
+  @@index([userId, createdAt(sort: Desc)])
 }
 
 model CoverLetter {
@@ -161,6 +172,10 @@ model Application {
   notes        String?
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   job          Job?     @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, status])
+  @@index([userId, appliedAt(sort: Desc)])
 }
 
 model SavedSearch {
@@ -176,6 +191,9 @@ model SavedSearch {
   lastNotified  DateTime?
   createdAt     DateTime @default(now())
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, alertEnabled])
 }
 
 model Referral {

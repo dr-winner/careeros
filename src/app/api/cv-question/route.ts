@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import Groq from "groq-sdk";
+import { readEnv } from "@/lib/env";
 
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY,
-});
+const groqApiKey = readEnv("GROQ_API_KEY");
+
+const groq = groqApiKey ? new Groq({ apiKey: groqApiKey }) : null;
 
 interface CVAnalysis {
   overall: {
@@ -43,6 +44,10 @@ export async function POST(request: NextRequest) {
 
     if (!question || !analysis) {
       return NextResponse.json({ error: "Missing question or analysis" }, { status: 400 });
+    }
+
+    if (!groq) {
+      return NextResponse.json({ error: "AI not configured" }, { status: 500 });
     }
 
     const prompt = `You are an expert CV advisor. A user has just had their CV analyzed and has a question about their results.

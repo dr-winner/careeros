@@ -4,6 +4,7 @@ import { ZodError } from "zod";
 import { prisma } from "@/lib/db";
 import { generateWithFallback } from "@/lib/ai";
 import { coverLetterRequestSchema, getZodErrorMessage } from "@/lib/validation";
+import { checkRateLimit, getRateLimitHeaders, RATE_LIMITS } from "@/lib/ratelimit";
 
 async function findPreferredResume(userId: string) {
   const include = {
@@ -44,6 +45,19 @@ async function findPreferredResume(userId: string) {
 
 export async function POST(request: NextRequest) {
   try {
+    const ip = request.headers.get("x-forwarded-for")?.split(",")[0] || "anonymous";
+    const rateLimitResult = await checkRateLimit("ai", RATE_LIMITS.ai, ip);
+
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: "Too many AI requests. Please wait before trying again." },
+        {
+          status: 429,
+          headers: getRateLimitHeaders(rateLimitResult),
+        },
+      );
+    }
+
     const { userId: clerkId } = await auth();
 
     if (!clerkId) {

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { getDbUserId } from "@/lib/auth";
 import { generateWithFallback } from "@/lib/ai";
 import { hasAiProviderConfigured } from "@/lib/env";
+import { isUserPremium } from "@/lib/auth";
 
 const SKILL_KEYWORDS: Record<string, string[]> = {
   JavaScript: ["javascript", "js", "ecmascript", "jscript"],
@@ -165,8 +166,9 @@ export async function POST(request: NextRequest) {
     } | null = null;
 
     const hasAI = hasAiProviderConfigured();
+    const isPremium = await isUserPremium();
 
-    if (missing.length > 0 && hasAI) {
+    if (missing.length > 0 && hasAI && isPremium) {
       try {
         const prompt = `You are an expert CV optimization specialist helping someone tailor their resume for a specific job. Return a JSON object with specific, actionable advice.
 
@@ -275,9 +277,11 @@ Make suggestions specific to African job market. Prioritize the most impactful c
         verdict,
         hasResume: !!user?.resumes[0],
         hasProfile: !!user?.headline || !!user?.experience,
-        cvAdvice,
-        cvOptimization,
+        cvAdvice: cvAdvice || (missing.length > 0 ? "Upgrade to Premium for AI-powered CV optimization" : ""),
+        cvOptimization: isPremium ? cvOptimization : null,
         aiEnabled: hasAI,
+        isPremium,
+        premiumRequired: !isPremium && missing.length > 0,
       },
     });
   } catch (error) {

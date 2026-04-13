@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, type KeyboardEvent } from "react";
 import { useAuth } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import dynamic from "next/dynamic";
 import CVUpload from "@/app/components/cv-upload";
@@ -40,6 +41,7 @@ interface CV {
 
 export default function CVsPage() {
   const { userId, isLoaded } = useAuth();
+  const router = useRouter();
   const [cvs, setCVs] = useState<CV[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -166,6 +168,9 @@ export default function CVsPage() {
         setShowRegenerated(true);
         setShowRoleSelector(false);
         toast.success(`${role} CV version created!`);
+      } else if (data.code === "PREMIUM_REQUIRED") {
+        toast.error("Premium subscription required");
+        router.push("/pricing");
       } else {
         toast.error(data.error || "Failed to create CV version");
       }
@@ -202,6 +207,9 @@ export default function CVsPage() {
         setRegeneratedCV(data.regeneratedCV);
         setShowRegenerated(true);
         toast.success("CV regenerated successfully!");
+      } else if (data.code === "PREMIUM_REQUIRED") {
+        toast.error("Premium subscription required");
+        router.push("/pricing");
       } else {
         toast.error(data.error || "Failed to regenerate CV");
       }

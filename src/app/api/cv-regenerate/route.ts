@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import Groq from "groq-sdk";
+import { isUserPremium } from "@/lib/auth";
+import { prisma } from "@/lib/db";
+import { readEnv } from "@/lib/env";
 
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY,
-});
+const groqApiKey = readEnv("GROQ_API_KEY");
+
+const groq = groqApiKey ? new Groq({ apiKey: groqApiKey }) : null;
 
 interface CVData {
   name?: string;
@@ -116,7 +119,7 @@ SKILLS
 
 Make it concise, powerful, and tailored for ${role || "job applications"}.`;
 
-  const completion = await groq.chat.completions.create({
+  const completion = await groq!.chat.completions.create({
     messages: [
       {
         role: "system",
@@ -142,9 +145,21 @@ Make it concise, powerful, and tailored for ${role || "job applications"}.`;
 export async function POST(request: NextRequest) {
   try {
     const { userId } = await auth();
-    
+
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const dbUser = await prisma.user.findUnique({
+      where: { clerkId: userId },
+      select: { isPremium: true },
+    });
+
+    if (!dbUser?.isPremium) {
+      return NextResponse.json(
+        { error: "Premium subscription required", code: "PREMIUM_REQUIRED" },
+        { status: 403 }
+      );
     }
 
     const body = await request.json();
@@ -152,6 +167,10 @@ export async function POST(request: NextRequest) {
 
     if (!cvText) {
       return NextResponse.json({ error: "No CV text provided" }, { status: 400 });
+    }
+
+    if (!groq) {
+      return NextResponse.json({ error: "AI not configured" }, { status: 500 });
     }
 
     console.log("CV Regeneration - Processing CV with role:", role);

@@ -8,6 +8,8 @@ import { prisma } from "@/lib/db";
 import { syncClerkUserToDb } from "@/lib/user";
 import { getDbUser } from "@/lib/auth";
 import { z } from "zod";
+import { uploadToStorage } from "@/lib/storage";
+import { checkRateLimit, getRateLimitHeaders, RATE_LIMITS } from "@/lib/ratelimit";
 
 const ALLOWED_TYPES = new Set([
   "application/msword",
@@ -213,6 +215,19 @@ async function ensureAuthenticatedDbUser() {
 
 export async function POST(request: NextRequest) {
   try {
+    const ip = request.headers.get("x-forwarded-for")?.split(",")[0] || "anonymous";
+    const rateLimitResult = await checkRateLimit("upload", RATE_LIMITS.upload, ip);
+
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: "Too many uploads. Please wait before trying again." },
+        {
+          status: 429,
+          headers: getRateLimitHeaders(rateLimitResult),
+        },
+      );
+    }
+
     const { user } = await ensureAuthenticatedDbUser();
 
     if (!user) {
@@ -248,9 +263,25 @@ export async function POST(request: NextRequest) {
 
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-    const filepath = path.join(uploadDir, filename);
 
-    await writeFile(filepath, buffer);
+    let fileUrl: string;
+    const uploadResult = await uploadToStorage(
+      "resumes",
+      filename,
+      buffer,
+      file.type,
+    );
+
+    if (uploadResult) {
+      fileUrl = uploadResult.publicUrl;
+    } else {
+      const filepath = path.join(uploadDir, filename);
+      if (!existsSync(uploadDir)) {
+        await mkdir(uploadDir, { recursive: true });
+      }
+      await writeFile(filepath, buffer);
+      fileUrl = `/uploads/${filename}`;
+    }
 
     const existingResumes = await prisma.resume.count({
       where: { userId: user.id },
@@ -278,7 +309,7 @@ export async function POST(request: NextRequest) {
         userId: user.id,
         filename,
         originalName: file.name,
-        fileUrl: `/uploads/${filename}`,
+        fileUrl,
         parsedText,
         versionLabel:
           existingResumes === 0 ? "Primary" : `Version ${existingResumes + 1}`,

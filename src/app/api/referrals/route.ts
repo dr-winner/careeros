@@ -4,8 +4,10 @@ import { prisma } from "@/lib/db";
 import { Resend } from "resend";
 import { getDbUser } from "@/lib/auth";
 import { getZodErrorMessage, referralInviteSchema } from "@/lib/validation";
+import { readEnv } from "@/lib/env";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resendApiKey = readEnv("RESEND_API_KEY");
+const resend = resendApiKey ? new Resend(resendApiKey) : null;
 
 function getBaseUrl(): string {
   return (process.env.NEXT_PUBLIC_APP_URL || "https://careeros.app").replace(
@@ -119,7 +121,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    if (process.env.RESEND_API_KEY) {
+    if (resend) {
       await resend.emails.send({
         from: "CareerOS <noreply@careeros.app>",
         to: refereeEmail,
