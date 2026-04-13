@@ -4,11 +4,14 @@ import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
 import Link from "next/link";
 import CVUpload from "@/app/components/cv-upload";
+import CVAnalysisScreen from "@/components/cv-analysis-screen";
 
 export default function DashboardPage() {
   const { isLoaded } = useUser();
   const { user } = useUser();
   const [showUpload, setShowUpload] = useState(false);
+  const [showAnalysis, setShowAnalysis] = useState(false);
+  const [analysisCvId, setAnalysisCvId] = useState<string | null>(null);
   const [stats, setStats] = useState({
     applications: 0,
     savedJobs: 0,
@@ -49,8 +52,32 @@ export default function DashboardPage() {
 
   const firstName = user?.firstName || "there";
 
+  const handleAnalysisStart = (cvId: string) => {
+    setShowUpload(false);
+    setShowAnalysis(true);
+    setAnalysisCvId(cvId);
+  };
+
+  const handleAnalysisComplete = () => {
+    setShowAnalysis(false);
+    setAnalysisCvId(null);
+  };
+
+  const handleCloseAnalysis = () => {
+    setShowAnalysis(false);
+    setAnalysisCvId(null);
+  };
+
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
+    <>
+      {showAnalysis && analysisCvId && (
+        <CVAnalysisScreen
+          cvId={analysisCvId}
+          onComplete={handleAnalysisComplete}
+          onClose={handleCloseAnalysis}
+        />
+      )}
+      <div className="max-w-5xl mx-auto space-y-6">
       {/* Agent Header */}
       <div className="rounded-2xl border border-white/10 bg-[#14141f] p-6">
         <div className="flex items-center gap-4">
@@ -186,7 +213,7 @@ export default function DashboardPage() {
               </svg>
             </button>
           </div>
-          <CVUpload />
+          <CVUpload onAnalysisStart={handleAnalysisStart} />
         </div>
       )}
 
@@ -249,5 +276,6 @@ export default function DashboardPage() {
         ))}
       </div>
     </div>
+    </>
   );
 }

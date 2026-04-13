@@ -5,6 +5,7 @@ import { toast } from "sonner";
 
 interface CVUploadProps {
   onUploadSuccess?: () => void;
+  onAnalysisStart?: (cvId: string) => void;
 }
 
 const MAX_SIZE_BYTES = 5 * 1024 * 1024;
@@ -44,7 +45,7 @@ function validateFile(file: File): string | null {
   return null;
 }
 
-export default function CVUpload({ onUploadSuccess }: CVUploadProps) {
+export default function CVUpload({ onUploadSuccess, onAnalysisStart }: CVUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
   const [dragging, setDragging] = useState(false);
@@ -99,10 +100,12 @@ export default function CVUpload({ onUploadSuccess }: CVUploadProps) {
         }
 
         toast.success("CV uploaded successfully!");
-        if (onUploadSuccess) {
+        clearSelectedFile();
+        if (data.id && onAnalysisStart) {
+          onAnalysisStart(data.id);
+        } else if (onUploadSuccess) {
           onUploadSuccess();
         }
-        clearSelectedFile();
       } catch {
         const message = "Upload failed. Try again.";
         setError(message);

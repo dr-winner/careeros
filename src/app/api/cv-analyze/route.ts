@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
+import { prisma } from "@/lib/db";
+import { getDbUserId } from "@/lib/auth";
 
 interface AnalysisResult {
   overall: {
@@ -221,50 +223,61 @@ function analyzeCVContent(text: string): AnalysisResult {
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId } = await auth();
-    
+    const userId = await getDbUserId();
+
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const formData = await request.formData();
-    const file = formData.get("file") as File | null;
-    
-    if (!file) {
-      return NextResponse.json({ error: "No file provided" }, { status: 400 });
+    const body = await request.json();
+    const { resumeId } = body;
+
+    let extractedText = "";
+
+    if (resumeId) {
+      const resume = await prisma.resume.findFirst({
+        where: { id: resumeId, userId },
+      });
+
+      if (resume?.parsedText) {
+        extractedText = resume.parsedText;
+      }
     }
 
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const uint8Array = new Uint8Array(buffer);
-    
-    let extractedText = "";
-    
-    try {
-      const { getDocumentProxy, extractText } = await import("unpdf");
-      const pdf = await getDocumentProxy(uint8Array);
-      const { text } = await extractText(pdf, { mergePages: true });
-      extractedText = text;
-    } catch (pdfError) {
-      console.error("PDF extraction error:", pdfError);
-      extractedText = buffer.toString("utf-8").slice(0, 10000);
+    if (!extractedText) {
+      const formData = await request.formData();
+      const file = formData.get("file") as File | null;
+
+      if (file) {
+        const buffer = Buffer.from(await file.arrayBuffer());
+        const uint8Array = new Uint8Array(buffer);
+
+        try {
+          const { getDocumentProxy, extractText } = await import("unpdf");
+          const pdf = await getDocumentProxy(uint8Array);
+          const { text } = await extractText(pdf, { mergePages: true });
+          extractedText = text;
+        } catch (pdfError) {
+          console.error("PDF extraction error:", pdfError);
+          extractedText = buffer.toString("utf-8").slice(0, 10000);
+        }
+      }
+    }
+
+    if (!extractedText) {
+      return NextResponse.json({ error: "No CV content to analyze" }, { status: 400 });
     }
 
     const analysis = analyzeCVContent(extractedText);
 
-    const resumeId = `cv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
     return NextResponse.json({
       success: true,
-      resume: { id: resumeId },
       analysis,
-      analysisId: `analysis_${Date.now()}`,
-      extractedText: extractedText.slice(0, 5000),
     });
-
   } catch (error) {
-    console.error("Upload error:", error);
+    console.error("Analysis error:", error);
     return NextResponse.json(
-      { error: "Failed to process CV" },
+      { error: "Failed to analyze CV" },
       { status: 500 }
     );
   }
