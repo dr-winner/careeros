@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
 import { toast } from "sonner";
-import Link from "next/link";
 
 const STEPS = [
   { id: "welcome", title: "Welcome", icon: "👋" },
@@ -161,7 +160,7 @@ export default function GuidedOnboarding() {
   const toggleArrayItem = (
     arr: string[],
     item: string,
-    setter: React.Dispatch<React.SetStateAction<any>>
+    setter: React.Dispatch<React.SetStateAction<string[]>>
   ) => {
     if (arr.includes(item)) {
       setter(arr.filter((i) => i !== item));
