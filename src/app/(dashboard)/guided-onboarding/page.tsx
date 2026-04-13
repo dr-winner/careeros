@@ -157,18 +157,6 @@ export default function GuidedOnboarding() {
     }
   };
 
-  const toggleArrayItem = (
-    arr: string[],
-    item: string,
-    setter: React.Dispatch<React.SetStateAction<string[]>>
-  ) => {
-    if (arr.includes(item)) {
-      setter(arr.filter((i) => i !== item));
-    } else {
-      setter([...arr, item]);
-    }
-  };
-
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
@@ -453,7 +441,13 @@ export default function GuidedOnboarding() {
                     {WORK_MODES.map((mode) => (
                       <button
                         key={mode}
-                        onClick={() => toggleArrayItem(preferences.workMode, mode, (arr) => setPreferences({ ...preferences, workMode: arr }))}
+                        onClick={() => {
+                          const current = preferences.workMode;
+                          const updated = current.includes(mode)
+                            ? current.filter((m) => m !== mode)
+                            : [...current, mode];
+                          setPreferences({ ...preferences, workMode: updated });
+                        }}
                         className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                           preferences.workMode.includes(mode)
                             ? "bg-purple-500/20 text-purple-400 border border-purple-500/30"
@@ -472,7 +466,13 @@ export default function GuidedOnboarding() {
                     {JOB_TYPES.map((type) => (
                       <button
                         key={type}
-                        onClick={() => toggleArrayItem(preferences.jobType, type, (arr) => setPreferences({ ...preferences, jobType: arr }))}
+                        onClick={() => {
+                          const current = preferences.jobType;
+                          const updated = current.includes(type)
+                            ? current.filter((t) => t !== type)
+                            : [...current, type];
+                          setPreferences({ ...preferences, jobType: updated });
+                        }}
                         className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                           preferences.jobType.includes(type)
                             ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
