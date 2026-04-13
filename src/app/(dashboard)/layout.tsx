@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth, UserButton } from "@clerk/nextjs";
+import { useAuth, UserButton, useClerk } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -31,6 +31,7 @@ const colorMap: Record<string, { bg: string; text: string; border: string }> = {
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { userId, isLoaded } = useAuth();
+  const { signOut } = useClerk();
   const router = useRouter();
   const pathname = usePathname();
   const [synced, setSynced] = useState(false);
@@ -116,7 +117,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           })}
         </nav>
 
-        <div className="p-3 border-t border-white/5">
+        <div className="p-3 border-t border-white/5 space-y-2">
           <div className="flex items-center gap-3 px-3 py-2">
             <UserButton />
             <div className="flex items-center gap-2 px-2 py-1 rounded-full bg-green-500/10 border border-green-500/20">
@@ -124,6 +125,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <span className="mono text-[10px] text-green-400">Agent ready</span>
             </div>
           </div>
+          <button
+            onClick={() => signOut({ redirectUrl: "/" })}
+            className="w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-zinc-500 hover:bg-white/5 hover:text-zinc-300 transition-colors text-sm"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+            <span>Log out</span>
+          </button>
         </div>
       </aside>
 
@@ -194,11 +204,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               })}
             </nav>
 
-            <div className="p-3 border-t border-white/5">
+            <div className="p-3 border-t border-white/5 space-y-2">
               <div className="flex items-center gap-2 px-3 py-2">
                 <div className="h-2 w-2 rounded-full bg-green-400 animate-pulse" />
                 <span className="mono text-xs text-green-400">Agent ready</span>
               </div>
+              <button
+                onClick={() => signOut({ redirectUrl: "/" })}
+                className="w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-zinc-500 hover:bg-white/5 hover:text-zinc-300 transition-colors text-sm"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                <span>Log out</span>
+              </button>
             </div>
           </aside>
         </div>
