@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
+import ServiceWorkerRegistration from "@/components/service-worker-registration";
 
 export const metadata: Metadata = {
   title: "CareerOS - Know Before You Apply",
@@ -18,7 +19,10 @@ export default function RootLayout({
   return (
     <ClerkProvider>
       <html lang="en">
-        <body>{children}</body>
+        <body>
+          <ServiceWorkerRegistration />
+          {children}
+        </body>
       </html>
     </ClerkProvider>
   );
