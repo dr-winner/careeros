@@ -2,12 +2,15 @@
 
 import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
+import { useAuth } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import CVUpload from "@/app/components/cv-upload";
 import CVAnalysisScreen from "@/components/cv-analysis-screen";
 
 export default function DashboardPage() {
-  const { isLoaded } = useUser();
+  const router = useRouter();
+  const { isLoaded, userId } = useAuth();
   const { user } = useUser();
   const [showUpload, setShowUpload] = useState(false);
   const [showAnalysis, setShowAnalysis] = useState(false);
@@ -17,6 +20,15 @@ export default function DashboardPage() {
     savedJobs: 0,
     interviews: 0,
   });
+
+  useEffect(() => {
+    if (isLoaded && userId) {
+      const onboardingComplete = localStorage.getItem("onboardingComplete");
+      if (!onboardingComplete) {
+        router.push("/guided-onboarding");
+      }
+    }
+  }, [isLoaded, userId, router]);
 
   useEffect(() => {
     Promise.all([
