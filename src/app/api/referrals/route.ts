@@ -1,26 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
-import { Resend } from "resend";
 import { getDbUser } from "@/lib/auth";
 import { getZodErrorMessage, referralInviteSchema } from "@/lib/validation";
-import { readEnv } from "@/lib/env";
+import { sendReferralReceivedEmail } from "@/lib/transactional-emails";
 
-const resendApiKey = readEnv("RESEND_API_KEY");
-const resend = resendApiKey ? new Resend(resendApiKey) : null;
-
-function getBaseUrl(): string {
-  return (process.env.NEXT_PUBLIC_APP_URL || "https://careeros.app").replace(
-    /\/+$/,
-    "",
-  );
-}
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://www.careeros.app";
+const FROM_NAME = "Winner";
+const FROM_EMAIL = "hey@careeros.app";
 
 function buildReferralCode(userId: string): string {
   return `CAREER-${userId
     .replace(/[^a-zA-Z0-9]/g, "")
     .slice(-10)
     .toUpperCase()}`;
+}
+
+function getBaseUrl(): string {
+  return APP_URL.replace(/\/+$/, "");
 }
 
 export async function GET() {
@@ -121,18 +118,65 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    const { Resend } = await import("resend");
+    const resendApiKey = (await import("@/lib/env")).readEnv("RESEND_API_KEY");
+    const resend = resendApiKey ? new Resend(resendApiKey) : null;
+
     if (resend) {
       await resend.emails.send({
-        from: "CareerOS <noreply@careeros.app>",
+        from: `${FROM_NAME} <${FROM_EMAIL}>`,
         to: refereeEmail,
-        subject: "You're invited to join CareerOS",
+        subject: `${user.fullName?.split(" ")[0] || "Someone"} thinks you'd be great at this`,
         html: `
-          <h1>You've been invited!</h1>
-          <p>${user.fullName || "Someone"} has invited you to join CareerOS, the AI-powered career platform for African job seekers.</p>
-          <p>Sign up with this link and you'll both get priority access!</p>
-          <a href="${referralUrl}">Join CareerOS</a>
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+              body { margin: 0; padding: 0; background-color: #0a0a0f; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+              .container { max-width: 600px; margin: 0 auto; padding: 32px 20px; }
+              .card { background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(6, 182, 212, 0.05)); border: 1px solid rgba(139, 92, 246, 0.2); border-radius: 16px; padding: 32px; margin-bottom: 24px; }
+              .greeting { color: #fafafa; font-size: 20px; margin: 0 0 16px; }
+              .body-text { color: #d1d5db; font-size: 15px; line-height: 1.7; margin: 0 0 16px; }
+              .highlight { color: #a78bfa; font-weight: 500; }
+              .cta-button { display: inline-block; background: linear-gradient(135deg, #8b5cf6, #6d28d9); color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px; margin: 8px 0; }
+              .footer { text-align: center; padding: 24px 0; border-top: 1px solid rgba(255,255,255,0.1); margin-top: 24px; }
+              .footer-text { color: #6b7280; font-size: 12px; margin: 8px 0; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="card">
+                <p class="greeting">Hey there 👋</p>
+                
+                <p class="body-text">
+                  ${user.fullName?.split(" ")[0] || "Someone"} thinks you'd be great for this. And since they know you, they're probably right.
+                </p>
+                
+                <p class="body-text">
+                  CareerOS helps you understand how well you fit a job <span class="highlight">before</span> you apply. No more guessing. No more wasting hours on roles you had no chance at anyway.
+                </p>
+                
+                <p class="body-text">
+                  It's free to get started. And honestly? It's pretty useful.
+                </p>
+
+                <a href="${referralUrl}" class="cta-button">Check it out →</a>
+              </div>
+
+              <div class="footer">
+                <p class="footer-text">
+                  Sent by ${user.fullName || "your friend"} via CareerOS
+                </p>
+              </div>
+            </div>
+          </body>
+          </html>
         `,
       });
+
+      await sendReferralReceivedEmail(user.email, user.fullName, refereeEmail);
     }
 
     return NextResponse.json({

@@ -6,6 +6,7 @@ import {
   getZodErrorMessage,
   updateApplicationSchema,
 } from "@/lib/validation";
+import { sendInterviewEmail, sendOfferEmail, sendRejectionEmail } from "@/lib/transactional-emails";
 import { ZodError } from "zod";
 
 export async function GET(
@@ -87,6 +88,31 @@ export async function PATCH(
           notes: notes || undefined,
         },
       });
+
+      if (dbUser.email) {
+        if (status === "Interview") {
+          await sendInterviewEmail(
+            dbUser.email,
+            dbUser.fullName,
+            application.jobTitle || "the position",
+            application.companyName || "the company"
+          );
+        } else if (status === "Offer") {
+          await sendOfferEmail(
+            dbUser.email,
+            dbUser.fullName,
+            application.jobTitle || "the position",
+            application.companyName || "the company"
+          );
+        } else if (status === "Rejected") {
+          await sendRejectionEmail(
+            dbUser.email,
+            dbUser.fullName,
+            application.jobTitle || "the position",
+            application.companyName || "the company"
+          );
+        }
+      }
     }
 
     const applicationWithHistory = await prisma.application.findUnique({

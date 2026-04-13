@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { getDbUser } from "@/lib/auth";
 import { ensureJobRecord } from "@/lib/jobs";
 import { createApplicationSchema, getZodErrorMessage } from "@/lib/validation";
+import { sendApplicationTrackedEmail } from "@/lib/transactional-emails";
 import { ZodError } from "zod";
 
 export async function POST(request: NextRequest) {
@@ -50,6 +51,13 @@ export async function POST(request: NextRequest) {
         notes: payload.notes,
       },
     });
+
+    await sendApplicationTrackedEmail(
+      dbUser.email,
+      dbUser.fullName,
+      payload.jobTitle || "the position",
+      payload.companyName || "Unknown Company"
+    );
 
     return NextResponse.json({ success: true, application });
   } catch (error) {
