@@ -1,10 +1,12 @@
 "use client";
 
-import { SignInButton, SignUpButton, Show, UserButton } from "@clerk/nextjs";
+import { SignInButton, SignUpButton, Show, UserButton, useClerk } from "@clerk/nextjs";
 import Link from "next/link";
 import Logo from "./logo";
 
 export default function Nav() {
+  const { signOut } = useClerk();
+  
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 glass-dark">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
@@ -52,6 +54,12 @@ export default function Nav() {
               Dashboard
             </Link>
             <UserButton />
+            <button
+              onClick={() => signOut({ redirectUrl: "/" })}
+              className="rounded-lg px-3 py-1.5 text-xs font-medium text-red-400 border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 transition-colors"
+            >
+              Log out
+            </button>
           </Show>
         </div>
       </div>
