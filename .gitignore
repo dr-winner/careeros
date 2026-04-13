@@ -68,3 +68,6 @@ uploads/
 # OS
 .DS_Store
 *.icloud
+
+# Sentry Config File
+.env.sentry-build-plugin
