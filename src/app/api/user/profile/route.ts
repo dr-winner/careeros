@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { ZodError } from "zod";
-import { getDbUser } from "@/lib/auth";
+import { getDbUser, requireDbUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getZodErrorMessage, profileUpdateSchema } from "@/lib/validation";
 
@@ -67,6 +67,42 @@ export async function PATCH(request: Request) {
     return NextResponse.json(
       { error: "Failed to update profile" },
       { status: 500 },
+    );
+  }
+}
+
+export async function PUT(request: NextRequest) {
+  try {
+    const dbUser = await requireDbUser();
+    const body = await request.json();
+
+    const { headline, experience, desiredRole, country, phone, fullName } = body;
+
+    await prisma.user.update({
+      where: { id: dbUser.id },
+      data: {
+        ...(headline !== undefined && { headline }),
+        ...(experience !== undefined && { experience }),
+        ...(desiredRole !== undefined && { desiredRole }),
+        ...(country !== undefined && { country }),
+        ...(phone !== undefined && { phone }),
+        ...(fullName !== undefined && { fullName }),
+      },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message === "User not found in database"
+    ) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    console.error("Error updating profile:", error);
+    return NextResponse.json(
+      { error: "Failed to update profile" },
+      { status: 500 }
     );
   }
 }
