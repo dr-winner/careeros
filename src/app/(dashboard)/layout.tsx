@@ -117,7 +117,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           })}
         </nav>
 
-        <div className="p-3 border-t border-white/5 space-y-2">
+        <div className="p-3 border-t border-white/10 space-y-2">
           <div className="flex items-center gap-3 px-3 py-2">
             <UserButton />
             <div className="flex items-center gap-2 px-2 py-1 rounded-full bg-green-500/10 border border-green-500/20">
@@ -127,7 +127,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
           <button
             onClick={() => signOut({ redirectUrl: "/" })}
-            className="w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-zinc-500 hover:bg-white/5 hover:text-zinc-300 transition-colors text-sm"
+            className="w-full flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors text-sm font-medium border border-red-500/30"
           >
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -204,14 +204,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               })}
             </nav>
 
-            <div className="p-3 border-t border-white/5 space-y-2">
+            <div className="p-3 border-t border-white/10 space-y-2">
               <div className="flex items-center gap-2 px-3 py-2">
                 <div className="h-2 w-2 rounded-full bg-green-400 animate-pulse" />
                 <span className="mono text-xs text-green-400">Agent ready</span>
               </div>
               <button
                 onClick={() => signOut({ redirectUrl: "/" })}
-                className="w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-zinc-500 hover:bg-white/5 hover:text-zinc-300 transition-colors text-sm"
+                className="w-full flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors text-sm font-medium border border-red-500/30"
               >
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />

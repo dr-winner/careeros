@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useAuth, useUser } from "@clerk/nextjs";
+import { useAuth, useUser, useClerk } from "@clerk/nextjs";
 import { toast } from "sonner";
+import Link from "next/link";
 
 interface UserProfile {
   id: string;
@@ -24,6 +25,7 @@ const EXPERIENCE_LEVELS = ["0-1 years", "1-3 years", "3-5 years", "5-10 years", 
 export default function ProfilePage() {
   const { userId, isLoaded } = useAuth();
   const { user } = useUser();
+  const { signOut } = useClerk();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -227,6 +229,19 @@ export default function ProfilePage() {
       >
         {saving ? "Saving..." : "Save Changes"}
       </button>
+
+      <div className="mt-6 pt-6 border-t border-white/10">
+        <h3 className="text-sm font-medium text-zinc-400 mb-4">Account</h3>
+        <button
+          onClick={() => signOut({ redirectUrl: "/" })}
+          className="w-full flex items-center justify-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 py-3 text-sm font-medium text-red-400 hover:bg-red-500/20 transition-colors"
+        >
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+          </svg>
+          Log out
+        </button>
+      </div>
     </div>
   );
 }
