@@ -1,6 +1,7 @@
 "use client";
 
-import { useAuth, UserButton, useClerk } from "@clerk/nextjs";
+import { useAuth, UserButton } from "@clerk/nextjs";
+import { SignOutButton } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -31,7 +32,6 @@ const colorMap: Record<string, { bg: string; text: string; border: string }> = {
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { userId, isLoaded } = useAuth();
-  const { signOut } = useClerk();
   const router = useRouter();
   const pathname = usePathname();
   const [synced, setSynced] = useState(false);
@@ -81,8 +81,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <div className="min-h-screen bg-[#0a0a0f]">
       <Toaster position="top-center" />
 
-      {/* Desktop Sidebar - Hidden on mobile/tablet */}
-      <aside className="hidden lg:flex fixed left-0 top-0 bottom-0 z-40 flex-col border-r border-white/5 bg-[#0a0a0f]/95 backdrop-blur-xl w-56">
+      {/* Desktop Sidebar */}
+      <aside className="hidden lg:flex fixed left-0 top-0 bottom-0 z-40 flex-col w-56 border-r border-white/5 bg-[#0a0a0f]/95 backdrop-blur-xl">
         <div className="flex h-14 items-center border-b border-white/5 px-4">
           <Link href="/dashboard" className="flex items-center gap-3">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500 to-indigo-600">
@@ -117,7 +117,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           })}
         </nav>
 
-        <div className="p-3 border-t border-white/10 space-y-2">
+        <div className="p-3 border-t border-white/5 space-y-3">
           <div className="flex items-center gap-3 px-3 py-2">
             <UserButton />
             <div className="flex items-center gap-2 px-2 py-1 rounded-full bg-green-500/10 border border-green-500/20">
@@ -125,15 +125,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <span className="mono text-[10px] text-green-400">Agent ready</span>
             </div>
           </div>
-          <button
-            onClick={() => signOut({ redirectUrl: "/" })}
-            className="w-full flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors text-sm font-medium border border-red-500/30"
-          >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
-            <span>Log out</span>
-          </button>
+          
+          <SignOutButton redirectUrl="/">
+            <button className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors text-sm font-medium border border-red-500/30">
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+              <span>Log out</span>
+            </button>
+          </SignOutButton>
         </div>
       </aside>
 
@@ -167,7 +167,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {sidebarOpen && (
         <div className="lg:hidden fixed inset-0 z-[60]">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
-          <aside className="absolute right-0 top-0 bottom-0 w-72 bg-[#0a0a0f]/98 backdrop-blur-xl border-l border-white/5 flex flex-col animate-slide-in-right">
+          <aside className="absolute right-0 top-0 bottom-0 w-72 bg-[#0a0a0f]/98 backdrop-blur-xl border-l border-white/5 flex flex-col">
             <div className="flex h-14 items-center justify-between border-b border-white/5 px-4">
               <span className="text-sm font-semibold text-white">Menu</span>
               <button
@@ -204,20 +204,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               })}
             </nav>
 
-            <div className="p-3 border-t border-white/10 space-y-2">
+            <div className="p-3 border-t border-white/5 space-y-3">
               <div className="flex items-center gap-2 px-3 py-2">
                 <div className="h-2 w-2 rounded-full bg-green-400 animate-pulse" />
                 <span className="mono text-xs text-green-400">Agent ready</span>
               </div>
-              <button
-                onClick={() => signOut({ redirectUrl: "/" })}
-                className="w-full flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors text-sm font-medium border border-red-500/30"
-              >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                </svg>
-                <span>Log out</span>
-              </button>
+              
+              <SignOutButton redirectUrl="/">
+                <button className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors text-sm font-medium border border-red-500/30">
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  </svg>
+                  <span>Log out</span>
+                </button>
+              </SignOutButton>
             </div>
           </aside>
         </div>
@@ -249,7 +249,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
       </nav>
 
-      {/* Main Content Area */}
+      {/* Main Content */}
       <main className="lg:pl-56 pt-14 lg:pt-0 pb-20 lg:pb-6 min-h-screen">
         <div className="p-4 sm:p-6">
           <div className="fixed inset-0 overflow-hidden pointer-events-none">
