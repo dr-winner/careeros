@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
-import { useAuth } from "@clerk/nextjs";
+import { useAuth, useClerk } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import CVUpload from "@/app/components/cv-upload";
@@ -12,6 +12,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const { isLoaded, userId } = useAuth();
   const { user } = useUser();
+  const { signOut } = useClerk();
   const [showUpload, setShowUpload] = useState(false);
   const [showAnalysis, setShowAnalysis] = useState(false);
   const [analysisCvId, setAnalysisCvId] = useState<string | null>(null);
@@ -286,6 +287,18 @@ export default function DashboardPage() {
             <div className="mono text-xs text-zinc-600 mt-1">→</div>
           </Link>
         ))}
+      </div>
+
+      <div className="fixed bottom-20 lg:bottom-6 right-4 lg:right-6 z-30">
+        <button
+          onClick={() => signOut({ redirectUrl: "/" })}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 transition-colors shadow-lg"
+        >
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+          </svg>
+          <span className="text-sm font-medium">Log out</span>
+        </button>
       </div>
     </div>
     </>
