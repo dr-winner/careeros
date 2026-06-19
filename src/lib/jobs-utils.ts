@@ -115,7 +115,7 @@ export function getCountry(source: string, location: unknown): string {
   if (loc.includes("singapore")) return "SG";
 
   // Source-based fallbacks
-  if (source === "remotive" || source === "remoteok") return "GLOBAL";
+  if (source === "remotive" || source === "remoteok" || source === "jobicy") return "GLOBAL";
   if (source === "arbeitnow") return "EU";
   if (source === "themuse") return "US";
 
