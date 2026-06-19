@@ -27,7 +27,8 @@ model User {
   savedJobs      SavedJob[]
   applications   Application[]
   savedSearches  SavedSearch[]
-  referrals      Referral[]
+  referrals         Referral[]
+  interviewSessions InterviewSession[]
 
   @@index([clerkId])
   @@index([email])
@@ -225,6 +226,20 @@ model Referral {
 
   @@unique([referrerId, refereeEmail])
   @@index([referralCode])
+}
+
+model InterviewSession {
+  id              String   @id @default(cuid())
+  userId          String
+  role            String
+  experienceLevel String?
+  messages        String
+  score           Float?
+  createdAt       DateTime @default(now())
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, createdAt(sort: Desc)])
 }
 
 model WaitlistReferral {

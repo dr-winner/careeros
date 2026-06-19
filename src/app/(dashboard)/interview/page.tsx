@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { INTERVIEW_QUESTIONS, QUESTION_CATEGORIES, ROLE_TYPES, ROLE_SPECIFIC_QUESTIONS } from "@/lib/interview-questions";
 import { toast } from "sonner";
 
@@ -19,6 +19,16 @@ interface Feedback {
   betterSampleAnswer: string;
 }
 
+interface PastSession {
+  id: string;
+  role: string;
+  experienceLevel?: string;
+  score?: number;
+  messageCount: number;
+  messages: Message[];
+  createdAt: string;
+}
+
 export default function InterviewPrepPage() {
   const [activeTab, setActiveTab] = useState<"bank" | "mock">("bank");
   const [category, setCategory] = useState("all");
@@ -34,6 +44,13 @@ export default function InterviewPrepPage() {
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [selectedRole, setSelectedRole] = useState("Software Engineer");
   const [experienceLevel, setExperienceLevel] = useState("Mid-level");
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Past Sessions
+  const [pastSessions, setPastSessions] = useState<PastSession[]>([]);
+  const [loadingSessions, setLoadingSessions] = useState(true);
+  const [expandedSession, setExpandedSession] = useState<string | null>(null);
+
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -41,6 +58,22 @@ export default function InterviewPrepPage() {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
+
+  const fetchSessions = useCallback(async () => {
+    try {
+      const res = await fetch("/api/user/interview-sessions");
+      const data = await res.json();
+      if (!data.error) setPastSessions(data.sessions || []);
+    } catch {
+      // silently ignore
+    } finally {
+      setLoadingSessions(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchSessions();
+  }, [fetchSessions]);
 
   const filteredQuestions = shuffledQuestions.filter((q) => {
     const categoryMatch = category === "all" || q.category === category;
@@ -68,18 +101,14 @@ export default function InterviewPrepPage() {
       const response = await fetch("/api/ai/interview", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "start",
-          role: selectedRole,
-          experienceLevel,
-        }),
+        body: JSON.stringify({ action: "start", role: selectedRole, experienceLevel }),
       });
 
       const data = await response.json();
       if (data.error) throw new Error(data.error);
 
       setMessages([{ role: "assistant", content: data.text }]);
-    } catch (error) {
+    } catch {
       toast.error("Failed to start interview");
       setIsInterviewing(false);
     } finally {
@@ -99,18 +128,14 @@ export default function InterviewPrepPage() {
       const response = await fetch("/api/ai/interview", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "respond",
-          role: selectedRole,
-          history: newMessages,
-        }),
+        body: JSON.stringify({ action: "respond", role: selectedRole, history: newMessages }),
       });
 
       const data = await response.json();
       if (data.error) throw new Error(data.error);
 
       setMessages([...newMessages, { role: "assistant", content: data.text }]);
-    } catch (error) {
+    } catch {
       toast.error("Failed to get response");
     } finally {
       setIsLoading(false);
@@ -142,10 +167,51 @@ export default function InterviewPrepPage() {
       if (data.error) throw new Error(data.error);
 
       setFeedback(data);
-    } catch (error) {
+    } catch {
       toast.error("Failed to get feedback");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const endSession = async () => {
+    if (messages.length < 2) {
+      setIsInterviewing(false);
+      setMessages([]);
+      setFeedback(null);
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      await fetch("/api/user/interview-sessions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          role: selectedRole,
+          experienceLevel,
+          messages,
+          score: feedback?.score,
+        }),
+      });
+      await fetchSessions();
+      toast.success("Session saved");
+    } catch {
+      // silently ignore save failure
+    } finally {
+      setIsSaving(false);
+      setIsInterviewing(false);
+      setMessages([]);
+      setFeedback(null);
+    }
+  };
+
+  const deleteSession = async (id: string) => {
+    try {
+      await fetch(`/api/user/interview-sessions/${id}`, { method: "DELETE" });
+      setPastSessions((prev) => prev.filter((s) => s.id !== id));
+    } catch {
+      toast.error("Failed to delete session");
     }
   };
 
@@ -247,7 +313,6 @@ export default function InterviewPrepPage() {
                           {cat?.icon} {cat?.label}
                         </span>
                       </div>
-
                       <div className="grid md:grid-cols-2 gap-6">
                         <div>
                           <span className="text-[10px] mono uppercase text-zinc-500 mb-3 block">Expert Tips</span>
@@ -260,11 +325,10 @@ export default function InterviewPrepPage() {
                             ))}
                           </ul>
                         </div>
-
                         {q.sampleAnswer && (
                           <div className="space-y-3">
                             <span className="text-[10px] mono uppercase text-zinc-500 block">Sample High-Quality Answer</span>
-                            <div className="p-4 rounded-xl bg-zinc-900/80 border border-zinc-800/50 relative group/answer">
+                            <div className="p-4 rounded-xl bg-zinc-900/80 border border-zinc-800/50 relative">
                               <div className="absolute -top-2 -right-2 bg-zinc-900 border border-zinc-800 rounded-md px-2 py-0.5 text-[8px] mono text-zinc-500">AI RECOMMENDED</div>
                               <p className="text-xs text-zinc-400 leading-relaxed italic">&quot;{q.sampleAnswer}&quot;</p>
                             </div>
@@ -280,71 +344,134 @@ export default function InterviewPrepPage() {
 
           {filteredQuestions.length === 0 && (
             <div className="agent-card p-12 text-center border-dashed">
-              <div className="h-12 w-12 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center mx-auto mb-4">
-                <svg className="h-6 w-6 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              </div>
               <p className="text-sm text-zinc-500 mono">No questions found matching these parameters.</p>
-              <button onClick={() => {setCategory("all"); setRoleType("all");}} className="mt-4 text-xs text-purple-400 hover:text-purple-300 underline underline-offset-4">Reset all filters</button>
+              <button onClick={() => { setCategory("all"); setRoleType("all"); }} className="mt-4 text-xs text-purple-400 hover:text-purple-300 underline underline-offset-4">Reset all filters</button>
             </div>
           )}
         </div>
       ) : (
         <div className="animate-fade-up">
           {!isInterviewing ? (
-            <div className="agent-card p-8 text-center max-w-2xl mx-auto">
-              <div className="h-16 w-16 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center mx-auto mb-6">
-                <svg className="h-8 w-8 text-purple-400 animate-glow-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                </svg>
-              </div>
-              <h2 className="text-xl font-bold text-white mb-2">Ready for your AI Simulation?</h2>
-              <p className="text-sm text-zinc-500 mb-8 max-w-md mx-auto">
-                Practice with our expert AI interviewer. Get real-time questions, give your answers, and receive detailed feedback on your performance.
-              </p>
-
-              <div className="grid grid-cols-2 gap-4 mb-8 text-left">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] mono text-zinc-500 uppercase ml-1">Target Role</label>
-                  <input
-                    type="text"
-                    value={selectedRole}
-                    onChange={(e) => setSelectedRole(e.target.value)}
-                    placeholder="e.g. Senior Product Manager"
-                    className="w-full agent-input text-sm py-3"
-                  />
+            <div className="space-y-6">
+              <div className="agent-card p-8 text-center max-w-2xl mx-auto">
+                <div className="h-16 w-16 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center mx-auto mb-6">
+                  <svg className="h-8 w-8 text-purple-400 animate-glow-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                  </svg>
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-[10px] mono text-zinc-500 uppercase ml-1">Experience Level</label>
-                  <select
-                    value={experienceLevel}
-                    onChange={(e) => setExperienceLevel(e.target.value)}
-                    className="w-full agent-input text-sm py-3"
-                  >
-                    <option>Junior</option>
-                    <option>Mid-level</option>
-                    <option>Senior</option>
-                    <option>Lead / Principal</option>
-                    <option>Executive</option>
-                  </select>
+                <h2 className="text-xl font-bold text-white mb-2">Ready for your AI Simulation?</h2>
+                <p className="text-sm text-zinc-500 mb-8 max-w-md mx-auto">
+                  Practice with our expert AI interviewer. Get real-time questions, give your answers, and receive detailed feedback.
+                </p>
+
+                <div className="grid grid-cols-2 gap-4 mb-8 text-left">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] mono text-zinc-500 uppercase ml-1">Target Role</label>
+                    <input
+                      type="text"
+                      value={selectedRole}
+                      onChange={(e) => setSelectedRole(e.target.value)}
+                      placeholder="e.g. Senior Product Manager"
+                      className="w-full agent-input text-sm py-3"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] mono text-zinc-500 uppercase ml-1">Experience Level</label>
+                    <select
+                      value={experienceLevel}
+                      onChange={(e) => setExperienceLevel(e.target.value)}
+                      className="w-full agent-input text-sm py-3"
+                    >
+                      <option>Junior</option>
+                      <option>Mid-level</option>
+                      <option>Senior</option>
+                      <option>Lead / Principal</option>
+                      <option>Executive</option>
+                    </select>
+                  </div>
                 </div>
+
+                <button
+                  onClick={startInterview}
+                  disabled={isLoading}
+                  className="agent-button-primary w-full py-4 text-sm font-bold flex items-center justify-center gap-2"
+                >
+                  {isLoading ? (
+                    <>
+                      <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Initializing Agent...
+                    </>
+                  ) : (
+                    "Start Practice Session"
+                  )}
+                </button>
               </div>
 
-              <button
-                onClick={startInterview}
-                disabled={isLoading}
-                className="agent-button-primary w-full py-4 text-sm font-bold flex items-center justify-center gap-2"
-              >
-                {isLoading ? (
-                  <>
-                    <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Initializing Agent...
-                  </>
-                ) : (
-                  "Start Practice Session"
-                )}
-              </button>
+              {/* Past Sessions */}
+              {!loadingSessions && pastSessions.length > 0 && (
+                <div className="max-w-2xl mx-auto">
+                  <h3 className="text-xs font-bold text-zinc-400 mono uppercase tracking-wider mb-3">Past Sessions</h3>
+                  <div className="space-y-2">
+                    {pastSessions.map((session) => (
+                      <div key={session.id} className="agent-card overflow-hidden">
+                        <button
+                          onClick={() => setExpandedSession(expandedSession === session.id ? null : session.id)}
+                          className="w-full flex items-center gap-4 p-4 text-left"
+                        >
+                          <div className="h-9 w-9 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center flex-shrink-0">
+                            <svg className="h-4 w-4 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                            </svg>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-white truncate">{session.role}</p>
+                            <p className="text-[11px] mono text-zinc-500">
+                              {session.experienceLevel} · {session.messageCount} messages · {new Date(session.createdAt).toLocaleDateString()}
+                            </p>
+                          </div>
+                          {session.score != null && (
+                            <span className={`text-xs font-bold px-2 py-1 rounded-lg ${session.score >= 7 ? "bg-green-500/10 text-green-400" : "bg-yellow-500/10 text-yellow-400"}`}>
+                              {session.score}/10
+                            </span>
+                          )}
+                          <svg className={`h-4 w-4 text-zinc-600 transition-transform flex-shrink-0 ${expandedSession === session.id ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </button>
+
+                        {expandedSession === session.id && (
+                          <div className="border-t border-zinc-800/50 bg-zinc-900/30 p-4 space-y-3">
+                            <div className="max-h-72 overflow-y-auto space-y-3 pr-1">
+                              {session.messages.map((msg, i) => (
+                                <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                                  <div className={`max-w-[85%] p-3 rounded-xl text-xs leading-relaxed ${
+                                    msg.role === "user"
+                                      ? "bg-purple-600/30 text-zinc-200 border border-purple-500/20"
+                                      : "bg-zinc-800 text-zinc-400 border border-zinc-700"
+                                  }`}>
+                                    {msg.content}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                            <div className="flex justify-end pt-2 border-t border-zinc-800/50">
+                              <button
+                                onClick={() => deleteSession(session.id)}
+                                className="text-[10px] mono text-red-400/70 hover:text-red-400 transition-colors flex items-center gap-1"
+                              >
+                                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                                Delete session
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <div className="grid lg:grid-cols-[1fr,320px] gap-6">
@@ -359,14 +486,20 @@ export default function InterviewPrepPage() {
                     </div>
                     <div>
                       <p className="text-xs font-bold text-white">Interview Agent</p>
-                      <p className="text-[10px] mono text-zinc-500">{selectedRole} • {experienceLevel}</p>
+                      <p className="text-[10px] mono text-zinc-500">{selectedRole} · {experienceLevel}</p>
                     </div>
                   </div>
                   <button
-                    onClick={() => {setIsInterviewing(false); setMessages([]); setFeedback(null);}}
-                    className="text-[10px] mono text-zinc-500 hover:text-red-400 transition-colors"
+                    onClick={endSession}
+                    disabled={isSaving}
+                    className="text-[10px] mono text-zinc-500 hover:text-red-400 transition-colors flex items-center gap-1.5 disabled:opacity-50"
                   >
-                    End Session
+                    {isSaving ? (
+                      <>
+                        <div className="h-3 w-3 border border-zinc-500 border-t-white rounded-full animate-spin" />
+                        Saving...
+                      </>
+                    ) : "End Session"}
                   </button>
                 </div>
 
@@ -416,7 +549,7 @@ export default function InterviewPrepPage() {
                   </div>
                   <div className="mt-3 flex items-center justify-between">
                     <p className="text-[10px] mono text-zinc-600">Press Enter to send</p>
-                    {messages.length >= 2 && messages[messages.length-1].role === "user" && (
+                    {messages.length >= 2 && messages[messages.length - 1].role === "user" && (
                       <button
                         onClick={getFeedback}
                         disabled={isLoading}
@@ -452,7 +585,6 @@ export default function InterviewPrepPage() {
                           <div className={`h-full transition-all duration-1000 ${feedback.score >= 7 ? "bg-green-500" : "bg-yellow-500"}`} style={{ width: `${feedback.score * 10}%` }} />
                         </div>
                       </div>
-
                       <div className="space-y-3">
                         <div>
                           <p className="text-[10px] mono text-green-500/70 mb-1.5">STRENGTHS</p>
@@ -471,7 +603,6 @@ export default function InterviewPrepPage() {
                           </ul>
                         </div>
                       </div>
-
                       <button
                         onClick={() => setFeedback(null)}
                         className="w-full py-2 rounded-lg bg-zinc-900 border border-zinc-800 text-[10px] mono text-zinc-500 hover:text-white hover:border-zinc-700 transition-all"
@@ -495,16 +626,13 @@ export default function InterviewPrepPage() {
                   <h3 className="text-xs font-bold text-white mb-3">Pro Tips</h3>
                   <ul className="space-y-3">
                     <li className="flex items-start gap-2 text-[11px] text-zinc-500">
-                      <span className="text-purple-500">→</span>
-                      Be specific with examples
+                      <span className="text-purple-500">→</span> Be specific with examples
                     </li>
                     <li className="flex items-start gap-2 text-[11px] text-zinc-500">
-                      <span className="text-purple-500">→</span>
-                      Use the STAR method
+                      <span className="text-purple-500">→</span> Use the STAR method
                     </li>
                     <li className="flex items-start gap-2 text-[11px] text-zinc-500">
-                      <span className="text-purple-500">→</span>
-                      Keep answers under 2 mins
+                      <span className="text-purple-500">→</span> Keep answers under 2 mins
                     </li>
                   </ul>
                 </div>
