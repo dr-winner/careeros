@@ -393,13 +393,9 @@ export default function CVAnalysisScreen({
     setTimeout(advanceStage, 500);
   }, []);
 
-  useEffect(() => {
-    if (isComplete && !analysis) {
-      fetchAnalysis();
-    }
-  }, [isComplete]);
 
-  const fetchAnalysis = async () => {
+
+  const fetchAnalysis = useCallback(async () => {
     try {
       const response = await fetch("/api/cv-analyze", {
         method: "POST",
@@ -419,7 +415,13 @@ export default function CVAnalysisScreen({
       setAnalysis(generateMockAnalysis());
       setTimeout(() => setShowResults(true), 1500);
     }
-  };
+  }, [cvId]);
+
+  useEffect(() => {
+    if (isComplete && !analysis) {
+      fetchAnalysis();
+    }
+  }, [isComplete, analysis, fetchAnalysis]);
 
   const generateMockAnalysis = (): CVAnalysisResult => ({
     overall: { score: 72, verdict: "Good Foundation", summary: "Your CV shows solid potential with room for optimization." },

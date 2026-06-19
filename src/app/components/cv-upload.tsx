@@ -8,7 +8,7 @@ interface CVUploadProps {
   onAnalysisStart?: (cvId: string) => void;
 }
 
-const MAX_SIZE_BYTES = 5 * 1024 * 1024;
+const MAX_SIZE_BYTES = 10 * 1024 * 1024;
 const ACCEPTED_MIME_TYPES = new Set([
   "application/pdf",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -39,7 +39,7 @@ function validateFile(file: File): string | null {
   }
 
   if (file.size > MAX_SIZE_BYTES) {
-    return "File size must be 5MB or less.";
+    return "File size must be 10MB or less.";
   }
 
   return null;
@@ -94,6 +94,14 @@ export default function CVUpload({ onUploadSuccess, onAnalysisStart }: CVUploadP
 
         if (!response.ok) {
           const message = data.error || "Upload failed";
+          
+          if (response.status === 401 && data.retryAfter) {
+            toast.info("Initializing your profile...");
+            // Small wait and then could potentially auto-retry or just show message
+            setError("Setting up your account. Please click upload again in a few seconds.");
+            return;
+          }
+
           setError(message);
           toast.error(message);
           return;
@@ -114,7 +122,7 @@ export default function CVUpload({ onUploadSuccess, onAnalysisStart }: CVUploadP
         setUploading(false);
       }
     },
-    [clearSelectedFile, onUploadSuccess],
+    [clearSelectedFile, onUploadSuccess, onAnalysisStart],
   );
 
   const handleDrop = useCallback(

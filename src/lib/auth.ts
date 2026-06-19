@@ -8,9 +8,12 @@ export async function getClerkUserId(): Promise<string | null> {
 }
 
 export async function getDbUser() {
-  const clerkId = await getClerkUserId();
+  const { userId: clerkId } = await auth();
+
+  console.log(`[getDbUser] Checking for clerkId: ${clerkId}`);
 
   if (!clerkId) {
+    console.log("[getDbUser] No clerkId found in session");
     return null;
   }
 
@@ -19,21 +22,43 @@ export async function getDbUser() {
   });
 
   if (user) {
+    console.log(`[getDbUser] Found user in DB: ${user.id}`);
     return user;
   }
+
+  console.log(`[getDbUser] User not found for clerkId ${clerkId}, attempting sync...`);
 
   try {
     const client = await clerkClient();
     const clerkUser = await client.users.getUser(clerkId);
-    await syncClerkUserToDb(clerkUser);
 
+    if (!clerkUser) {
+      console.error(`[getDbUser] Clerk user not found even with valid session ID: ${clerkId}`);
+      return null;
+    }
+
+    console.log(`[getDbUser] Syncing Clerk user: ${clerkUser.id}`);
+    const syncedUser = await syncClerkUserToDb(clerkUser);
+
+    if (syncedUser) {
+      console.log(`[getDbUser] Sync successful, user created/updated: ${syncedUser.id}`);
+      return syncedUser;
+    }
+
+    console.log(`[getDbUser] Sync returned null, trying final re-query...`);
     user = await prisma.user.findUnique({
       where: { clerkId },
     });
 
+    if (user) {
+      console.log(`[getDbUser] Final re-query successful: ${user.id}`);
+    } else {
+      console.error(`[getDbUser] User still not found in DB after sync for clerkId: ${clerkId}`);
+    }
+
     return user;
   } catch (error) {
-    console.error("Failed to sync Clerk user to database:", error);
+    console.error(`[getDbUser] Critical error during sync/retrieval for ${clerkId}:`, error);
     return null;
   }
 }
