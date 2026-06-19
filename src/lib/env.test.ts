@@ -1,6 +1,5 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import {
-  getAiProviderKeys,
   getAppUrl,
   getCronSecret,
   getEmailFrom,
@@ -159,36 +158,13 @@ describe("env helpers", () => {
   });
 
   describe("AI provider helpers", () => {
-    it("returns all configured AI keys", () => {
-      process.env.OPENAI_API_KEY = "openai-key";
-      process.env.DEEPSEEK_API_KEY = "deepseek-key";
+    it("returns true when GROQ_API_KEY is configured", () => {
       process.env.GROQ_API_KEY = "groq-key";
-      process.env.GEMINI_API_KEY = "gemini-key";
-
-      expect(getAiProviderKeys()).toEqual({
-        openai: "openai-key",
-        deepseek: "deepseek-key",
-        groq: "groq-key",
-        gemini: "gemini-key",
-      });
-    });
-
-    it("returns undefined for missing AI keys", () => {
-      expect(getAiProviderKeys()).toEqual({
-        openai: undefined,
-        deepseek: undefined,
-        groq: undefined,
-        gemini: undefined,
-      });
-    });
-
-    it("returns true when any AI provider is configured", () => {
-      process.env.GEMINI_API_KEY = "gemini-key";
 
       expect(hasAiProviderConfigured()).toBe(true);
     });
 
-    it("returns false when no AI providers are configured", () => {
+    it("returns false when GROQ_API_KEY is not configured", () => {
       expect(hasAiProviderConfigured()).toBe(false);
     });
   });

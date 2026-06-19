@@ -1,172 +1,36 @@
 import OpenAI from "openai";
-import { getAiProviderKeys } from "@/lib/env";
 
-export type AIModel = "deepseek" | "groq" | "gemini" | "openai";
+const GROQ_BASE_URL = "https://api.groq.com/openai/v1";
+const GROQ_MODEL = "llama-3.3-70b-versatile";
 
-export interface AIConfig {
-  model: AIModel;
-  modelName: string;
-  baseURL?: string;
-  costPer1MInput: number;
-  costPer1MOutput: number;
-  freeTier?: {
-    tokensPerMonth: number;
-    rpm: number;
-    requiresCreditCard: boolean;
-  };
-}
-
-export const AI_MODELS: Record<AIModel, AIConfig> = {
-  groq: {
-    model: "groq",
-    modelName: "llama-3.3-70b-versatile",
-    baseURL: "https://api.groq.com/openai/v1",
-    costPer1MInput: 0.18,
-    costPer1MOutput: 0.18,
-    freeTier: {
-      tokensPerMonth: 1_000_000,
-      rpm: 30,
-      requiresCreditCard: false,
-    },
-  },
-  deepseek: {
-    model: "deepseek",
-    modelName: "deepseek-chat",
-    baseURL: "https://api.deepseek.com",
-    costPer1MInput: 0.14,
-    costPer1MOutput: 0.28,
-    freeTier: {
-      tokensPerMonth: 5_000_000,
-      rpm: 60,
-      requiresCreditCard: false,
-    },
-  },
-  gemini: {
-    model: "gemini",
-    modelName: "gemini-2.0-flash",
-    baseURL: "https://generativelanguage.googleapis.com/v1beta/openai",
-    costPer1MInput: 0.1,
-    costPer1MOutput: 0.4,
-    freeTier: {
-      tokensPerMonth: 1_000_000,
-      rpm: 60,
-      requiresCreditCard: false,
-    },
-  },
-  openai: {
-    model: "openai",
-    modelName: "gpt-4o-mini",
-    costPer1MInput: 0.15,
-    costPer1MOutput: 0.6,
-    freeTier: {
-      tokensPerMonth: 100_000,
-      rpm: 3,
-      requiresCreditCard: false,
-    },
-  },
-};
-
-function getAPIKey(config: AIConfig): string | undefined {
-  const keys = getAiProviderKeys();
-
-  switch (config.model) {
-    case "deepseek":
-      return keys.deepseek;
-    case "groq":
-      return keys.groq;
-    case "gemini":
-      return keys.gemini;
-    case "openai":
-      return keys.openai;
-    default:
-      return keys.openai;
-  }
-}
-
-function createClient(config: AIConfig): OpenAI {
-  const apiKey = getAPIKey(config);
-
+function getGroqClient(): OpenAI {
   return new OpenAI({
-    apiKey,
-    baseURL: config.baseURL,
+    apiKey: process.env.GROQ_API_KEY,
+    baseURL: GROQ_BASE_URL,
   });
-}
-
-export async function generateWithAI(
-  prompt: string,
-  systemPrompt: string,
-  options: {
-    model?: AIModel;
-    maxTokens?: number;
-    temperature?: number;
-  } = {},
-): Promise<string> {
-  const model = options.model || "deepseek";
-  const config = AI_MODELS[model];
-
-  const client = createClient(config);
-
-  const completion = await client.chat.completions.create({
-    model: config.modelName,
-    messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: prompt },
-    ],
-    max_tokens: options.maxTokens || 800,
-    temperature: options.temperature || 0.7,
-  });
-
-  return completion.choices[0]?.message?.content || "";
 }
 
 export async function generateWithFallback(
   prompt: string,
   systemPrompt: string,
   options: {
-    preferFree?: boolean;
     maxTokens?: number;
     temperature?: number;
+    preferFree?: boolean; // kept for call-site compatibility, ignored
   } = {},
-): Promise<{ text: string; model: AIModel }> {
-  const orderedModels: AIModel[] =
-    options.preferFree !== false
-      ? ["groq", "deepseek", "gemini", "openai"]
-      : ["openai", "groq", "deepseek", "gemini"];
+): Promise<{ text: string; model: string }> {
+  const client = getGroqClient();
 
-  for (const model of orderedModels) {
-    try {
-      const config = AI_MODELS[model];
-      const apiKey = getAPIKey(config);
+  const completion = await client.chat.completions.create({
+    model: GROQ_MODEL,
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: prompt },
+    ],
+    max_tokens: options.maxTokens || 800,
+    temperature: options.temperature ?? 0.7,
+  });
 
-      if (!apiKey) {
-        continue;
-      }
-
-      const text = await generateWithAI(prompt, systemPrompt, {
-        model,
-        maxTokens: options.maxTokens,
-        temperature: options.temperature,
-      });
-
-      if (text) {
-        return { text, model };
-      }
-    } catch (error) {
-      const errorStr = String(error);
-
-      if (errorStr.includes("402") || errorStr.includes("Insufficient")) {
-        console.warn(`${model} has insufficient balance, trying next...`);
-        continue;
-      }
-
-      console.warn(`Failed with ${model}:`, error);
-      continue;
-    }
-  }
-
-  throw new Error("All AI providers failed");
-}
-
-export function getModelInfo(model: AIModel): AIConfig {
-  return AI_MODELS[model];
+  const text = completion.choices[0]?.message?.content || "";
+  return { text, model: "groq" };
 }

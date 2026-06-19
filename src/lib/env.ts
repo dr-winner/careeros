@@ -47,18 +47,8 @@ export function getResendAudienceId(): string | undefined {
   return readEnv("RESEND_AUDIENCE_ID");
 }
 
-export function getAiProviderKeys() {
-  return {
-    openai: readEnv("OPENAI_API_KEY"),
-    deepseek: readEnv("DEEPSEEK_API_KEY"),
-    groq: readEnv("GROQ_API_KEY"),
-    gemini: readEnv("GEMINI_API_KEY"),
-  };
-}
-
 export function hasAiProviderConfigured(): boolean {
-  const keys = getAiProviderKeys();
-  return Boolean(keys.openai || keys.deepseek || keys.groq || keys.gemini);
+  return Boolean(readEnv("GROQ_API_KEY"));
 }
 
 export function getSupabaseConfig() {
