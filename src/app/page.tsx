@@ -57,9 +57,9 @@ export default function Home() {
             <SocialLinks className="text-zinc-500 hover:text-white" />
 
             <div className="flex items-center gap-6 mono text-xs text-zinc-600">
-              <a href="#" className="hover:text-zinc-400 transition-colors">Privacy</a>
-              <a href="#" className="hover:text-zinc-400 transition-colors">Terms</a>
-              <a href="#" className="hover:text-zinc-400 transition-colors">Contact</a>
+              <a href="/privacy" className="hover:text-zinc-400 transition-colors">Privacy</a>
+              <a href="/terms" className="hover:text-zinc-400 transition-colors">Terms</a>
+              <a href="mailto:support@careeros.live" className="hover:text-zinc-400 transition-colors">Contact</a>
             </div>
           </div>
 

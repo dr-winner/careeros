@@ -52,6 +52,7 @@ export default function JobDetailPage() {
   const [cvAdvice, setCvAdvice] = useState<string>("");
   const [analyzing, setAnalyzing] = useState(false);
   const [hasResume, setHasResume] = useState(false);
+  const [profileIncomplete, setProfileIncomplete] = useState(false);
   const [aiEnabled, setAiEnabled] = useState(false);
   const [showOptimizeModal, setShowOptimizeModal] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
@@ -75,10 +76,10 @@ export default function JobDetailPage() {
   }, [params]);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const premiumStatus = localStorage.getItem("isPremium") === "true";
-      setIsPremium(premiumStatus);
-    }
+    fetch("/api/user/premium")
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => { if (d?.isPremium !== undefined) setIsPremium(d.isPremium); })
+      .catch(() => {});
   }, []);
 
   const handleOptimizeClick = () => {
@@ -110,6 +111,7 @@ export default function JobDetailPage() {
           setMissingSkills(data.analysis.missingSkills || []);
           setCvAdvice(data.analysis.cvAdvice || "");
           setHasResume(data.analysis.hasResume);
+          setProfileIncomplete(data.analysis.profileIncomplete || false);
           setAiEnabled(data.analysis.aiEnabled);
           setCvOptimization(data.analysis.cvOptimization || null);
           setAiNarrative(data.analysis.aiNarrative || null);
@@ -444,6 +446,19 @@ export default function JobDetailPage() {
               </Link>
             </div>
           </div>
+        </div>
+      )}
+
+      {profileIncomplete && fitScore !== null && !analyzing && (
+        <div className="agent-card p-4 animate-fade-up border-amber-500/20 flex items-start gap-3">
+          <svg className="h-4 w-4 text-amber-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <p className="text-xs text-amber-300">
+            Your profile is empty — fit score is based on job keywords only.{" "}
+            <a href="/profile" className="underline hover:text-amber-200">Complete your profile</a> or{" "}
+            <a href="/resumes" className="underline hover:text-amber-200">upload your CV</a> for accurate results.
+          </p>
         </div>
       )}
 

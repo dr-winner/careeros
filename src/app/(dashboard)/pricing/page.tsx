@@ -58,7 +58,6 @@ export default function PricingPage() {
       }
 
       toast.success(`Successfully subscribed to ${plan}!`);
-      localStorage.setItem("isPremium", "true");
       const pendingUpgrade = localStorage.getItem("pendingUpgrade");
       if (pendingUpgrade === "cv_regeneration") {
         localStorage.removeItem("pendingUpgrade");

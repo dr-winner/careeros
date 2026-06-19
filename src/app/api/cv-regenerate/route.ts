@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
 CV:
 ${cvText}
 
-Candidate: ${cvData.name || "Not found"} | ${cvData.email || ""} | ${cvData.phone || ""}
+Contact info: ${[cvData.email, cvData.phone].filter(Boolean).join(" | ") || "extract from CV above"}
 
 Return the full rewritten CV in this format:
 
