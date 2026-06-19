@@ -132,7 +132,9 @@ export async function POST(request: NextRequest) {
     } | null = null;
     let aiNarrative: { strengths: string; gaps: string; recommendation: string } | null = null;
 
-    if (hasAI && jobDescription) {
+    const profileIncomplete = allUserSkills.length === 0 && !user?.headline && !user?.experience;
+
+    if (hasAI && jobDescription && !profileIncomplete) {
       // AI narrative analysis for ALL users — brief summary of fit
       try {
         const narrativePrompt = `You are a career advisor speaking directly to a job seeker. Analyze their fit for this role and speak in second person ("you", "your").
@@ -237,6 +239,7 @@ Return ONLY this JSON (no markdown):
         aiEnabled: hasAI,
         isPremium,
         premiumRequired: !isPremium && missing.length > 0,
+        profileIncomplete,
       },
     });
   } catch (error) {

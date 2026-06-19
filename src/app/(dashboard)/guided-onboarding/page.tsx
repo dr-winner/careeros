@@ -48,7 +48,7 @@ export default function GuidedOnboarding() {
     headline: "",
     experience: "",
     desiredRole: "",
-    country: "South Africa",
+    country: "Ghana",
   });
 
   const [preferences, setPreferences] = useState<PreferencesData>({

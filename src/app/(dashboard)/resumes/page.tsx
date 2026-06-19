@@ -54,10 +54,10 @@ export default function CVsPage() {
   const [analysisCvId, setAnalysisCvId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const premiumStatus = localStorage.getItem("isPremium") === "true";
-      setIsPremium(premiumStatus);
-    }
+    fetch("/api/user/premium")
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => { if (d?.isPremium !== undefined) setIsPremium(d.isPremium); })
+      .catch(() => {});
   }, []);
 
   const fetchCVs = useCallback(async () => {
