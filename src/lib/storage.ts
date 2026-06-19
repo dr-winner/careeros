@@ -1,3 +1,4 @@
+import { put, del as blobDel } from "@vercel/blob";
 import { readEnv, getSupabaseConfig } from "./env";
 
 // ─── Vercel Blob ───────────────────────────────────────────────────────────────
@@ -12,7 +13,6 @@ async function uploadToVercelBlob(
   contentType: string,
 ): Promise<{ url: string; publicUrl: string } | null> {
   try {
-    const { put } = await import("@vercel/blob");
     const blob = await put(filename, buffer, {
       access: "public",
       contentType,
@@ -26,8 +26,7 @@ async function uploadToVercelBlob(
 
 async function deleteFromVercelBlob(url: string): Promise<boolean> {
   try {
-    const { del } = await import("@vercel/blob");
-    await del(url);
+    await blobDel(url);
     return true;
   } catch (err) {
     console.error("Vercel Blob delete failed:", err);
