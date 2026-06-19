@@ -4,9 +4,8 @@ import { getEmailFrom, getOptionalEnv } from "@/lib/env";
 const resendApiKey = getOptionalEnv("RESEND_API_KEY");
 const resend = resendApiKey ? new Resend(resendApiKey) : null;
 
-const FROM_NAME = "Winner";
-const FROM_EMAIL = getEmailFrom() || "hey@careeros.app";
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://www.careeros.app";
+const FROM = getEmailFrom();
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://careeros.live";
 
 function isConfigured(): boolean {
   return Boolean(resend);
@@ -104,7 +103,7 @@ export async function sendWelcomeEmail(
 
   try {
     await resend!.emails.send({
-      from: FROM_NAME + " <" + FROM_EMAIL + ">",
+      from: FROM,
       to,
       subject: subjectName,
       html: wrapHtml(content),
@@ -170,7 +169,7 @@ export async function sendApplicationTrackedEmail(
 
   try {
     await resend!.emails.send({
-      from: FROM_NAME + " <" + FROM_EMAIL + ">",
+      from: FROM,
       to,
       subject: "Application tracked — " + jobTitle + " at " + companyName,
       html: wrapHtml(content),
@@ -253,7 +252,7 @@ export async function sendInterviewEmail(
 
   try {
     await resend!.emails.send({
-      from: FROM_NAME + " <" + FROM_EMAIL + ">",
+      from: FROM,
       to,
       subject: subjectPart + "'re getting an interview! 🎉",
       html: wrapHtml(content),
@@ -323,7 +322,7 @@ export async function sendOfferEmail(
 
   try {
     await resend!.emails.send({
-      from: FROM_NAME + " <" + FROM_EMAIL + ">",
+      from: FROM,
       to,
       subject: subjectPart + " got an offer! 🏆",
       html: wrapHtml(content),
@@ -402,7 +401,7 @@ export async function sendReEngagementEmail(
 
   try {
     await resend!.emails.send({
-      from: FROM_NAME + " <" + FROM_EMAIL + ">",
+      from: FROM,
       to,
       subject: subjectFirst,
       html: wrapHtml(content),
@@ -484,7 +483,7 @@ export async function sendWeeklyDigestEmail(
 
   try {
     await resend!.emails.send({
-      from: FROM_NAME + " <" + FROM_EMAIL + ">",
+      from: FROM,
       to,
       subject: subjectName,
       html: wrapHtml(content),
@@ -544,7 +543,7 @@ export async function sendReferralReceivedEmail(
 
   try {
     await resend!.emails.send({
-      from: FROM_NAME + " <" + FROM_EMAIL + ">",
+      from: FROM,
       to,
       subject: "Your CareerOS referral is on its way ✌️",
       html: wrapHtml(content),
@@ -612,7 +611,7 @@ export async function sendRejectionEmail(
 
   try {
     await resend!.emails.send({
-      from: FROM_NAME + " <" + FROM_EMAIL + ">",
+      from: FROM,
       to,
       subject: (first ? first + ", " : "") + "Onward and upward 💙",
       html: wrapHtml(content),

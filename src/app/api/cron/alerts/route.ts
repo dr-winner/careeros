@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { isValidCronSecret } from "@/lib/validation";
-import { readEnv } from "@/lib/env";
+import { readEnv, getEmailFrom } from "@/lib/env";
 
 const resendApiKey = readEnv("RESEND_API_KEY");
 const resend = resendApiKey ? new Resend(resendApiKey) : null;
@@ -341,7 +341,7 @@ export async function GET(request: NextRequest) {
         searchesMatched++;
 
         await resend.emails.send({
-          from: "CareerOS <noreply@careeros.app>",
+          from: getEmailFrom(),
           to: search.user.email,
           subject: `New jobs matching "${search.searchQuery}" (${matchedJobs.length})`,
           html: renderEmailHtml(search, matchedJobs, baseUrl),

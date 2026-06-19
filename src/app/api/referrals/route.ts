@@ -4,10 +4,9 @@ import { prisma } from "@/lib/db";
 import { getDbUser } from "@/lib/auth";
 import { getZodErrorMessage, referralInviteSchema } from "@/lib/validation";
 import { sendReferralReceivedEmail } from "@/lib/transactional-emails";
+import { getEmailFrom } from "@/lib/env";
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://www.careeros.app";
-const FROM_NAME = "Winner";
-const FROM_EMAIL = "hey@careeros.app";
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://careeros.live";
 
 function buildReferralCode(userId: string): string {
   return `CAREER-${userId
@@ -124,7 +123,7 @@ export async function POST(request: NextRequest) {
 
     if (resend) {
       await resend.emails.send({
-        from: `${FROM_NAME} <${FROM_EMAIL}>`,
+        from: getEmailFrom(),
         to: refereeEmail,
         subject: `${user.fullName?.split(" ")[0] || "Someone"} thinks you'd be great at this`,
         html: `
