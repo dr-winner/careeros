@@ -73,7 +73,7 @@ export async function PATCH(
 
     const statusChanged = status !== undefined && application.status !== status;
 
-    const [updated] = await prisma.$transaction([
+    await prisma.$transaction([
       prisma.application.update({
         where: { id },
         data: {
