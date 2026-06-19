@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import Groq from "groq-sdk";
-import { isUserPremium } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { readEnv } from "@/lib/env";
 

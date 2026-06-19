@@ -105,6 +105,9 @@ model Job {
   jobSkills       JobSkill[]
   applications    Application[]
   coverLetters    CoverLetter[]
+
+  @@index([title])
+  @@index([companyName])
 }
 
 model JobSkill {
@@ -169,6 +172,7 @@ model Application {
   workMode     String?
   status       String
   appliedAt    DateTime?
+  updatedAt    DateTime            @default(now()) @updatedAt
   notes        String?
   user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   job          Job?                @relation(fields: [jobId], references: [id], onDelete: Cascade)

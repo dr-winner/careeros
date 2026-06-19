@@ -2,10 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { mkdir, writeFile } from "fs/promises";
 import { existsSync } from "fs";
 import path from "path";
-import { clerkClient } from "@clerk/nextjs/server";
-import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
-import { syncClerkUserToDb } from "@/lib/user";
 import { getDbUser } from "@/lib/auth";
 import { z } from "zod";
 import { uploadToStorage } from "@/lib/storage";
@@ -17,7 +14,8 @@ const ALLOWED_TYPES = new Set([
   "application/pdf",
 ]);
 
-const MAX_SIZE = 5 * 1024 * 1024;
+// Keep in sync with client upload UIs (dashboard CV upload, guided onboarding, profile)
+const MAX_SIZE = 10 * 1024 * 1024;
 
 const uploadSchema = z.object({
   file: z
@@ -27,7 +25,7 @@ const uploadSchema = z.object({
       (file) => ALLOWED_TYPES.has(file.type),
       "Only PDF and Word documents are allowed",
     )
-    .refine((file) => file.size <= MAX_SIZE, "File size must be less than 5MB"),
+    .refine((file) => file.size <= MAX_SIZE, "File size must be less than 10MB"),
 });
 
 type ParsedResumeData = {
@@ -188,31 +186,6 @@ async function extractTextFromPDF(buffer: Buffer): Promise<string> {
   }
 }
 
-async function ensureAuthenticatedDbUser() {
-  const { userId } = await auth();
-
-  if (!userId) {
-    return { clerkId: null, user: null };
-  }
-
-  let user = await getDbUser();
-
-  if (user) {
-    return { clerkId: userId, user };
-  }
-
-  try {
-    const client = await clerkClient();
-    const clerkUser = await client.users.getUser(userId);
-    await syncClerkUserToDb(clerkUser);
-    user = await getDbUser();
-  } catch (error) {
-    console.error("Failed to sync Clerk user during upload:", error);
-  }
-
-  return { clerkId: userId, user };
-}
-
 export async function POST(request: NextRequest) {
   try {
     const ip = request.headers.get("x-forwarded-for")?.split(",")[0] || "anonymous";
@@ -228,11 +201,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { user } = await ensureAuthenticatedDbUser();
+    console.log("[POST /api/upload] Starting request");
+    const user = await getDbUser();
 
     if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      console.log("[POST /api/upload] No DB user found, forcing a reload/refresh strategy");
+      return NextResponse.json(
+        {
+          error: "Profile synchronization in progress. Please wait 2 seconds and try again.",
+          retryAfter: 2
+        },
+        { status: 401 }
+      );
     }
+    console.log(`[POST /api/upload] Authorized user: ${user.id}`);
 
     const formData = await request.formData();
     const rawFile = formData.get("file");

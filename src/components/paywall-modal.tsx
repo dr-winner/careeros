@@ -1,7 +1,6 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 
 interface PaywallModalProps {
   isOpen: boolean;

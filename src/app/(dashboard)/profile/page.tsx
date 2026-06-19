@@ -5,6 +5,8 @@ import { useAuth, useUser } from "@clerk/nextjs";
 import { SignOutButton } from "@clerk/nextjs";
 import { toast } from "sonner";
 import Link from "next/link";
+import CVUpload from "@/app/components/cv-upload";
+import { EXPERIENCE_LEVELS, PROFILE_COUNTRIES, ROLE_TYPES } from "@/lib/user-profile-options";
 
 interface UserProfile {
   id: string;
@@ -19,16 +21,13 @@ interface UserProfile {
   desiredRole: string | null;
 }
 
-const COUNTRIES = ["Ghana", "Nigeria", "Kenya", "South Africa", "Other"];
-const ROLE_TYPES = ["Developer", "Designer", "Data/Analytics", "Marketing", "Sales", "Operations", "HR", "Finance", "Other"];
-const EXPERIENCE_LEVELS = ["0-1 years", "1-3 years", "3-5 years", "5-10 years", "10+ years"];
-
 export default function ProfilePage() {
   const { userId, isLoaded } = useAuth();
   const { user } = useUser();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [resumeCount, setResumeCount] = useState(0);
 
   const [formData, setFormData] = useState({
     fullName: "",
@@ -52,6 +51,7 @@ export default function ProfilePage() {
       if (response.ok) {
         const data = await response.json();
         setProfile(data.user);
+        setResumeCount(data.counts?.resumes ?? 0);
         setFormData({
           fullName: data.user?.fullName || "",
           phone: data.user?.phone || "",
@@ -80,9 +80,12 @@ export default function ProfilePage() {
 
       if (response.ok) {
         toast.success("Profile updated!");
-        fetchProfile();
+        await fetchProfile();
       } else {
-        toast.error("Failed to update profile");
+        const data = (await response.json().catch(() => ({}))) as { error?: string };
+        toast.error(
+          typeof data.error === "string" ? data.error : "Failed to update profile",
+        );
       }
     } catch {
       toast.error("Failed to update profile");
@@ -158,12 +161,14 @@ export default function ProfilePage() {
           <div>
             <label className={labelClass}>Country</label>
             <select
-              value={formData.country}
+              value={PROFILE_COUNTRIES.includes(formData.country as (typeof PROFILE_COUNTRIES)[number]) ? formData.country : "Other"}
               onChange={(e) => setFormData({ ...formData, country: e.target.value })}
               className={selectClass}
             >
-              {COUNTRIES.map((c) => (
-                <option key={c} value={c} className="bg-[#0d0d15]">{c}</option>
+              {PROFILE_COUNTRIES.map((c) => (
+                <option key={c} value={c} className="bg-[#0d0d15]">
+                  {c}
+                </option>
               ))}
             </select>
           </div>
@@ -220,6 +225,23 @@ export default function ProfilePage() {
             />
           </div>
         </div>
+      </div>
+
+      <div className="rounded-2xl border border-white/10 bg-[#14141f] p-6">
+        <h2 className="text-lg font-semibold text-white mb-2">Your CV</h2>
+        <p className="text-sm text-zinc-500 mb-4">
+          {resumeCount === 0
+            ? "Upload a CV to power job matching and analysis."
+            : `${resumeCount} CV${resumeCount === 1 ? "" : "s"} on file. Uploading adds a new version.`}
+        </p>
+        <CVUpload onUploadSuccess={fetchProfile} />
+        <p className="mt-4 text-sm text-zinc-500">
+          Manage versions and set a primary CV on the{" "}
+          <Link href="/resumes" className="text-purple-400 hover:underline">
+            CVs
+          </Link>{" "}
+          page.
+        </p>
       </div>
 
       <button

@@ -114,6 +114,18 @@ export const coverLetterRequestSchema = z.object({
   recipientName: nullableTrimmedString,
 });
 
+export const mockInterviewSchema = z.object({
+  action: z.enum(["start", "respond", "feedback"]),
+  role: z.string().trim().min(1, "Role required").max(200),
+  experienceLevel: z.string().trim().optional(),
+  history: z.array(z.object({
+    role: z.enum(["user", "assistant"]),
+    content: z.string(),
+  })).optional(),
+  currentQuestion: z.string().optional(),
+  userResponse: z.string().optional(),
+});
+
 export function getCronSecretFromRequest(request: Request): string | null {
   const authHeader = request.headers.get("authorization");
   const bearerPrefix = "Bearer ";

@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { isValidCronSecret } from "@/lib/validation";
 import { readEnv } from "@/lib/env";
-import type { Prisma } from "@prisma/client";
 
 const resendApiKey = readEnv("RESEND_API_KEY");
 const resend = resendApiKey ? new Resend(resendApiKey) : null;
@@ -16,17 +15,6 @@ const ADZUNA_COUNTRIES = [
   { name: "Ghana", code: "GH", region: "Africa" },
 ];
 
-const REMOTIVE_CATEGORIES = [
-  "software-dev",
-  "marketing",
-  "customer-service",
-  "design",
-  "sales",
-  "product",
-  "business",
-  "data",
-  "devops-sysadmin",
-];
 
 type SavedSearchRecord = Awaited<ReturnType<typeof import("@/lib/db").prisma.savedSearch.findMany>>[number];
 type SavedSearchWithUser = SavedSearchRecord & {
