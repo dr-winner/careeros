@@ -409,7 +409,7 @@ async function fetchFromJooble(
           seniorityLevel: detectSeniority(job.title || ""),
           employmentType: job.type || "Full-time",
           description:
-            job.snippet?.replace(/<[^>]*>/g, "").substring(0, 500) || "",
+            job.snippet?.replace(/<[^>]*>/g, "").substring(0, 2000) || "",
           requirements: "See job posting for details",
           postedAt: job.updated
             ? new Date(job.updated).toISOString()
