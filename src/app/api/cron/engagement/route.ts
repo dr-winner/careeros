@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
           (now.getTime() - user.updatedAt.getTime()) / (1000 * 60 * 60 * 24),
         );
 
-        if (daysSinceActive >= RE_ENGAGEMENT_DAYS && dayOfWeek === RE_ENGAGEMENT_DAY) {
+        if (daysSinceActive >= RE_ENGAGEMENT_DAYS && dayOfWeek === RE_ENGAGEMENT_DAY && hasAnyActivity) {
           await sendReEngagementEmail(user.email, user.fullName, daysSinceActive);
           emailsSent.reEngagement++;
         }
