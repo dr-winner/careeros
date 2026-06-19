@@ -4,6 +4,13 @@ import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 
+function stripHtml(html: string): string {
+  return html
+    .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, " ")
+    .replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+}
+
 interface Job {
   id: string;
   title: string;
@@ -375,7 +382,7 @@ export default function JobsPage() {
                 </div>
 
                 <p className="mt-3 text-sm text-zinc-500 line-clamp-2 leading-relaxed">
-                  {job.description}
+                  {stripHtml(job.description)}
                 </p>
 
                 <div className="mt-4 flex items-center gap-3">
