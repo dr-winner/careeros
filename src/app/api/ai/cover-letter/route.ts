@@ -67,7 +67,8 @@ export async function POST(request: NextRequest) {
     if (
       !process.env.OPENAI_API_KEY &&
       !process.env.DEEPSEEK_API_KEY &&
-      !process.env.GROQ_API_KEY
+      !process.env.GROQ_API_KEY &&
+      !process.env.GEMINI_API_KEY
     ) {
       return NextResponse.json({ error: "AI not configured" }, { status: 500 });
     }
