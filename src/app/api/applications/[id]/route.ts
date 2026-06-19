@@ -71,23 +71,31 @@ export async function PATCH(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const updated = await prisma.application.update({
-      where: { id },
-      data: {
-        ...(status !== undefined ? { status } : {}),
-        ...(notes !== undefined ? { notes } : {}),
-      },
-    });
+    const statusChanged = status !== undefined && application.status !== status;
 
-    if (status !== undefined && application.status !== status) {
-      await prisma.applicationHistory.create({
+    const [updated] = await prisma.$transaction([
+      prisma.application.update({
+        where: { id },
         data: {
-          applicationId: id,
-          previousStatus: application.status,
-          newStatus: status,
-          notes: notes || undefined,
+          ...(status !== undefined ? { status } : {}),
+          ...(notes !== undefined ? { notes } : {}),
         },
-      });
+      }),
+      ...(statusChanged
+        ? [
+            prisma.applicationHistory.create({
+              data: {
+                applicationId: id,
+                previousStatus: application.status,
+                newStatus: status!,
+                notes: notes || undefined,
+              },
+            }),
+          ]
+        : []),
+    ]);
+
+    if (statusChanged) {
 
       if (dbUser.email) {
         if (status === "Interview") {
