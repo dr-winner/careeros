@@ -135,28 +135,28 @@ export async function POST(request: NextRequest) {
     if (hasAI && jobDescription) {
       // AI narrative analysis for ALL users — brief summary of fit
       try {
-        const narrativePrompt = `Analyze this candidate's fit for the job. Be concise and direct.
+        const narrativePrompt = `You are a career advisor speaking directly to a job seeker. Analyze their fit for this role and speak in second person ("you", "your").
 
 JOB: ${jobTitle || "Position"}
 JOB DESCRIPTION (first 3000 chars): ${(jobDescription || "").substring(0, 3000)}
 
-CANDIDATE:
+ABOUT THE USER:
 - Skills: ${allUserSkills.join(", ") || "None listed"}
 - Experience level: ${user?.experience || "Not specified"}
 - Headline: ${user?.headline || "Not set"}
 - Matched skills: ${matched.join(", ") || "None"}
 - Missing skills: ${missing.join(", ") || "None"}
 
-Return ONLY this JSON (no markdown):
+Return ONLY this JSON (no markdown). Use "you"/"your" throughout, never "the candidate":
 {
-  "strengths": "1-2 sentence summary of candidate strengths for this role",
-  "gaps": "1-2 sentence summary of key gaps or what to address",
-  "recommendation": "direct 1-sentence recommendation on whether to apply"
+  "strengths": "1-2 sentences on your strengths for this role",
+  "gaps": "1-2 sentences on key gaps you should address",
+  "recommendation": "direct 1-sentence recommendation on whether you should apply"
 }`;
 
         const { text } = await generateWithFallback(
           narrativePrompt,
-          "You are a career advisor. Return only valid JSON, no markdown.",
+          "You are a career advisor speaking directly to a job seeker. Always use second person (you/your). Return only valid JSON, no markdown.",
           { maxTokens: 300, temperature: 0.3 },
         );
         const jsonMatch = text.match(/\{[\s\S]*\}/);
@@ -170,12 +170,12 @@ Return ONLY this JSON (no markdown):
       // AI CV optimization — premium only
       if (isPremium && missing.length > 0) {
         try {
-          const optimizePrompt = `You are an expert CV optimization specialist for the African job market.
+          const optimizePrompt = `You are an expert CV optimization specialist for the African job market. Speak directly to the user using "you"/"your".
 
 JOB TITLE: ${jobTitle || "This position"}
 JOB DESCRIPTION: ${(jobDescription || "").substring(0, 2000)}
 
-CANDIDATE:
+ABOUT THE USER:
 - Headline: ${user?.headline || "Not set"}
 - Experience: ${user?.experience || "Not provided"}
 - Skills: ${allUserSkills.join(", ") || "None"}
