@@ -104,7 +104,7 @@ describe("env helpers", () => {
     });
 
     it("falls back to the default sender", () => {
-      expect(getEmailFrom()).toBe("CareerOS <noreply@careeros.app>");
+      expect(getEmailFrom()).toBe("CareerOS <noreply@careeros.live>");
     });
   });
 

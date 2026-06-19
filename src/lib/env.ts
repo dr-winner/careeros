@@ -28,7 +28,7 @@ export function getAppUrl(): string {
 }
 
 export function getEmailFrom(): string {
-  return readEnv("EMAIL_FROM") || "CareerOS <noreply@careeros.app>";
+  return readEnv("EMAIL_FROM") || "CareerOS <noreply@careeros.live>";
 }
 
 export function hasAnyEnv(names: string[]): boolean {
