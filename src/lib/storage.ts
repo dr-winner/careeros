@@ -54,15 +54,21 @@ export async function uploadToStorage(
     return null;
   }
 
-  const { data, error } = await client.storage
-    .from(bucket)
-    .upload(filename, buffer, {
-      contentType,
-      upsert: true,
-    });
-
-  if (error) {
-    console.error("Supabase upload error:", error);
+  let data: { fullPath: string } | null = null;
+  try {
+    const result = await client.storage
+      .from(bucket)
+      .upload(filename, buffer, {
+        contentType,
+        upsert: true,
+      });
+    if (result.error) {
+      console.error("Supabase upload error:", result.error);
+      return null;
+    }
+    data = result.data;
+  } catch (err) {
+    console.error("Supabase upload threw:", err);
     return null;
   }
 
