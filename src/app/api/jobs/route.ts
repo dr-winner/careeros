@@ -71,7 +71,7 @@ type SavedJobRecord = Awaited<
   ReturnType<typeof prisma.savedJob.findMany>
 >[number];
 
-type JobSourceName = "adzuna" | "remotive" | "arbeitnow" | "rise" | "jooble" | "remoteok" | "themuse";
+type JobSourceName = "adzuna" | "remotive" | "arbeitnow" | "rise" | "jooble" | "remoteok" | "themuse" | "jobicy" | "greenhouse";
 
 type CachedJobsPayload = {
   jobs: Job[];
@@ -489,6 +489,123 @@ async function fetchFromRemoteOK(
   }
 }
 
+// Jobicy — free, no key, global remote-only jobs with geo data
+// https://jobi.cy/apidocs
+async function fetchFromJobicy(
+  query: string,
+  savedJobIds: string[],
+): Promise<Job[]> {
+  try {
+    const tag = query.trim().split(/\s+/)[0].toLowerCase();
+    const url = tag
+      ? `https://jobicy.com/api/v2/remote-jobs?count=50&tag=${encodeURIComponent(tag)}`
+      : "https://jobicy.com/api/v2/remote-jobs?count=50";
+    const data = (await fetchJsonWithTimeout(url)) as {
+      jobs?: Array<{
+        id: number;
+        url: string;
+        jobTitle: string;
+        companyName: string;
+        jobGeo: string;
+        jobLevel?: string;
+        jobType?: string;
+        pubDate: string;
+        annualSalaryMin?: number;
+        annualSalaryMax?: number;
+        jobExcerpt?: string;
+        jobDescription?: string;
+      }>;
+    };
+
+    if (!Array.isArray(data.jobs)) return [];
+
+    return data.jobs.map((job): Job => {
+      const id = `jobicy-${job.id}`;
+      const geoRaw = job.jobGeo?.trim() || "Worldwide";
+      const location = geoRaw.split(",")[0].trim() || "Worldwide";
+      return {
+        id,
+        title: job.jobTitle,
+        companyName: job.companyName,
+        location,
+        country: "GLOBAL",
+        workMode: "Remote",
+        seniorityLevel: detectSeniority(job.jobTitle),
+        employmentType: job.jobType || "Full-time",
+        description: (job.jobExcerpt || job.jobDescription || "")
+          .replace(/<[^>]*>/g, "")
+          .substring(0, 1000),
+        requirements: "See job posting for details",
+        postedAt: job.pubDate || new Date().toISOString(),
+        salaryMin: job.annualSalaryMin,
+        salaryMax: job.annualSalaryMax,
+        isSaved: savedJobIds.includes(id),
+        applicationUrl: job.url,
+        source: "jobicy",
+      };
+    });
+  } catch (error) {
+    console.error("Jobicy error:", error);
+    return [];
+  }
+}
+
+// Greenhouse public job boards — Africa-focused companies with verified active listings
+// No API key required
+interface GreenhouseJob {
+  id: number;
+  title: string;
+  location: { name: string };
+  updated_at: string;
+  absolute_url: string;
+  departments: Array<{ name: string }>;
+  company_name?: string;
+  content?: string;
+}
+
+const GREENHOUSE_BOARDS = [
+  { slug: "paystack",    company: "Paystack" },
+  { slug: "moniepoint", company: "Moniepoint" },
+  { slug: "jumia",      company: "Jumia" },
+] as const;
+
+async function fetchFromGreenhouse(savedJobIds: string[]): Promise<Job[]> {
+  const results = await Promise.allSettled(
+    GREENHOUSE_BOARDS.map(async ({ slug, company }) => {
+      const data = (await fetchJsonWithTimeout(
+        `https://boards-api.greenhouse.io/v1/boards/${slug}/jobs?content=true`,
+        {},
+        8_000,
+      )) as { jobs?: GreenhouseJob[] };
+
+      if (!Array.isArray(data.jobs)) return [];
+
+      return data.jobs.map((job): Job => {
+        const id = `greenhouse-${job.id}`;
+        const location = job.location?.name || "Not specified";
+        return {
+          id,
+          title: job.title,
+          companyName: job.company_name || company,
+          location,
+          country: getCountry("greenhouse", location),
+          workMode: location.toLowerCase().includes("remote") ? "Remote" : "On-site",
+          seniorityLevel: detectSeniority(job.title),
+          employmentType: "Full-time",
+          description: (job.content || "").replace(/<[^>]*>/g, "").substring(0, 1000),
+          requirements: job.departments?.[0]?.name || "See job posting for details",
+          postedAt: job.updated_at || new Date().toISOString(),
+          isSaved: savedJobIds.includes(id),
+          applicationUrl: job.absolute_url,
+          source: "greenhouse",
+        };
+      });
+    }),
+  );
+
+  return results.flatMap((r) => (r.status === "fulfilled" ? r.value : []));
+}
+
 // The Muse — free public API, US-focused professional roles
 // https://www.themuse.com/developers/api/v2
 async function fetchFromTheMuse(
@@ -584,13 +701,15 @@ async function fetchSearchResults(
     source: JobSourceName;
     run: () => Promise<Job[]>;
   }> = [
-    { source: "adzuna",   run: () => fetchFromAdzuna(query, savedJobIds) },
-    { source: "remotive", run: () => fetchFromRemotive(query, savedJobIds) },
-    { source: "arbeitnow",run: () => fetchFromArbeitnow(savedJobIds) },
-    { source: "rise",     run: () => fetchFromRise(query, savedJobIds) },
-    { source: "jooble",   run: () => fetchFromJooble(query, savedJobIds) },
-    { source: "remoteok", run: () => fetchFromRemoteOK(query, savedJobIds) },
-    { source: "themuse",  run: () => fetchFromTheMuse(query, savedJobIds) },
+    { source: "adzuna",     run: () => fetchFromAdzuna(query, savedJobIds) },
+    { source: "remotive",   run: () => fetchFromRemotive(query, savedJobIds) },
+    { source: "arbeitnow",  run: () => fetchFromArbeitnow(savedJobIds) },
+    { source: "rise",       run: () => fetchFromRise(query, savedJobIds) },
+    { source: "jooble",     run: () => fetchFromJooble(query, savedJobIds) },
+    { source: "remoteok",   run: () => fetchFromRemoteOK(query, savedJobIds) },
+    { source: "themuse",    run: () => fetchFromTheMuse(query, savedJobIds) },
+    { source: "jobicy",     run: () => fetchFromJobicy(query, savedJobIds) },
+    { source: "greenhouse", run: () => fetchFromGreenhouse(savedJobIds) },
   ];
 
   const results = await Promise.allSettled(
@@ -609,6 +728,8 @@ async function fetchSearchResults(
     jooble: 0,
     remoteok: 0,
     themuse: 0,
+    jobicy: 0,
+    greenhouse: 0,
   };
   const warnings: string[] = [];
   let partialFailure = false;
