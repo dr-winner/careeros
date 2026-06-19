@@ -132,7 +132,7 @@ function formatJob(
       : new Date().toISOString());
 
   const description =
-    raw.description?.replace(/<[^>]*>/g, "").substring(0, 500) ||
+    raw.description?.replace(/<[^>]*>/g, "") ||
     raw.descriptionBreakdown?.oneSentenceJobSummary ||
     "";
 

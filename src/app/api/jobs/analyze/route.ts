@@ -6,7 +6,7 @@ import { hasAiProviderConfigured } from "@/lib/env";
 import { isUserPremium } from "@/lib/auth";
 
 const SKILL_KEYWORDS: Record<string, string[]> = {
-  JavaScript: ["javascript", "js", "ecmascript", "jscript"],
+  JavaScript: ["javascript", "js", "ecmascript"],
   TypeScript: ["typescript", "ts"],
   React: ["react", "reactjs", "react.js", "nextjs", "next.js"],
   Vue: ["vue", "vuejs", "vue.js", "nuxt"],
@@ -23,18 +23,10 @@ const SKILL_KEYWORDS: Record<string, string[]> = {
   Kotlin: ["kotlin", "android"],
   Flutter: ["flutter", "dart"],
   "React Native": ["react native", "rn"],
-  SQL: [
-    "sql",
-    "mysql",
-    "postgresql",
-    "postgres",
-    "sqlite",
-    "mssql",
-    "database",
-  ],
+  SQL: ["sql", "mysql", "postgresql", "postgres", "sqlite", "mssql", "database"],
   MongoDB: ["mongodb", "mongo", "nosql"],
   Redis: ["redis", "cache"],
-  AWS: ["aws", "amazon web services", "ec2", "s3", "lambda", "cloudformation"],
+  AWS: ["aws", "amazon web services", "ec2", "s3", "lambda"],
   Azure: ["azure", "microsoft azure", "azure devops"],
   GCP: ["gcp", "google cloud", "google cloud platform"],
   Docker: ["docker", "container", "containerization"],
@@ -42,14 +34,7 @@ const SKILL_KEYWORDS: Record<string, string[]> = {
   "CI/CD": ["ci/cd", "jenkins", "gitlab ci", "github actions", "pipeline"],
   Git: ["git", "github", "gitlab", "bitbucket", "version control"],
   Linux: ["linux", "unix", "bash", "shell"],
-  "Machine Learning": [
-    "machine learning",
-    "ml",
-    "ai",
-    "tensorflow",
-    "pytorch",
-    "keras",
-  ],
+  "Machine Learning": ["machine learning", "ml", "tensorflow", "pytorch", "keras"],
   "Data Analysis": ["data analysis", "analytics", "tableau", "power bi"],
   Agile: ["agile", "scrum", "kanban", "jira"],
   Leadership: ["leadership", "team lead", "mentoring", "management"],
@@ -58,7 +43,6 @@ const SKILL_KEYWORDS: Record<string, string[]> = {
   Marketing: ["marketing", "seo", "sem", "digital marketing"],
   Sales: ["sales", "crm", "salesforce", "business development"],
   Finance: ["finance", "accounting", "financial analysis"],
-  Accounting: ["accounting", "bookkeeping", "tax", "auditing"],
   HR: ["hr", "human resources", "recruitment"],
   "Graphic Design": ["graphic design", "photoshop", "illustrator", "figma"],
   "UI/UX": ["ui/ux", "ui design", "ux design", "user experience"],
@@ -73,26 +57,22 @@ const SKILL_KEYWORDS: Record<string, string[]> = {
 function extractSkills(text: string): string[] {
   const lowerText = text.toLowerCase();
   const foundSkills: string[] = [];
-
   for (const [skill, keywords] of Object.entries(SKILL_KEYWORDS)) {
-    if (keywords.some((keyword) => lowerText.includes(keyword))) {
+    if (keywords.some((kw) => lowerText.includes(kw))) {
       foundSkills.push(skill);
     }
   }
-
   return foundSkills;
 }
 
 export async function POST(request: NextRequest) {
   try {
     const userId = await getDbUserId();
-
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { jobId, jobDescription, jobTitle } = await request.json();
-
     if (!jobId) {
       return NextResponse.json({ error: "Job ID required" }, { status: 400 });
     }
@@ -103,58 +83,44 @@ export async function POST(request: NextRequest) {
         resumes: {
           where: { isPrimary: true },
           take: 1,
-          include: {
-            skills: true,
-            experiences: true,
-            education: true,
-          },
+          include: { skills: true, experiences: true, education: true },
         },
       },
     });
 
     const profileSkills = extractSkills(
-      [
-        user?.headline || "",
-        user?.experience || "",
-        user?.desiredRole || "",
-      ].join(" "),
+      [user?.headline || "", user?.experience || "", user?.desiredRole || ""].join(" "),
     );
-
     const resumeSkills =
-      user?.resumes[0]?.skills?.map(
-        (skill: { skillName: string }) => skill.skillName,
-      ) || [];
-
+      user?.resumes[0]?.skills?.map((s: { skillName: string }) => s.skillName) || [];
     const experiences = user?.resumes[0]?.experiences || [];
     const education = user?.resumes[0]?.education || [];
-
     const allUserSkills = [...new Set([...profileSkills, ...resumeSkills])];
     const jobSkills = extractSkills(jobDescription || "");
 
     const matched = allUserSkills.filter((skill) =>
       jobSkills.some(
-        (jobSkill) =>
-          jobSkill.toLowerCase() === skill.toLowerCase() ||
-          skill.toLowerCase().includes(jobSkill.toLowerCase()) ||
-          jobSkill.toLowerCase().includes(skill.toLowerCase()),
+        (j) =>
+          j.toLowerCase() === skill.toLowerCase() ||
+          skill.toLowerCase().includes(j.toLowerCase()) ||
+          j.toLowerCase().includes(skill.toLowerCase()),
       ),
     );
-
     const missing = jobSkills.filter(
-      (skill) =>
-        !matched.some((match) => match.toLowerCase() === skill.toLowerCase()),
+      (j) => !matched.some((m) => m.toLowerCase() === j.toLowerCase()),
     );
 
     const score =
-      jobSkills.length > 0
-        ? Math.round((matched.length / jobSkills.length) * 100)
-        : 50;
+      jobSkills.length > 0 ? Math.round((matched.length / jobSkills.length) * 100) : 50;
 
     let verdict: string;
     if (score >= 80) verdict = "Strong Match";
     else if (score >= 60) verdict = "Good Fit";
     else if (score >= 40) verdict = "Partial Match";
     else verdict = "Reach Position";
+
+    const hasAI = hasAiProviderConfigured();
+    const isPremium = await isUserPremium();
 
     let cvAdvice = "";
     let cvOptimization: {
@@ -164,61 +130,73 @@ export async function POST(request: NextRequest) {
       keywordsToAdd: string[];
       phrasesToUse: string[];
     } | null = null;
+    let aiNarrative: { strengths: string; gaps: string; recommendation: string } | null = null;
 
-    const hasAI = hasAiProviderConfigured();
-    const isPremium = await isUserPremium();
-
-    if (missing.length > 0 && hasAI && isPremium) {
+    if (hasAI && jobDescription) {
+      // AI narrative analysis for ALL users — brief summary of fit
       try {
-        const prompt = `You are an expert CV optimization specialist helping someone tailor their resume for a specific job. Return a JSON object with specific, actionable advice.
+        const narrativePrompt = `Analyze this candidate's fit for the job. Be concise and direct.
+
+JOB: ${jobTitle || "Position"}
+JOB DESCRIPTION (first 3000 chars): ${(jobDescription || "").substring(0, 3000)}
+
+CANDIDATE:
+- Skills: ${allUserSkills.join(", ") || "None listed"}
+- Experience level: ${user?.experience || "Not specified"}
+- Headline: ${user?.headline || "Not set"}
+- Matched skills: ${matched.join(", ") || "None"}
+- Missing skills: ${missing.join(", ") || "None"}
+
+Return ONLY this JSON (no markdown):
+{
+  "strengths": "1-2 sentence summary of candidate strengths for this role",
+  "gaps": "1-2 sentence summary of key gaps or what to address",
+  "recommendation": "direct 1-sentence recommendation on whether to apply"
+}`;
+
+        const { text } = await generateWithFallback(
+          narrativePrompt,
+          "You are a career advisor. Return only valid JSON, no markdown.",
+          { maxTokens: 300, temperature: 0.3 },
+        );
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          aiNarrative = JSON.parse(jsonMatch[0]);
+        }
+      } catch (err) {
+        console.error("AI narrative error:", err);
+      }
+
+      // AI CV optimization — premium only
+      if (isPremium && missing.length > 0) {
+        try {
+          const optimizePrompt = `You are an expert CV optimization specialist for the African job market.
 
 JOB TITLE: ${jobTitle || "This position"}
-JOB REQUIREMENTS: ${(jobDescription || "").substring(0, 2000)}
+JOB DESCRIPTION: ${(jobDescription || "").substring(0, 2000)}
 
-CANDIDATE PROFILE:
+CANDIDATE:
 - Headline: ${user?.headline || "Not set"}
-- Experience Level: ${user?.experience || "Not provided"}
-- Current Skills: ${allUserSkills.join(", ") || "Limited skills detected"}
-- Work History: ${
-          experiences
-            .map(
-              (experience) =>
-                `${experience.title} at ${experience.company || "Unknown Company"}${experience.description ? ": " + experience.description.substring(0, 100) : ""}`,
-            )
-            .join(" | ") || "Not provided"
-        }
-- Education: ${
-          education
-            .map(
-              (entry) =>
-                `${entry.degree || "Degree"}${entry.fieldOfStudy ? " in " + entry.fieldOfStudy : ""} from ${entry.institution || "Unknown Institution"}`,
-            )
-            .join(" | ") || "Not provided"
-        }
+- Experience: ${user?.experience || "Not provided"}
+- Skills: ${allUserSkills.join(", ") || "None"}
+- Work history: ${experiences.map((e: { title: string; company: string | null }) => `${e.title}${e.company ? " at " + e.company : ""}`).join(", ") || "Not provided"}
+- Education: ${education.map((e: { degree: string | null; institution: string }) => `${e.degree || "Degree"} from ${e.institution}`).join(", ") || "Not provided"}
+- Missing skills: ${missing.join(", ")}
 
-MISSING SKILLS: ${missing.join(", ")}
-
-Return a JSON object with this exact structure (no markdown, just the JSON):
+Return ONLY this JSON (no markdown):
 {
-  "content": ["Actionable content changes - what to add/rewrite in each section"],
-  "format": ["Formatting recommendations - section order, length, visual structure"],
-  "atsTips": ["ATS optimization tips - keywords, structure, common pitfalls to avoid"],
-  "keywordsToAdd": ["Specific keywords to add to skills section"],
-  "phrasesToUse": ["Power phrases to use in work experience descriptions"]
-}
+  "content": ["specific content change 1", "specific content change 2"],
+  "format": ["formatting tip 1", "formatting tip 2"],
+  "atsTips": ["ATS tip 1", "ATS tip 2"],
+  "keywordsToAdd": ["keyword1", "keyword2"],
+  "phrasesToUse": ["power phrase 1", "power phrase 2"]
+}`;
 
-Make suggestions specific to African job market. Prioritize the most impactful changes.`;
-
-        const systemPrompt =
-          "You are an expert CV optimization specialist. Return ONLY valid JSON with no additional text.";
-
-        const { text } = await generateWithFallback(prompt, systemPrompt, {
-          maxTokens: 600,
-          temperature: 0.4,
-        });
-
-        // Try to parse JSON from response
-        try {
+          const { text } = await generateWithFallback(
+            optimizePrompt,
+            "You are an expert CV optimizer. Return ONLY valid JSON.",
+            { maxTokens: 600, temperature: 0.4 },
+          );
           const jsonMatch = text.match(/\{[\s\S]*\}/);
           if (jsonMatch) {
             const parsed = JSON.parse(jsonMatch[0]);
@@ -229,44 +207,20 @@ Make suggestions specific to African job market. Prioritize the most impactful c
               keywordsToAdd: parsed.keywordsToAdd || [],
               phrasesToUse: parsed.phrasesToUse || [],
             };
-            cvAdvice = parsed.content?.slice(0, 2).join(" ") || "";
+            cvAdvice = parsed.content?.[0] || "";
           }
-        } catch {
-          // Fallback to plain text advice
-          cvAdvice = text.substring(0, 300);
+        } catch (err) {
+          console.error("AI CV optimization error:", err);
         }
-      } catch (error) {
-        console.error("AI CV optimization error:", error);
-        cvAdvice = "";
       }
     }
 
-    // Fallback advice if no AI
+    // Non-AI fallback advice
     if (!cvAdvice && missing.length > 0) {
-      cvAdvice = `Skills to add: ${missing.slice(0, 5).join(", ")}`;
-      cvOptimization = {
-        content: [
-          `Add these skills to your CV: ${missing.slice(0, 5).join(", ")}`,
-          "Quantify achievements where possible (e.g., 'Increased sales by 30%')",
-          "Mirror the exact wording from the job description",
-        ],
-        format: [
-          "Keep CV to 1-2 pages maximum",
-          "Place most relevant experience at the top",
-          "Use consistent formatting throughout",
-        ],
-        atsTips: [
-          "Include keywords from the job posting verbatim",
-          "Avoid tables, headers, and complex formatting",
-          "Save as Word or PDF format",
-        ],
-        keywordsToAdd: missing.slice(0, 5),
-        phrasesToUse: [
-          "Led the implementation of...",
-          "Achieved measurable results in...",
-          "Collaborated with cross-functional teams...",
-        ],
-      };
+      cvAdvice = `Skills to develop: ${missing.slice(0, 5).join(", ")}`;
+      if (!isPremium) {
+        cvOptimization = null;
+      }
     }
 
     return NextResponse.json({
@@ -276,9 +230,10 @@ Make suggestions specific to African job market. Prioritize the most impactful c
         missingSkills: missing,
         verdict,
         hasResume: !!user?.resumes[0],
-        hasProfile: !!user?.headline || !!user?.experience,
-        cvAdvice: cvAdvice || (missing.length > 0 ? "Upgrade to Premium for AI-powered CV optimization" : ""),
+        hasProfile: !!(user?.headline || user?.experience),
+        cvAdvice,
         cvOptimization: isPremium ? cvOptimization : null,
+        aiNarrative,
         aiEnabled: hasAI,
         isPremium,
         premiumRequired: !isPremium && missing.length > 0,
@@ -286,9 +241,6 @@ Make suggestions specific to African job market. Prioritize the most impactful c
     });
   } catch (error) {
     console.error("Error analyzing job fit:", error);
-    return NextResponse.json(
-      { error: "Failed to analyze job fit" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to analyze job fit" }, { status: 500 });
   }
 }

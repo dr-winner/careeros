@@ -49,6 +49,11 @@ export default function JobDetailPage() {
     keywordsToAdd: string[];
     phrasesToUse: string[];
   } | null>(null);
+  const [aiNarrative, setAiNarrative] = useState<{
+    strengths: string;
+    gaps: string;
+    recommendation: string;
+  } | null>(null);
 
   const jobId = useMemo(() => {
     if (!params?.id) return "";
@@ -93,6 +98,8 @@ export default function JobDetailPage() {
           setHasResume(data.analysis.hasResume);
           setAiEnabled(data.analysis.aiEnabled);
           setCvOptimization(data.analysis.cvOptimization || null);
+          setAiNarrative(data.analysis.aiNarrative || null);
+          if (data.analysis.isPremium !== undefined) setIsPremium(data.analysis.isPremium);
         }
       } catch (error) {
         console.error("Error analyzing fit:", error);
@@ -496,6 +503,20 @@ export default function JobDetailPage() {
               </svg>
               Re-analyze
             </button>
+          </div>
+        </div>
+      )}
+
+      {aiNarrative && (
+        <div className="agent-card p-5 animate-fade-up border-cyan-500/20">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-xs font-medium text-cyan-400">AI Analysis</span>
+            <span className="px-2 py-0.5 rounded text-xs bg-cyan-500/10 text-cyan-500 border border-cyan-500/20">Agent</span>
+          </div>
+          <div className="space-y-2 mono text-xs text-zinc-300">
+            <p><span className="text-green-400">Strengths: </span>{aiNarrative.strengths}</p>
+            <p><span className="text-amber-400">Gaps: </span>{aiNarrative.gaps}</p>
+            <p><span className="text-purple-400">Verdict: </span>{aiNarrative.recommendation}</p>
           </div>
         </div>
       )}
