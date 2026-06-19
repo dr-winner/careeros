@@ -87,3 +87,7 @@ export function hasUpstashRedisConfigured(): boolean {
   }
   return true;
 }
+
+export function hasVercelBlobConfigured(): boolean {
+  return Boolean(readEnv("BLOB_READ_WRITE_TOKEN"));
+}

@@ -8,7 +8,7 @@ import { z } from "zod";
 import { uploadToStorage } from "@/lib/storage";
 import { checkRateLimit, getRateLimitHeaders, RATE_LIMITS } from "@/lib/ratelimit";
 import { generateWithFallback } from "@/lib/ai";
-import { hasAiProviderConfigured } from "@/lib/env";
+import { hasAiProviderConfigured, hasVercelBlobConfigured } from "@/lib/env";
 
 const ALLOWED_TYPES = new Set([
   "application/msword",
@@ -293,21 +293,16 @@ export async function POST(request: NextRequest) {
     let fileUrl: string;
     const isVercel = !!process.env.VERCEL;
 
-    const uploadResult = await uploadToStorage(
-      "resumes",
-      filename,
-      buffer,
-      file.type,
-    );
+    const uploadResult = await uploadToStorage("resumes", filename, buffer, file.type);
 
     if (uploadResult) {
       fileUrl = uploadResult.publicUrl;
     } else if (isVercel) {
-      // Vercel filesystem is read-only — Supabase is required in production
-      return NextResponse.json(
-        { error: "File storage is temporarily unavailable. Please try again in a few minutes." },
-        { status: 503 },
-      );
+      // On Vercel the filesystem is read-only — cloud storage is required
+      const hint = hasVercelBlobConfigured()
+        ? "Storage upload failed. Please try again in a few minutes."
+        : "File storage is not configured. Please contact support.";
+      return NextResponse.json({ error: hint }, { status: 503 });
     } else {
       // Local dev fallback: write to uploads/ directory
       const filepath = path.join(uploadDir, filename);
