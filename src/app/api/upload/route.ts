@@ -291,6 +291,8 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(bytes);
 
     let fileUrl: string;
+    const isVercel = !!process.env.VERCEL;
+
     const uploadResult = await uploadToStorage(
       "resumes",
       filename,
@@ -300,7 +302,14 @@ export async function POST(request: NextRequest) {
 
     if (uploadResult) {
       fileUrl = uploadResult.publicUrl;
+    } else if (isVercel) {
+      // Vercel filesystem is read-only — Supabase is required in production
+      return NextResponse.json(
+        { error: "File storage is temporarily unavailable. Please try again in a few minutes." },
+        { status: 503 },
+      );
     } else {
+      // Local dev fallback: write to uploads/ directory
       const filepath = path.join(uploadDir, filename);
       if (!existsSync(uploadDir)) {
         await mkdir(uploadDir, { recursive: true });
