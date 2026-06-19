@@ -7,6 +7,20 @@ import Link from "next/link";
 import { toast } from "sonner";
 import PaywallModal from "@/components/paywall-modal";
 
+function decodeHtmlEntities(html: string): string {
+  return html
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, " ");
+}
+
+function stripHtml(html: string): string {
+  return decodeHtmlEntities(html).replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+}
+
 interface Job {
   id: string;
   title: string;
@@ -566,9 +580,10 @@ export default function JobDetailPage() {
 
       <div className="agent-card p-6 animate-fade-up">
         <div className="text-sm text-zinc-500 mb-3 font-medium">Job Description</div>
-        <div className="text-sm text-zinc-300 whitespace-pre-wrap leading-relaxed">
-          {job.description}
-        </div>
+        <div
+          className="text-sm text-zinc-300 leading-relaxed prose prose-invert prose-sm max-w-none prose-p:my-2 prose-headings:text-zinc-200 prose-strong:text-zinc-200 prose-ul:my-2 prose-li:my-0.5"
+          dangerouslySetInnerHTML={{ __html: decodeHtmlEntities(job.description) }}
+        />
       </div>
 
       <div className="agent-card p-6 animate-fade-up">
