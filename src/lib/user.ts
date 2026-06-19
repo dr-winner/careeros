@@ -41,13 +41,29 @@ export async function syncClerkUserToDb(clerkUser: User) {
         },
       });
     } else {
-      user = await prisma.user.create({
-        data: {
-          clerkId: clerkUser.id,
-          email,
-          fullName,
-        },
-      });
+      try {
+        user = await prisma.user.create({
+          data: {
+            clerkId: clerkUser.id,
+            email,
+            fullName,
+          },
+        });
+      } catch (createError: unknown) {
+        // Unique constraint race: another concurrent request already created the user
+        if (
+          typeof createError === "object" &&
+          createError !== null &&
+          "code" in createError &&
+          (createError as { code: string }).code === "P2002"
+        ) {
+          const raceUser =
+            (await prisma.user.findUnique({ where: { clerkId: clerkUser.id } })) ||
+            (await prisma.user.findUnique({ where: { email } }));
+          if (raceUser) return raceUser;
+        }
+        throw createError;
+      }
     }
     console.log(`[syncClerkUserToDb] Sync success: ${user.id}`);
 
