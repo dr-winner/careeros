@@ -140,6 +140,7 @@ export default function GuidedOnboarding() {
         });
       }
 
+      await fetch("/api/user/onboarding", { method: "POST" });
       localStorage.setItem("onboardingComplete", "true");
       toast.success("You're all set!");
       router.push("/dashboard");
