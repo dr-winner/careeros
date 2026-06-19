@@ -19,6 +19,13 @@ import {
 } from "@/lib/jobs-utils";
 import { checkRateLimit, getRateLimitHeaders, RATE_LIMITS } from "@/lib/ratelimit";
 
+function cleanDescription(html: string): string {
+  return html
+    .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, " ")
+    .replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+}
+
 interface Job {
   id: string;
   title: string;
@@ -132,7 +139,7 @@ function formatJob(
       : new Date().toISOString());
 
   const description =
-    raw.description?.replace(/<[^>]*>/g, "") ||
+    (raw.description ? cleanDescription(raw.description) : "") ||
     raw.descriptionBreakdown?.oneSentenceJobSummary ||
     "";
 
@@ -592,7 +599,7 @@ async function fetchFromGreenhouse(savedJobIds: string[]): Promise<Job[]> {
           workMode: location.toLowerCase().includes("remote") ? "Remote" : "On-site",
           seniorityLevel: detectSeniority(job.title),
           employmentType: "Full-time",
-          description: (job.content || "").replace(/<[^>]*>/g, "").substring(0, 1000),
+          description: cleanDescription(job.content || "").substring(0, 1000),
           requirements: job.departments?.[0]?.name || "See job posting for details",
           postedAt: job.updated_at || new Date().toISOString(),
           isSaved: savedJobIds.includes(id),
@@ -651,7 +658,7 @@ async function fetchFromTheMuse(
         workMode: location.toLowerCase().includes("remote") ? "Remote" : "On-site",
         seniorityLevel: job.levels?.[0]?.name ?? detectSeniority(job.name),
         employmentType: "Full-time",
-        description: (job.contents ?? "").replace(/<[^>]*>/g, "").substring(0, 1000),
+        description: cleanDescription(job.contents ?? "").substring(0, 1000),
         requirements: job.categories?.map((c) => c.name).join(", ") ?? "See job posting",
         postedAt: job.publication_date ?? new Date().toISOString(),
         isSaved: savedJobIds.includes(id),

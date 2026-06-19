@@ -580,10 +580,9 @@ export default function JobDetailPage() {
 
       <div className="agent-card p-6 animate-fade-up">
         <div className="text-sm text-zinc-500 mb-3 font-medium">Job Description</div>
-        <div
-          className="text-sm text-zinc-300 leading-relaxed prose prose-invert prose-sm max-w-none prose-p:my-2 prose-headings:text-zinc-200 prose-strong:text-zinc-200 prose-ul:my-2 prose-li:my-0.5"
-          dangerouslySetInnerHTML={{ __html: decodeHtmlEntities(job.description) }}
-        />
+        <div className="text-sm text-zinc-300 whitespace-pre-wrap leading-relaxed">
+          {stripHtml(job.description)}
+        </div>
       </div>
 
       <div className="agent-card p-6 animate-fade-up">
