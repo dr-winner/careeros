@@ -7,6 +7,8 @@ import { getDbUser } from "@/lib/auth";
 import { z } from "zod";
 import { uploadToStorage } from "@/lib/storage";
 import { checkRateLimit, getRateLimitHeaders, RATE_LIMITS } from "@/lib/ratelimit";
+import { generateWithFallback } from "@/lib/ai";
+import { hasAiProviderConfigured } from "@/lib/env";
 
 const ALLOWED_TYPES = new Set([
   "application/msword",
@@ -159,6 +161,48 @@ function parseCVText(text: string): ParsedResumeData {
     email: emailMatch ? emailMatch[0].toLowerCase() : null,
     phone: phoneMatch ? phoneMatch[0].replace(/[^\d+]/g, "") : null,
   };
+}
+
+async function extractSkillsWithAI(
+  resumeId: string,
+  text: string,
+  existingSkills: string[],
+): Promise<void> {
+  try {
+    const { text: aiText } = await generateWithFallback(
+      `Extract ALL skills from this CV. Include technical skills, soft skills, tools, frameworks, and domain knowledge.
+
+CV TEXT:
+${text.substring(0, 3500)}
+
+Return ONLY a JSON array of skill names (strings), nothing else. Example: ["JavaScript", "Team Leadership", "SQL"]`,
+      "You are a skill extraction expert. Return ONLY a valid JSON array of strings.",
+      { maxTokens: 400, temperature: 0.2 },
+    );
+
+    const match = aiText.match(/\[[\s\S]*\]/);
+    if (!match) return;
+
+    const skills = JSON.parse(match[0]) as string[];
+    const existingLower = new Set(existingSkills.map((s) => s.toLowerCase()));
+    const newSkills = skills
+      .filter((s) => typeof s === "string" && s.trim().length > 1 && s.trim().length < 60)
+      .filter((s) => !existingLower.has(s.trim().toLowerCase()))
+      .slice(0, 30);
+
+    if (newSkills.length > 0) {
+      await prisma.resumeSkill.createMany({
+        data: newSkills.map((skill) => ({
+          resumeId,
+          skillName: skill.trim(),
+          source: "ai",
+        })),
+        skipDuplicates: true,
+      });
+    }
+  } catch (err) {
+    console.error("AI skill extraction failed (non-fatal):", err);
+  }
 }
 
 async function extractTextFromDOCX(buffer: Buffer): Promise<string> {
@@ -328,6 +372,11 @@ export async function POST(request: NextRequest) {
             source: "parsed",
           })),
         });
+      }
+
+      if (parsedText && hasAiProviderConfigured()) {
+        // Fire-and-forget: AI skill extraction runs after response is sent
+        extractSkillsWithAI(resume.id, parsedText, parsedData.skills).catch(console.error);
       }
 
       const profileUpdates: {
