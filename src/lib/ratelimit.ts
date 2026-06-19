@@ -75,13 +75,18 @@ export async function checkRateLimit(
   }
 
   const key = ip || identifier;
-  const result = await ratelimit.limit(key);
-
-  return {
-    success: result.success,
-    remaining: result.remaining,
-    reset: result.reset,
-  };
+  try {
+    const result = await ratelimit.limit(key);
+    return {
+      success: result.success,
+      remaining: result.remaining,
+      reset: result.reset,
+    };
+  } catch (err) {
+    // Fail open: if Redis is unavailable, allow the request rather than blocking it
+    console.error("Rate limit check failed (allowing request):", err);
+    return { success: true, remaining: 999, reset: 0 };
+  }
 }
 
 export function getRateLimitHeaders(result: { success: boolean; remaining: number; reset: number }): Record<string, string> {
