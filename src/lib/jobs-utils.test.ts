@@ -71,13 +71,31 @@ describe("jobs-utils", () => {
 
   describe("getCountry", () => {
     it("detects African locations", () => {
-      expect(getCountry("rise", "Accra, Ghana")).toBe("AFRICA");
-      expect(getCountry("rise", "Lagos, Nigeria")).toBe("AFRICA");
+      expect(getCountry("rise", "Accra, Ghana")).toBe("GH");
+      expect(getCountry("rise", "Lagos, Nigeria")).toBe("NG");
+      expect(getCountry("rise", "Cape Town, South Africa")).toBe("ZA");
+      expect(getCountry("rise", "Nairobi, Kenya")).toBe("KE");
+    });
+
+    it("detects North American locations", () => {
+      expect(getCountry("adzuna", "Toronto, Canada")).toBe("CA");
+      expect(getCountry("adzuna", "Vancouver")).toBe("CA");
+      expect(getCountry("adzuna", "New York, United States")).toBe("US");
+      expect(getCountry("adzuna", "San Francisco, CA")).toBe("US");
+    });
+
+    it("detects European and APAC locations", () => {
+      expect(getCountry("adzuna", "London, United Kingdom")).toBe("GB");
+      expect(getCountry("adzuna", "Sydney, Australia")).toBe("AU");
+      expect(getCountry("adzuna", "Bangalore, India")).toBe("IN");
+      expect(getCountry("adzuna", "Berlin, Germany")).toBe("DE");
+      expect(getCountry("arbeitnow", "Amsterdam")).toBe("EU");
     });
 
     it("detects region fallbacks from source", () => {
       expect(getCountry("remotive", "Remote")).toBe("GLOBAL");
-      expect(getCountry("arbeitnow", "Berlin")).toBe("EU");
+      expect(getCountry("remoteok", "Worldwide")).toBe("GLOBAL");
+      expect(getCountry("themuse", "New York")).toBe("US");
     });
 
     it("falls back to ZA when no rule matches", () => {

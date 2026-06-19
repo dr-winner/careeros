@@ -92,43 +92,32 @@ export function parseSalary(salary?: string): { min?: number; max?: number } {
 export function getCountry(source: string, location: unknown): string {
   const loc = String(location || "").toLowerCase();
 
-  if (
-    loc.includes("africa") ||
-    loc.includes("nigeria") ||
-    loc.includes("ghana") ||
-    loc.includes("kenya") ||
-    loc.includes("south africa")
-  ) {
-    return "AFRICA";
-  }
+  // Africa
+  if (loc.includes("nigeria") || loc.includes("lagos") || loc.includes("abuja")) return "NG";
+  if (loc.includes("ghana") || loc.includes("accra")) return "GH";
+  if (loc.includes("kenya") || loc.includes("nairobi")) return "KE";
+  if (loc.includes("south africa") || loc.includes("johannesburg") || loc.includes("cape town")) return "ZA";
+  if (loc.includes("africa")) return "ZA";
 
-  if (
-    loc.includes("europe") ||
-    loc.includes("germany") ||
-    loc.includes("uk") ||
-    loc.includes("france")
-  ) {
-    return "EU";
-  }
+  // North America
+  if (loc.includes("canada") || loc.includes("toronto") || loc.includes("vancouver") || loc.includes("montreal") || loc.includes("ottawa") || loc.includes("calgary")) return "CA";
+  if (loc.includes("united states") || loc.includes("usa") || loc.includes("new york") || loc.includes("san francisco") || loc.includes("austin") || loc.includes("seattle") || loc.includes(", tx") || loc.includes(", ca") || loc.includes(", ny")) return "US";
 
-  if (
-    loc.includes("usa") ||
-    loc.includes("united states") ||
-    loc.includes("america")
-  ) {
-    return "USA";
-  }
+  // Europe
+  if (loc.includes("united kingdom") || loc.includes("london") || loc.includes("manchester") || loc.includes("birmingham") || loc.includes(", uk")) return "GB";
+  if (loc.includes("germany") || loc.includes("berlin") || loc.includes("munich")) return "DE";
+  if (loc.includes("france") || loc.includes("paris")) return "FR";
+  if (loc.includes("europe") || loc.includes("netherlands") || loc.includes("amsterdam")) return "EU";
 
-  if (
-    loc.includes("asia") ||
-    loc.includes("india") ||
-    loc.includes("china")
-  ) {
-    return "ASIA";
-  }
+  // Asia-Pacific
+  if (loc.includes("australia") || loc.includes("sydney") || loc.includes("melbourne")) return "AU";
+  if (loc.includes("india") || loc.includes("bangalore") || loc.includes("mumbai") || loc.includes("delhi")) return "IN";
+  if (loc.includes("singapore")) return "SG";
 
-  if (source === "remotive") return "GLOBAL";
+  // Source-based fallbacks
+  if (source === "remotive" || source === "remoteok") return "GLOBAL";
   if (source === "arbeitnow") return "EU";
+  if (source === "themuse") return "US";
 
   return "ZA";
 }

@@ -71,7 +71,7 @@ type SavedJobRecord = Awaited<
   ReturnType<typeof prisma.savedJob.findMany>
 >[number];
 
-type JobSourceName = "adzuna" | "remotive" | "arbeitnow" | "rise" | "jooble";
+type JobSourceName = "adzuna" | "remotive" | "arbeitnow" | "rise" | "jooble" | "remoteok" | "themuse";
 
 type CachedJobsPayload = {
   jobs: Job[];
@@ -208,32 +208,35 @@ async function fetchJsonWithTimeout(
   }
 }
 
+// Adzuna supported country codes + regions for broader global coverage
+const ADZUNA_COUNTRIES = [
+  { code: "za", label: "South Africa" },
+  { code: "ca", label: "Canada" },
+  { code: "gb", label: "United Kingdom" },
+  { code: "us", label: "United States" },
+  { code: "au", label: "Australia" },
+  { code: "in", label: "India" },
+  { code: "ng", label: "Nigeria" }, // may 404 — caught per-country
+] as const;
+
 async function fetchFromAdzuna(
   query: string,
   savedJobIds: string[],
 ): Promise<Job[]> {
   const appId = process.env.ADZUNA_APP_ID;
   const appKey = process.env.ADZUNA_APP_KEY;
-
   if (!appId || !appKey) return [];
 
-  try {
-    const url = `https://api.adzuna.com/v1/api/jobs/za/search/1?app_id=${encodeURIComponent(appId)}&app_key=${encodeURIComponent(appKey)}&what=${encodeURIComponent(query)}&where=South+Africa&results_per_page=20`;
-    const data = (await fetchJsonWithTimeout(url)) as {
-      results?: RawJob[];
-    };
+  const results = await Promise.allSettled(
+    ADZUNA_COUNTRIES.map(async ({ code }) => {
+      const url = `https://api.adzuna.com/v1/api/jobs/${code}/search/1?app_id=${encodeURIComponent(appId)}&app_key=${encodeURIComponent(appKey)}&what=${encodeURIComponent(query)}&results_per_page=15`;
+      const data = (await fetchJsonWithTimeout(url)) as { results?: RawJob[] };
+      if (!Array.isArray(data.results)) return [];
+      return data.results.map((job) => formatJob(job, job.id, "adzuna", savedJobIds));
+    }),
+  );
 
-    if (!Array.isArray(data.results)) {
-      return [];
-    }
-
-    return data.results.map((job) =>
-      formatJob(job, job.id, "adzuna", savedJobIds),
-    );
-  } catch (error) {
-    console.error("Adzuna error:", error);
-    return [];
-  }
+  return results.flatMap((r) => (r.status === "fulfilled" ? r.value : []));
 }
 
 async function fetchFromRemotive(
@@ -348,14 +351,23 @@ async function fetchFromJooble(
   if (!apiKey) return [];
 
   const jobs: Job[] = [];
-  const africanCountries = [
-    { name: "Ghana", code: "GH" },
+  const joobleCountries = [
+    // Africa
     { name: "Nigeria", code: "NG" },
+    { name: "Ghana", code: "GH" },
     { name: "Kenya", code: "KE" },
     { name: "South Africa", code: "ZA" },
+    // North America
+    { name: "Canada", code: "CA" },
+    { name: "United States", code: "US" },
+    // Europe / Oceania
+    { name: "United Kingdom", code: "GB" },
+    { name: "Australia", code: "AU" },
+    // Asia
+    { name: "India", code: "IN" },
   ] as const;
 
-  for (const country of africanCountries) {
+  for (const country of joobleCountries) {
     try {
       const data = (await fetchJsonWithTimeout(
         `https://jooble.org/api/${encodeURIComponent(apiKey)}`,
@@ -417,6 +429,125 @@ async function fetchFromJooble(
   return jobs;
 }
 
+// Remote OK — completely free, no API key, global remote jobs
+// https://remoteok.com/api
+async function fetchFromRemoteOK(
+  query: string,
+  savedJobIds: string[],
+): Promise<Job[]> {
+  try {
+    const tag = query.trim().split(/\s+/)[0].toLowerCase();
+    const url = tag
+      ? `https://remoteok.com/api?tag=${encodeURIComponent(tag)}`
+      : "https://remoteok.com/api";
+
+    const data = (await fetchJsonWithTimeout(url, {
+      headers: { "User-Agent": "CareerOS/1.0 (careeros.live)" },
+    })) as unknown[];
+
+    if (!Array.isArray(data)) return [];
+
+    // First element is a legal notice object — always skip it
+    const rawJobs = data.slice(1).filter(
+      (item): item is Record<string, unknown> =>
+        typeof item === "object" && item !== null && "id" in item,
+    );
+
+    return rawJobs.slice(0, 40).map((job) => {
+      const id = `remoteok-${job.id}`;
+      const title = String(job.position ?? job.title ?? "Position");
+      return {
+        id,
+        title,
+        companyName: String(job.company ?? "Unknown Company"),
+        location: String(job.location ?? "Worldwide"),
+        country: "GLOBAL",
+        workMode: "Remote",
+        seniorityLevel: detectSeniority(title),
+        employmentType: "Full-time",
+        description: String(job.description ?? "")
+          .replace(/<[^>]*>/g, "")
+          .substring(0, 1000),
+        requirements: Array.isArray(job.tags)
+          ? (job.tags as string[]).join(", ")
+          : "See job posting for details",
+        postedAt: job.date
+          ? String(job.date)
+          : new Date().toISOString(),
+        salaryMin: typeof job.salary_min === "number" ? job.salary_min : undefined,
+        salaryMax: typeof job.salary_max === "number" ? job.salary_max : undefined,
+        isSaved: savedJobIds.includes(id),
+        applicationUrl: String(
+          job.url ?? `https://remoteok.com/jobs/${job.id}`,
+        ),
+        source: "remoteok" as JobSourceName,
+      };
+    });
+  } catch (error) {
+    console.error("RemoteOK error:", error);
+    return [];
+  }
+}
+
+// The Muse — free public API, US-focused professional roles
+// https://www.themuse.com/developers/api/v2
+async function fetchFromTheMuse(
+  query: string,
+  savedJobIds: string[],
+): Promise<Job[]> {
+  try {
+    const url = `https://www.themuse.com/api/public/jobs?page=0&descending=true`;
+    const data = (await fetchJsonWithTimeout(url)) as {
+      results?: Array<{
+        id: number;
+        name: string;
+        company: { name: string };
+        locations: Array<{ name: string }>;
+        levels: Array<{ name: string }>;
+        refs: { landing_page: string };
+        publication_date: string;
+        contents?: string;
+        categories: Array<{ name: string }>;
+      }>;
+    };
+
+    if (!Array.isArray(data.results)) return [];
+
+    const queryLower = query.toLowerCase();
+    const filtered = queryLower
+      ? data.results.filter(
+          (j) =>
+            j.name.toLowerCase().includes(queryLower) ||
+            j.categories?.some((c) => c.name.toLowerCase().includes(queryLower)),
+        )
+      : data.results;
+
+    return filtered.slice(0, 30).map((job) => {
+      const id = `themuse-${job.id}`;
+      const location = job.locations?.[0]?.name ?? "United States";
+      return {
+        id,
+        title: job.name,
+        companyName: job.company?.name ?? "Unknown Company",
+        location,
+        country: "US",
+        workMode: location.toLowerCase().includes("remote") ? "Remote" : "On-site",
+        seniorityLevel: job.levels?.[0]?.name ?? detectSeniority(job.name),
+        employmentType: "Full-time",
+        description: (job.contents ?? "").replace(/<[^>]*>/g, "").substring(0, 1000),
+        requirements: job.categories?.map((c) => c.name).join(", ") ?? "See job posting",
+        postedAt: job.publication_date ?? new Date().toISOString(),
+        isSaved: savedJobIds.includes(id),
+        applicationUrl: job.refs?.landing_page ?? "https://www.themuse.com/jobs",
+        source: "themuse" as JobSourceName,
+      };
+    });
+  } catch (error) {
+    console.error("TheMuse error:", error);
+    return [];
+  }
+}
+
 function buildSavedJobMap(
   savedJobs: SavedJobRecord[],
 ): Record<string, SavedJobRecord> {
@@ -453,26 +584,13 @@ async function fetchSearchResults(
     source: JobSourceName;
     run: () => Promise<Job[]>;
   }> = [
-    {
-      source: "adzuna",
-      run: () => fetchFromAdzuna(query, savedJobIds),
-    },
-    {
-      source: "remotive",
-      run: () => fetchFromRemotive(query, savedJobIds),
-    },
-    {
-      source: "arbeitnow",
-      run: () => fetchFromArbeitnow(savedJobIds),
-    },
-    {
-      source: "rise",
-      run: () => fetchFromRise(query, savedJobIds),
-    },
-    {
-      source: "jooble",
-      run: () => fetchFromJooble(query, savedJobIds),
-    },
+    { source: "adzuna",   run: () => fetchFromAdzuna(query, savedJobIds) },
+    { source: "remotive", run: () => fetchFromRemotive(query, savedJobIds) },
+    { source: "arbeitnow",run: () => fetchFromArbeitnow(savedJobIds) },
+    { source: "rise",     run: () => fetchFromRise(query, savedJobIds) },
+    { source: "jooble",   run: () => fetchFromJooble(query, savedJobIds) },
+    { source: "remoteok", run: () => fetchFromRemoteOK(query, savedJobIds) },
+    { source: "themuse",  run: () => fetchFromTheMuse(query, savedJobIds) },
   ];
 
   const results = await Promise.allSettled(
@@ -489,6 +607,8 @@ async function fetchSearchResults(
     arbeitnow: 0,
     rise: 0,
     jooble: 0,
+    remoteok: 0,
+    themuse: 0,
   };
   const warnings: string[] = [];
   let partialFailure = false;
