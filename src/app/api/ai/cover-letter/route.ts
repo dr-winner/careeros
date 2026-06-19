@@ -64,12 +64,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (
-      !process.env.OPENAI_API_KEY &&
-      !process.env.DEEPSEEK_API_KEY &&
-      !process.env.GROQ_API_KEY &&
-      !process.env.GEMINI_API_KEY
-    ) {
+    if (!process.env.GROQ_API_KEY) {
       return NextResponse.json({ error: "AI not configured" }, { status: 500 });
     }
 
