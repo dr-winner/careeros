@@ -175,15 +175,21 @@ async function extractSkillsWithAI(
 CV TEXT:
 ${text.substring(0, 3500)}
 
-Return ONLY a JSON array of skill names (strings), nothing else. Example: ["JavaScript", "Team Leadership", "SQL"]`,
-      "You are a skill extraction expert. Return ONLY a valid JSON array of strings.",
-      { maxTokens: 400, temperature: 0.2 },
+Return ONLY a JSON object with a "skills" array: {"skills": ["JavaScript", "Team Leadership", "SQL"]}`,
+      "You are a skill extraction expert. Return ONLY valid JSON with a skills array.",
+      { maxTokens: 400, temperature: 0.2, json: true },
     );
 
-    const match = aiText.match(/\[[\s\S]*\]/);
-    if (!match) return;
-
-    const skills = JSON.parse(match[0]) as string[];
+    // GPT-4o-mini returns JSON object; Groq may return a raw array — handle both
+    let skills: string[];
+    try {
+      const parsed = JSON.parse(aiText);
+      skills = Array.isArray(parsed) ? parsed : (parsed.skills as string[]) || [];
+    } catch {
+      const match = aiText.match(/\[[\s\S]*\]/);
+      if (!match) return;
+      skills = JSON.parse(match[0]) as string[];
+    }
     const existingLower = new Set(existingSkills.map((s) => s.toLowerCase()));
     const newSkills = skills
       .filter((s) => typeof s === "string" && s.trim().length > 1 && s.trim().length < 60)

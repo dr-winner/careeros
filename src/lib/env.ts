@@ -48,7 +48,11 @@ export function getResendAudienceId(): string | undefined {
 }
 
 export function hasAiProviderConfigured(): boolean {
-  return Boolean(readEnv("GROQ_API_KEY"));
+  return Boolean(
+    readEnv("OPENAI_API_KEY") ||
+    readEnv("ANTHROPIC_API_KEY") ||
+    readEnv("GROQ_API_KEY"),
+  );
 }
 
 export function getSupabaseConfig() {
