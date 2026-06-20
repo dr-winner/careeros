@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
-import { generateWithFallback } from "@/lib/ai";
+import { generatePremium } from "@/lib/ai";
 import { hasAiProviderConfigured } from "@/lib/env";
 
 interface CVData {
@@ -126,10 +126,10 @@ SKILLS
 [Technical skills], [Tools], [Soft skills]
 ---`;
 
-    const { text: regeneratedCV } = await generateWithFallback(
+    const { text: regeneratedCV } = await generatePremium(
       prompt,
-      "You are an expert CV writer. Create professional, ATS-friendly CVs. Return only the CV content.",
-      { maxTokens: 2048, temperature: 0.7 },
+      "You are an expert CV writer specialising in the African job market. Write professional, ATS-friendly CVs that are honest, specific, and compelling. Return only the CV content — no preamble, no commentary.",
+      { maxTokens: 2048, temperature: 0.4 },
     );
 
     return NextResponse.json({ success: true, regeneratedCV, extractedData: cvData });

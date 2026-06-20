@@ -185,8 +185,8 @@ Return ONLY this JSON (no markdown, no explanation):
 
   const { text: aiText } = await generateWithFallback(
     prompt,
-    "You are an expert CV reviewer for African job markets. Return ONLY valid JSON.",
-    { maxTokens: 700, temperature: 0.3 },
+    "You are an expert CV reviewer for African job markets. Be honest and specific — do not inflate scores. Return ONLY valid JSON.",
+    { maxTokens: 700, temperature: 0.3, json: true },
   );
 
   const jsonMatch = aiText.match(/\{[\s\S]*\}/);

@@ -159,7 +159,7 @@ Return ONLY this JSON (no markdown). Use "you"/"your" throughout, never "the can
         const { text } = await generateWithFallback(
           narrativePrompt,
           "You are a career advisor speaking directly to a job seeker. Always use second person (you/your). Return only valid JSON, no markdown.",
-          { maxTokens: 300, temperature: 0.3 },
+          { maxTokens: 300, temperature: 0.3, json: true },
         );
         const jsonMatch = text.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
@@ -196,8 +196,8 @@ Return ONLY this JSON (no markdown):
 
           const { text } = await generateWithFallback(
             optimizePrompt,
-            "You are an expert CV optimizer. Return ONLY valid JSON.",
-            { maxTokens: 600, temperature: 0.4 },
+            "You are an expert CV optimizer for the African job market. Speak directly to the user using you/your. Return ONLY valid JSON.",
+            { maxTokens: 600, temperature: 0.4, json: true },
           );
           const jsonMatch = text.match(/\{[\s\S]*\}/);
           if (jsonMatch) {
