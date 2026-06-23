@@ -92,7 +92,7 @@ describe("env helpers", () => {
     });
 
     it("falls back to the default production URL", () => {
-      expect(getAppUrl()).toBe("https://careeros.app");
+      expect(getAppUrl()).toBe("https://careeros.live");
     });
   });
 

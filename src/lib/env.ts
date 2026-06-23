@@ -24,7 +24,7 @@ export function getOptionalEnv(name: string): string | undefined {
 }
 
 export function getAppUrl(): string {
-  return readEnv("APP_URL") || readEnv("NEXT_PUBLIC_APP_URL") || "https://careeros.app";
+  return readEnv("APP_URL") || readEnv("NEXT_PUBLIC_APP_URL") || "https://careeros.live";
 }
 
 export function getEmailFrom(): string {
