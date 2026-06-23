@@ -303,9 +303,20 @@ body {
 }
 
 .agent-button-primary {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-weight: 500;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  cursor: pointer;
   background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
   color: white;
-  border-color: transparent;
+  border: 1px solid transparent;
   box-shadow: 0 4px 20px rgba(139, 92, 246, 0.3);
 }
 
@@ -316,7 +327,24 @@ body {
   transform: translateY(-1px);
 }
 
+.agent-button-primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 .agent-button-secondary {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-weight: 500;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  cursor: pointer;
   background: rgba(255, 255, 255, 0.05);
   color: #fafafa;
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -325,6 +353,12 @@ body {
 .agent-button-secondary:hover {
   background: rgba(255, 255, 255, 0.1);
   border-color: rgba(255, 255, 255, 0.2);
+}
+
+.agent-button-secondary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 
 /* Agent card */
