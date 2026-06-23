@@ -94,6 +94,7 @@ export const saveJobSchema = z.object({
   location: nullableTrimmedString,
   country: nullableTrimmedString,
   workMode: nullableTrimmedString,
+  description: nullableTrimmedString,
   applicationUrl: z
     .union([z.url(), z.literal(""), z.null()])
     .optional()

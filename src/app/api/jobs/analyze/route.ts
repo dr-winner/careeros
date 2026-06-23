@@ -72,10 +72,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { jobId, jobDescription, jobTitle } = await request.json();
+    const { jobId, jobDescription: clientDescription, jobTitle } = await request.json();
     if (!jobId) {
       return NextResponse.json({ error: "Job ID required" }, { status: 400 });
     }
+
+    // Prefer the full description stored in DB over the truncated client-sent one
+    const storedJob = await prisma.job.findUnique({
+      where: { id: jobId },
+      select: { description: true },
+    });
+    const jobDescription = storedJob?.description || clientDescription || "";
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -110,14 +117,18 @@ export async function POST(request: NextRequest) {
       (j) => !matched.some((m) => m.toLowerCase() === j.toLowerCase()),
     );
 
-    const score =
-      jobSkills.length > 0 ? Math.round((matched.length / jobSkills.length) * 100) : 50;
+    let score =
+      jobSkills.length > 0
+        ? Math.min(100, Math.round((matched.length / jobSkills.length) * 100))
+        : 50;
 
-    let verdict: string;
-    if (score >= 80) verdict = "Strong Match";
-    else if (score >= 60) verdict = "Good Fit";
-    else if (score >= 40) verdict = "Partial Match";
-    else verdict = "Reach Position";
+    const getVerdict = (s: number) => {
+      if (s >= 80) return "Strong Match";
+      if (s >= 60) return "Good Fit";
+      if (s >= 40) return "Partial Match";
+      return "Reach Position";
+    };
+    let verdict = getVerdict(score);
 
     const hasAI = hasAiProviderConfigured();
     const isPremium = await isUserPremium();
@@ -135,7 +146,7 @@ export async function POST(request: NextRequest) {
     const profileIncomplete = allUserSkills.length === 0 && !user?.headline && !user?.experience;
 
     if (hasAI && jobDescription && !profileIncomplete) {
-      // AI narrative analysis for ALL users — brief summary of fit
+      // AI narrative analysis for ALL users — brief summary of fit + AI-scored fitScore
       try {
         const narrativePrompt = `You are a career advisor speaking directly to a job seeker. Analyze their fit for this role and speak in second person ("you", "your").
 
@@ -146,11 +157,10 @@ ABOUT THE USER:
 - Skills: ${allUserSkills.join(", ") || "None listed"}
 - Experience level: ${user?.experience || "Not specified"}
 - Headline: ${user?.headline || "Not set"}
-- Matched skills: ${matched.join(", ") || "None"}
-- Missing skills: ${missing.join(", ") || "None"}
 
 Return ONLY this JSON (no markdown). Use "you"/"your" throughout, never "the candidate":
 {
+  "fitScore": <integer 0-100 representing how well this person fits the role, considering skills depth, seniority match, and role requirements — not just keyword overlap>,
   "strengths": "1-2 sentences on your strengths for this role",
   "gaps": "1-2 sentences on key gaps you should address",
   "recommendation": "direct 1-sentence recommendation on whether you should apply"
@@ -159,11 +169,23 @@ Return ONLY this JSON (no markdown). Use "you"/"your" throughout, never "the can
         const { text } = await generateWithFallback(
           narrativePrompt,
           "You are a career advisor speaking directly to a job seeker. Always use second person (you/your). Return only valid JSON, no markdown.",
-          { maxTokens: 300, temperature: 0.3, json: true },
+          { maxTokens: 350, temperature: 0.3, json: true },
         );
         const jsonMatch = text.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
-          aiNarrative = JSON.parse(jsonMatch[0]);
+          const parsed = JSON.parse(jsonMatch[0]);
+          if (parsed.fitScore !== undefined) {
+            const aiScore = Math.min(100, Math.max(0, Math.round(Number(parsed.fitScore))));
+            if (!isNaN(aiScore)) {
+              score = aiScore;
+              verdict = getVerdict(score);
+            }
+          }
+          aiNarrative = {
+            strengths: parsed.strengths,
+            gaps: parsed.gaps,
+            recommendation: parsed.recommendation,
+          };
         }
       } catch (err) {
         console.error("AI narrative error:", err);

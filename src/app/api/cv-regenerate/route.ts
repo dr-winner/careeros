@@ -4,15 +4,17 @@ import { prisma } from "@/lib/db";
 import { generatePremium } from "@/lib/ai";
 import { hasAiProviderConfigured } from "@/lib/env";
 
-interface CVData {
-  name?: string;
-  email?: string;
-  phone?: string;
+export interface StructuredCV {
+  name: string;
+  email: string;
+  phone: string;
+  location: string;
+  summary: string;
   experience: Array<{
     title: string;
     company: string;
     duration: string;
-    description: string;
+    bullets: string[];
   }>;
   education: Array<{
     degree: string;
@@ -20,48 +22,7 @@ interface CVData {
     year: string;
   }>;
   skills: string[];
-}
-
-function extractCVData(text: string): CVData {
-  const lines = text.split("\n").filter(Boolean);
-  const emailMatch = text.match(/[\w.-]+@[\w.-]+\.\w+/);
-  const phoneMatch = text.match(/\+?[\d\s()-]{10,}/);
-  const experience: CVData["experience"] = [];
-  const education: CVData["education"] = [];
-  const skills: string[] = [];
-
-  if (/experience|work history|employment/i.test(text)) {
-    const expMatch = text.match(/([A-Z][^0-9]+?)(?:at|@|,)\s*([A-Z][^,]+?)(?:,|\n)([^•\n]+)/gi);
-    if (expMatch) {
-      expMatch.forEach((match) => {
-        const parts = match.split(/\n|,/).filter(Boolean);
-        if (parts.length >= 2) {
-          experience.push({
-            title: parts[0]?.trim() || "",
-            company: parts[1]?.trim() || "",
-            duration: "",
-            description: parts.slice(2).join(" ").trim() || "",
-          });
-        }
-      });
-    }
-  }
-
-  if (/skills|technologies|tools|competencies/i.test(text)) {
-    const skillsMatch = text.match(/skills[:\s]+([^\n]+)/i);
-    if (skillsMatch) {
-      skills.push(...skillsMatch[1].split(/[,;•]/).map((s) => s.trim()).filter(Boolean));
-    }
-  }
-
-  return {
-    name: lines[0] || "",
-    email: emailMatch?.[0],
-    phone: phoneMatch?.[0],
-    experience,
-    education,
-    skills,
-  };
+  certifications?: string[];
 }
 
 export async function POST(request: NextRequest) {
@@ -94,45 +55,58 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No CV text provided" }, { status: 400 });
     }
 
-    const cvData = extractCVData(cvText);
+    const prompt = `Rewrite this CV to be ATS-optimised with strong action verbs and quantified achievements. Tailor it for ${role || "general job applications"}.
 
-    const prompt = `Rewrite this CV to be ATS-optimised with strong action verbs, quantified achievements, and a clean structure. Tailor it for ${role || "general job applications"}.
-
-CV:
+CV TEXT:
 ${cvText}
 
-Contact info: ${[cvData.email, cvData.phone].filter(Boolean).join(" | ") || "extract from CV above"}
+Return ONLY valid JSON — no markdown, no explanation:
+{
+  "name": "Full Name",
+  "email": "email@example.com",
+  "phone": "+XX XXX XXX XXXX",
+  "location": "City, Country",
+  "summary": "2-3 sentence compelling professional summary with specific expertise and value proposition",
+  "experience": [
+    {
+      "title": "Job Title",
+      "company": "Company Name",
+      "duration": "Month Year – Month Year",
+      "bullets": [
+        "Achieved X by doing Y, resulting in Z% improvement",
+        "Led initiative that delivered specific measurable outcome"
+      ]
+    }
+  ],
+  "education": [
+    {
+      "degree": "Degree Name",
+      "institution": "Institution Name",
+      "year": "YYYY"
+    }
+  ],
+  "skills": ["Skill1", "Skill2", "Skill3"],
+  "certifications": ["Certification Name (Year)"]
+}`;
 
-Return the full rewritten CV in this format:
-
----
-[Full Name]
-[Email] | [Phone] | [Location]
-
-PROFESSIONAL SUMMARY
-[2-3 sentence compelling summary]
-
-WORK EXPERIENCE
-
-[Job Title] | [Company] | [Duration]
-• [Achievement with metrics]
-• [Achievement with impact]
-
-EDUCATION
-
-[Degree] | [Institution] | [Year]
-
-SKILLS
-[Technical skills], [Tools], [Soft skills]
----`;
-
-    const { text: regeneratedCV } = await generatePremium(
+    const { text } = await generatePremium(
       prompt,
-      "You are an expert CV writer specialising in the African job market. Write professional, ATS-friendly CVs that are honest, specific, and compelling. Return only the CV content — no preamble, no commentary.",
-      { maxTokens: 2048, temperature: 0.4 },
+      "You are an expert CV writer for the African job market. Rewrite CVs to be ATS-friendly with strong action verbs and quantified achievements. Return ONLY valid JSON — no markdown, no commentary.",
+      { maxTokens: 2048, temperature: 0.4, json: true },
     );
 
-    return NextResponse.json({ success: true, regeneratedCV, extractedData: cvData });
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      return NextResponse.json({ error: "Failed to parse CV structure" }, { status: 500 });
+    }
+
+    const cvData: StructuredCV = JSON.parse(jsonMatch[0]);
+
+    if (!cvData.name || !cvData.experience) {
+      return NextResponse.json({ error: "Invalid CV structure returned" }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true, cvData });
   } catch (error) {
     console.error("CV regeneration error:", error);
     return NextResponse.json(

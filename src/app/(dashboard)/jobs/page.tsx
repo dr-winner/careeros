@@ -109,6 +109,7 @@ export default function JobsPage() {
     if (userId) {
       fetchJobs(true);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
   const handleSearch = () => {
@@ -143,6 +144,7 @@ export default function JobsPage() {
                 location: jobToToggle.location,
                 country: jobToToggle.country,
                 workMode: jobToToggle.workMode,
+                description: jobToToggle.description || null,
                 applicationUrl: jobToToggle.applicationUrl,
               }
             : { jobId },

@@ -4,10 +4,27 @@ import "./globals.css";
 import ServiceWorkerRegistration from "@/components/service-worker-registration";
 
 export const metadata: Metadata = {
-  title: "CareerOS - Know Before You Apply",
-  description: "Stop applying to jobs you have no chance at. CareerOS shows you how well you fit before you spend time on applications.",
+  title: "CareerOS — Your AI Career Agent",
+  description:
+    "Stop applying blind. CareerOS uses AI to analyze your CV fit, optimize your application, and prepare you for interviews — built for Ghana and Africa.",
+  keywords: ["career", "job search", "AI", "CV", "Ghana", "Africa", "interview prep"],
+  authors: [{ name: "CareerOS" }],
+  metadataBase: new URL("https://careeros.live"),
   icons: {
     icon: "/logo.svg",
+  },
+  openGraph: {
+    title: "CareerOS — Your AI Career Agent",
+    description: "Stop applying blind. Know your fit before you apply.",
+    url: "https://careeros.live",
+    siteName: "CareerOS",
+    locale: "en_GH",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "CareerOS — Your AI Career Agent",
+    description: "Stop applying blind. Know your fit before you apply.",
   },
 };
 

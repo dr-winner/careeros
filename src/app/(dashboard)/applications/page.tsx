@@ -381,7 +381,7 @@ export default function ApplicationsPage() {
                         </div>
                       </div>
 
-                      {application.history?.map((entry, idx) => {
+                      {application.history?.map((entry) => {
                         const entryConfig = STATUS_CONFIG[entry.newStatus] || STATUS_CONFIG.Applied;
                         return (
                           <div key={entry.id} className="relative">

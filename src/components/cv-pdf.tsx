@@ -1,378 +1,154 @@
-import {
-  Document,
-  Page,
-  Text,
-  View,
-  StyleSheet,
-  Font,
-} from "@react-pdf/renderer";
+import { Document, Page, Text, View, StyleSheet, Font } from "@react-pdf/renderer";
+import type { StructuredCV } from "@/app/api/cv-regenerate/route";
 
 Font.register({
   family: "Inter",
   fonts: [
-    {
-      src: "https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hiJ-Ek-_EeA.woff2",
-      fontWeight: 400,
-    },
-    {
-      src: "https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuGKYAZ9hiJ-Ek-_EeA.woff2",
-      fontWeight: 600,
-    },
-    {
-      src: "https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuFuYAZ9hiJ-Ek-_EeA.woff2",
-      fontWeight: 700,
-    },
+    { src: "https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hiJ-Ek-_EeA.woff2", fontWeight: 400 },
+    { src: "https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuGKYAZ9hiJ-Ek-_EeA.woff2", fontWeight: 600 },
+    { src: "https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuFuYAZ9hiJ-Ek-_EeA.woff2", fontWeight: 700 },
   ],
 });
 
-const styles = StyleSheet.create({
-  page: {
-    padding: 40,
-    fontFamily: "Inter",
-    fontSize: 10,
-    color: "#1a1a1a",
-  },
-  header: {
-    marginBottom: 20,
-    borderBottom: "2 solid #6366f1",
-    paddingBottom: 15,
-  },
-  name: {
-    fontSize: 24,
-    fontWeight: 700,
-    color: "#1e1b4b",
-    marginBottom: 8,
-  },
-  contact: {
-    fontSize: 9,
-    color: "#64748b",
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-  },
-  contactItem: {
-    marginRight: 10,
-  },
-  section: {
-    marginBottom: 15,
-  },
+const s = StyleSheet.create({
+  page: { padding: "40 48", fontFamily: "Inter", fontSize: 10, color: "#1a1a2e", backgroundColor: "#ffffff" },
+
+  // Header
+  header: { marginBottom: 20 },
+  name: { fontSize: 22, fontWeight: 700, color: "#1e1b4b", marginBottom: 6, letterSpacing: 0.3 },
+  contactRow: { flexDirection: "row", flexWrap: "wrap", gap: 4 },
+  contactItem: { fontSize: 9, color: "#4b5563" },
+  contactDivider: { fontSize: 9, color: "#d1d5db", marginHorizontal: 4 },
+  divider: { borderBottom: "1.5 solid #6366f1", marginTop: 12, marginBottom: 16 },
+
+  // Section
+  section: { marginBottom: 16 },
   sectionTitle: {
-    fontSize: 12,
-    fontWeight: 600,
-    color: "#6366f1",
-    marginBottom: 8,
-    textTransform: "uppercase",
-    letterSpacing: 1,
+    fontSize: 9, fontWeight: 700, color: "#6366f1", letterSpacing: 1.5,
+    textTransform: "uppercase", marginBottom: 8, paddingBottom: 4,
+    borderBottom: "0.5 solid #e0e7ff",
   },
-  summary: {
-    fontSize: 10,
-    lineHeight: 1.5,
-    color: "#475569",
-  },
-  experienceItem: {
-    marginBottom: 12,
-  },
-  experienceHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "baseline",
-    marginBottom: 4,
-  },
-  jobTitle: {
-    fontSize: 11,
-    fontWeight: 600,
-    color: "#1e1b4b",
-  },
-  company: {
-    fontSize: 10,
-    color: "#64748b",
-  },
-  date: {
-    fontSize: 9,
-    color: "#64748b",
-  },
-  description: {
-    fontSize: 9,
-    lineHeight: 1.5,
-    color: "#475569",
-  },
-  bullet: {
-    flexDirection: "row",
-    marginBottom: 3,
-  },
-  bulletDot: {
-    width: 10,
-    color: "#6366f1",
-  },
-  bulletText: {
-    flex: 1,
-    fontSize: 9,
-    lineHeight: 1.4,
-    color: "#475569",
-  },
-  educationItem: {
-    marginBottom: 8,
-  },
-  degree: {
-    fontSize: 10,
-    fontWeight: 600,
-    color: "#1e1b4b",
-  },
-  institution: {
-    fontSize: 9,
-    color: "#64748b",
-  },
-  skillsContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 5,
-  },
-  skill: {
-    fontSize: 9,
-    color: "#475569",
-    backgroundColor: "#f1f5f9",
-    padding: "3 8",
-    borderRadius: 3,
-  },
-  textContent: {
-    fontSize: 9,
-    lineHeight: 1.6,
-    color: "#475569",
-  },
-  fallbackText: {
-    fontSize: 10,
-    lineHeight: 1.6,
-    color: "#374151",
-  },
-  fallbackSection: {
-    marginBottom: 12,
-  },
-  fallbackTitle: {
-    fontSize: 11,
-    fontWeight: 600,
-    color: "#1e1b4b",
-    marginBottom: 4,
-    borderBottom: "1 solid #e5e7eb",
-    paddingBottom: 4,
-  },
-  fallbackItem: {
-    marginBottom: 8,
-  },
+
+  // Summary
+  summary: { fontSize: 9.5, lineHeight: 1.6, color: "#374151" },
+
+  // Experience
+  expItem: { marginBottom: 12 },
+  expHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "baseline", marginBottom: 2 },
+  jobTitle: { fontSize: 10.5, fontWeight: 600, color: "#1e1b4b" },
+  duration: { fontSize: 8.5, color: "#6b7280" },
+  company: { fontSize: 9, color: "#6366f1", marginBottom: 5 },
+  bullet: { flexDirection: "row", marginBottom: 2.5 },
+  bulletDot: { width: 10, fontSize: 9, color: "#6366f1", marginTop: 1 },
+  bulletText: { flex: 1, fontSize: 9, lineHeight: 1.5, color: "#374151" },
+
+  // Education
+  eduItem: { marginBottom: 8 },
+  degree: { fontSize: 10, fontWeight: 600, color: "#1e1b4b" },
+  institution: { fontSize: 9, color: "#6b7280", marginTop: 1 },
+
+  // Skills
+  skillsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 5 },
+  skill: { fontSize: 8.5, color: "#374151", backgroundColor: "#f0f0ff", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 3, border: "0.5 solid #c7d2fe" },
+
+  // Certifications
+  certText: { fontSize: 9, color: "#374151", lineHeight: 1.6 },
 });
 
-interface ParsedCV {
-  name: string;
-  contact: string[];
-  summary: string;
-  experience: Array<{
-    title: string;
-    company: string;
-    duration: string;
-    bullets: string[];
-  }>;
-  education: Array<{
-    degree: string;
-    institution: string;
-    year: string;
-  }>;
-  skills: string[];
-}
-
-function parseCVContent(rawContent: string): ParsedCV {
-  const lines = rawContent.split("\n");
-  const parsed: ParsedCV = {
-    name: "",
-    contact: [],
-    summary: "",
-    experience: [],
-    education: [],
-    skills: [],
-  };
-
-  let currentSection = "";
-  let currentExperience: ParsedCV["experience"][0] | null = null;
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed === "---") continue;
-
-    if (!parsed.name && /^[A-Z][a-z]+ [A-Z][a-z]+/.test(trimmed)) {
-      parsed.name = trimmed;
-    } else if (trimmed.includes("@")) {
-      parsed.contact.push(trimmed);
-    } else if (/^\+?[\d\s\-\(\)]{10,}$/.test(trimmed.replace(/\s/g, ""))) {
-      parsed.contact.push(trimmed);
-    } else if (/^PROFESSIONAL SUMMARY$/i.test(trimmed) || /^SUMMARY$/i.test(trimmed)) {
-      currentSection = "summary";
-    } else if (/^WORK EXPERIENCE$/i.test(trimmed) || /^EXPERIENCE$/i.test(trimmed)) {
-      currentSection = "experience";
-    } else if (/^EDUCATION$/i.test(trimmed)) {
-      currentSection = "education";
-    } else if (/^SKILLS$/i.test(trimmed)) {
-      currentSection = "skills";
-    } else if (currentSection === "summary") {
-      parsed.summary += " " + trimmed;
-    } else if (currentSection === "skills") {
-      const skillParts = trimmed.split(/[,;•|]/).map((s) => s.trim()).filter(Boolean);
-      parsed.skills.push(...skillParts);
-    } else if (currentSection === "experience" && (trimmed.startsWith("•") || trimmed.startsWith("-") || trimmed.startsWith("*"))) {
-      if (currentExperience) {
-        currentExperience.bullets.push(trimmed.substring(1).trim());
-      }
-    } else if (currentSection === "experience" && /^[A-Z]/.test(trimmed) && !trimmed.startsWith("•") && !trimmed.startsWith("-")) {
-      if (currentExperience) {
-        parsed.experience.push(currentExperience);
-      }
-      const parts = trimmed.split(/\|/);
-      currentExperience = {
-        title: parts[0]?.trim() || trimmed,
-        company: parts[1]?.trim() || "",
-        duration: parts[2]?.trim() || "",
-        bullets: [],
-      };
-    } else if (currentSection === "education" && /^[A-Z]/.test(trimmed)) {
-      const parts = trimmed.split(/\|/);
-      parsed.education.push({
-        degree: parts[0]?.trim() || trimmed,
-        institution: parts[1]?.trim() || "",
-        year: parts[2]?.trim() || "",
-      });
-    }
-  }
-
-  if (currentExperience) {
-    parsed.experience.push(currentExperience);
-  }
-
-  return parsed;
-}
-
-function renderFallbackContent(content: string) {
-  const sections = content.split(/^---$/m).filter(s => s.trim());
-  
-  if (sections.length === 0) {
-    const lines = content.split("\n").filter(l => l.trim());
-    return (
-      <View>
-        {lines.slice(0, 30).map((line, i) => (
-          <Text key={i} style={styles.textContent}>{line}</Text>
-        ))}
-        {lines.length > 30 && (
-          <Text style={styles.textContent}>... (content truncated)</Text>
-        )}
-      </View>
-    );
-  }
-
-  return (
-    <View>
-      {sections.map((section, sIndex) => {
-        const lines = section.trim().split("\n");
-        const title = lines[0]?.trim();
-        const isTitleCase = title && /^[A-Z]/.test(title) && title.length < 50;
-        
-        return (
-          <View key={sIndex} style={styles.fallbackSection}>
-            {isTitleCase && (
-              <Text style={styles.fallbackTitle}>{title}</Text>
-            )}
-            <View>
-              {lines.slice(1).filter(l => l.trim()).map((line, i) => (
-                <Text key={i} style={styles.textContent}>{line}</Text>
-              ))}
-            </View>
-          </View>
-        );
-      })}
-    </View>
-  );
-}
-
 interface CVPDFProps {
-  content: string;
+  data: StructuredCV;
 }
 
-export default function CVPDF({ content }: CVPDFProps) {
-  const parsed = parseCVContent(content);
-  
-  const hasStructuredContent = parsed.name || parsed.summary || parsed.experience.length > 0;
+export default function CVPDF({ data }: CVPDFProps) {
+  const contacts = [
+    data.email,
+    data.phone,
+    data.location,
+  ].filter(Boolean);
 
   return (
     <Document>
-      <Page size="A4" style={styles.page}>
-        {hasStructuredContent ? (
-          <>
-            {parsed.name && (
-              <View style={styles.header}>
-                <Text style={styles.name}>{parsed.name}</Text>
-                <View style={styles.contact}>
-                  {parsed.contact.map((item, index) => (
-                    <Text key={index} style={styles.contactItem}>
-                      {item}
-                    </Text>
-                  ))}
+      <Page size="A4" style={s.page}>
+        {/* Header */}
+        <View style={s.header}>
+          <Text style={s.name}>{data.name}</Text>
+          <View style={s.contactRow}>
+            {contacts.map((item, i) => (
+              <View key={i} style={{ flexDirection: "row" }}>
+                {i > 0 && <Text style={s.contactDivider}>|</Text>}
+                <Text style={s.contactItem}>{item}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+
+        <View style={s.divider} />
+
+        {/* Summary */}
+        {data.summary && (
+          <View style={s.section}>
+            <Text style={s.sectionTitle}>Professional Summary</Text>
+            <Text style={s.summary}>{data.summary}</Text>
+          </View>
+        )}
+
+        {/* Experience */}
+        {data.experience?.length > 0 && (
+          <View style={s.section}>
+            <Text style={s.sectionTitle}>Work Experience</Text>
+            {data.experience.map((exp, i) => (
+              <View key={i} style={s.expItem}>
+                <View style={s.expHeader}>
+                  <Text style={s.jobTitle}>{exp.title}</Text>
+                  {exp.duration && <Text style={s.duration}>{exp.duration}</Text>}
                 </View>
-              </View>
-            )}
-
-            {parsed.summary && (
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Professional Summary</Text>
-                <Text style={styles.summary}>{parsed.summary}</Text>
-              </View>
-            )}
-
-            {parsed.experience.length > 0 && (
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Work Experience</Text>
-                {parsed.experience.map((exp, index) => (
-                  <View key={index} style={styles.experienceItem}>
-                    <View style={styles.experienceHeader}>
-                      <Text style={styles.jobTitle}>{exp.title}</Text>
-                      {exp.duration && <Text style={styles.date}>{exp.duration}</Text>}
-                    </View>
-                    {exp.company && <Text style={styles.company}>{exp.company}</Text>}
-                    {exp.bullets.map((bullet, bIndex) => (
-                      <View key={bIndex} style={styles.bullet}>
-                        <Text style={styles.bulletDot}>•</Text>
-                        <Text style={styles.bulletText}>{bullet}</Text>
-                      </View>
-                    ))}
+                {exp.company && <Text style={s.company}>{exp.company}</Text>}
+                {exp.bullets?.map((bullet, j) => (
+                  <View key={j} style={s.bullet}>
+                    <Text style={s.bulletDot}>▸</Text>
+                    <Text style={s.bulletText}>{bullet}</Text>
                   </View>
                 ))}
               </View>
-            )}
+            ))}
+          </View>
+        )}
 
-            {parsed.education.length > 0 && (
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Education</Text>
-                {parsed.education.map((edu, index) => (
-                  <View key={index} style={styles.educationItem}>
-                    <Text style={styles.degree}>{edu.degree}</Text>
-                    <Text style={styles.institution}>
-                      {edu.institution}
-                      {edu.year && ` • ${edu.year}`}
-                    </Text>
-                  </View>
-                ))}
+        {/* Education */}
+        {data.education?.length > 0 && (
+          <View style={s.section}>
+            <Text style={s.sectionTitle}>Education</Text>
+            {data.education.map((edu, i) => (
+              <View key={i} style={s.eduItem}>
+                <Text style={s.degree}>{edu.degree}</Text>
+                <Text style={s.institution}>
+                  {edu.institution}{edu.year ? ` · ${edu.year}` : ""}
+                </Text>
               </View>
-            )}
+            ))}
+          </View>
+        )}
 
-            {parsed.skills.length > 0 && (
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Skills</Text>
-                <View style={styles.skillsContainer}>
-                  {parsed.skills.slice(0, 25).map((skill, index) => (
-                    <Text key={index} style={styles.skill}>
-                      {skill}
-                    </Text>
-                  ))}
-                </View>
-              </View>
-            )}
-          </>
-        ) : (
-          renderFallbackContent(content)
+        {/* Skills */}
+        {data.skills?.length > 0 && (
+          <View style={s.section}>
+            <Text style={s.sectionTitle}>Skills</Text>
+            <View style={s.skillsGrid}>
+              {data.skills.map((skill, i) => (
+                <Text key={i} style={s.skill}>{skill}</Text>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* Certifications */}
+        {data.certifications && data.certifications.length > 0 && (
+          <View style={s.section}>
+            <Text style={s.sectionTitle}>Certifications</Text>
+            {data.certifications.map((cert, i) => (
+              <Text key={i} style={s.certText}>▸ {cert}</Text>
+            ))}
+          </View>
         )}
       </Page>
     </Document>

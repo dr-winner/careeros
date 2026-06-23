@@ -257,9 +257,11 @@ export default function PricingPage() {
                       "Pay with Mobile Money / Card"
                     )}
                   </button>
-                  <p className="text-xs text-zinc-500 text-center mt-3">
-                    MTN · Telecel · AirtelTigo · Card · Secure checkout by Moolre
-                  </p>
+                  <div className="flex items-center justify-center gap-2 mt-3">
+                    <span className="text-xs text-zinc-500">Secure checkout by</span>
+                    <span className="text-xs font-semibold text-purple-400">Moolre</span>
+                    <span className="text-xs text-zinc-600">· MTN · Telecel · AirtelTigo · Card</span>
+                  </div>
                 </>
               )}
             </div>

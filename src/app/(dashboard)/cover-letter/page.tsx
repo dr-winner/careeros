@@ -201,14 +201,14 @@ ${name}`;
                 {generating ? (
                   <>
                     <div className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                    generating...
+                    Generating...
                   </>
                 ) : (
                   <>
                     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
-                    generate()
+                    Generate Letter
                   </>
                 )}
               </button>
@@ -241,17 +241,27 @@ ${name}`;
             <div className="flex items-center justify-between mb-4">
               <span className="text-sm font-medium text-zinc-400">Generated Letter</span>
               {coverLetter && (
-                <button onClick={copyToClipboard} className="mono text-xs text-purple-400 hover:text-purple-300">
-                  copy
+                <button
+                  onClick={copyToClipboard}
+                  className="flex items-center gap-1.5 rounded-lg border border-purple-500/30 bg-purple-500/10 px-3 py-1.5 text-xs font-medium text-purple-400 hover:bg-purple-500/20 transition-colors"
+                >
+                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                  Copy
                 </button>
               )}
             </div>
 
             {coverLetter ? (
-              <div className="p-4 rounded-lg bg-zinc-900/50 border border-zinc-800">
-                <pre className="whitespace-pre-wrap text-xs text-zinc-400 font-mono">
-                  {coverLetter}
-                </pre>
+              <div className="rounded-lg bg-white/[0.03] border border-zinc-800 p-5">
+                {coverLetter.split("\n\n").map((paragraph, i) => (
+                  paragraph.trim() ? (
+                    <p key={i} className="text-sm text-zinc-200 leading-relaxed mb-4 last:mb-0 whitespace-pre-wrap">
+                      {paragraph.trim()}
+                    </p>
+                  ) : null
+                ))}
               </div>
             ) : (
               <div className="flex items-center justify-center h-48 rounded-lg border-2 border-dashed border-zinc-800">

@@ -135,11 +135,11 @@ export default function MobileAppPage() {
 
       <div className="mono text-xs text-zinc-600 mb-4 flex items-center justify-between">
         <span>
-          {loading ? "searching..." : isSearching ? `"${searchQuery}"` : "latest_opportunities"}
+          {loading ? "Searching..." : isSearching ? `"${searchQuery}"` : "Latest Opportunities"}
         </span>
         {isSearching && (
           <button onClick={clearSearch} className="text-purple-400 hover:text-purple-300">
-            clear
+            Clear
           </button>
         )}
       </div>

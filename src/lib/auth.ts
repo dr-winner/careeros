@@ -7,60 +7,48 @@ export async function getClerkUserId(): Promise<string | null> {
   return userId ?? null;
 }
 
+const SYNC_MAX_ATTEMPTS = 3;
+const SYNC_BACKOFF_MS = [0, 600, 1400]; // delays before attempt 1, 2, 3
+
 export async function getDbUser() {
   const { userId: clerkId } = await auth();
 
-  console.log(`[getDbUser] Checking for clerkId: ${clerkId}`);
+  if (!clerkId) return null;
 
-  if (!clerkId) {
-    console.log("[getDbUser] No clerkId found in session");
-    return null;
-  }
+  // Fast path: user already exists
+  const existing = await prisma.user.findUnique({ where: { clerkId } });
+  if (existing) return existing;
 
-  let user = await prisma.user.findUnique({
-    where: { clerkId },
-  });
-
-  if (user) {
-    console.log(`[getDbUser] Found user in DB: ${user.id}`);
-    return user;
-  }
-
-  console.log(`[getDbUser] User not found for clerkId ${clerkId}, attempting sync...`);
-
-  try {
-    const client = await clerkClient();
-    const clerkUser = await client.users.getUser(clerkId);
-
-    if (!clerkUser) {
-      console.error(`[getDbUser] Clerk user not found even with valid session ID: ${clerkId}`);
-      return null;
+  // Slow path: first-login race — sync from Clerk with retries + backoff
+  for (let attempt = 0; attempt < SYNC_MAX_ATTEMPTS; attempt++) {
+    if (SYNC_BACKOFF_MS[attempt] > 0) {
+      await new Promise((r) => setTimeout(r, SYNC_BACKOFF_MS[attempt]));
     }
 
-    console.log(`[getDbUser] Syncing Clerk user: ${clerkUser.id}`);
-    const syncedUser = await syncClerkUserToDb(clerkUser);
+    try {
+      const client = await clerkClient();
+      const clerkUser = await client.users.getUser(clerkId);
 
-    if (syncedUser) {
-      console.log(`[getDbUser] Sync successful, user created/updated: ${syncedUser.id}`);
-      return syncedUser;
+      if (!clerkUser) {
+        console.error(`[getDbUser] Clerk user not found for clerkId: ${clerkId}`);
+        return null;
+      }
+
+      const synced = await syncClerkUserToDb(clerkUser);
+      if (synced) return synced;
+
+      // syncClerkUserToDb returned null — check if a concurrent request already created the user
+      const raceUser = await prisma.user.findUnique({ where: { clerkId } });
+      if (raceUser) return raceUser;
+
+      console.warn(`[getDbUser] Attempt ${attempt + 1}/${SYNC_MAX_ATTEMPTS} — sync returned null, retrying...`);
+    } catch (error) {
+      console.error(`[getDbUser] Attempt ${attempt + 1}/${SYNC_MAX_ATTEMPTS} failed:`, error);
     }
-
-    console.log(`[getDbUser] Sync returned null, trying final re-query...`);
-    user = await prisma.user.findUnique({
-      where: { clerkId },
-    });
-
-    if (user) {
-      console.log(`[getDbUser] Final re-query successful: ${user.id}`);
-    } else {
-      console.error(`[getDbUser] User still not found in DB after sync for clerkId: ${clerkId}`);
-    }
-
-    return user;
-  } catch (error) {
-    console.error(`[getDbUser] Critical error during sync/retrieval for ${clerkId}:`, error);
-    return null;
   }
+
+  console.error(`[getDbUser] All sync attempts exhausted for clerkId: ${clerkId}`);
+  return null;
 }
 
 export async function getDbUserId(): Promise<string | null> {

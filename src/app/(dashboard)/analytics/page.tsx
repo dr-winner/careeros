@@ -161,14 +161,14 @@ export default function AnalyticsPage() {
         <>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
             {[
-              { label: "applications", value: stats.totalApplications, color: "purple" },
-              { label: "response_rate", value: `${stats.responseRate}%`, color: "cyan" },
-              { label: "saved_jobs", value: stats.savedJobs, color: "amber" },
-              { label: "alerts", value: stats.alerts, color: "green" },
+              { label: "Applications", value: stats.totalApplications, color: "purple" },
+              { label: "Response Rate", value: `${stats.responseRate}%`, color: "cyan" },
+              { label: "Saved Jobs", value: stats.savedJobs, color: "amber" },
+              { label: "Alerts", value: stats.alerts, color: "green" },
             ].map((item, i) => (
               <div key={i} className="agent-card p-5">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs text-zinc-400">{item.label}</span>
+                  <span className="text-xs font-medium text-zinc-400">{item.label}</span>
                   <div className={`h-2 w-2 rounded-full ${item.color === "purple" ? "bg-purple-400" : item.color === "cyan" ? "bg-cyan-400" : item.color === "amber" ? "bg-amber-400" : "bg-green-400"}`} />
                 </div>
                 <div className="text-2xl font-bold text-white">{item.value}</div>
@@ -212,12 +212,12 @@ export default function AnalyticsPage() {
               <div className="mt-4 space-y-3">
                 {[
                   { label: "CVs Uploaded", value: stats.resumes },
-                  { label: "avg_days_active", value: `${stats.avgTimeToResponse}d` },
-                  { label: "offers_received", value: stats.applicationsByStatus["Offer"] || 0 },
+                  { label: "Avg. Days Active", value: `${stats.avgTimeToResponse}d` },
+                  { label: "Offers Received", value: stats.applicationsByStatus["Offer"] || 0 },
                 ].map((item, i) => (
                   <div key={i} className="flex items-center justify-between py-2 border-b border-zinc-800/50 last:border-0">
-                    <span className="mono text-xs text-zinc-500">{item.label}</span>
-                    <span className="mono text-sm font-medium text-white">{item.value}</span>
+                    <span className="text-xs text-zinc-500">{item.label}</span>
+                    <span className="text-sm font-medium text-white">{item.value}</span>
                   </div>
                 ))}
               </div>

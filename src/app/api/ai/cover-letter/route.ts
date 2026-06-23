@@ -127,15 +127,18 @@ WRITING RULES:
 5. Sound human - like someone actually excited about THIS job
 6. Do NOT use generic phrases like "team player", "hard worker", "detail-oriented"
 7. Do NOT invent skills or experiences not in the candidate data
-${payload.recipientName ? `8. Address to: ${payload.recipientName}` : ""}
+8. ONE closing paragraph only - do not repeat "I look forward to discussing" or "I am confident" twice
+9. Each paragraph must make a NEW point - no restating what was said in a previous paragraph
+${payload.recipientName ? `10. Address to: ${payload.recipientName}` : ""}
 
-Write ONLY the cover letter. No preamble or explanation.`;
+Write ONLY the cover letter body. No preamble or explanation.`;
 
-    const systemPrompt = `You are a career coach helping African job seekers. You write cover letters that are:
+    const systemPrompt = `You are a career coach helping African job seekers write cover letters that stand out. Your letters are:
 - Specific to the person and job (never generic templates)
 - Honest - only use real skills/experience from the data provided
-- Enthusiastic but professional
-- Under 350 words
+- Enthusiastic but professional, under 350 words
+- Structured: opening hook → skills/experience → why this company → single clean closing
+- Never repetitive: each paragraph makes exactly one new point, the closing line appears once only
 
 Do NOT write generic cover letters that could apply to any job or person.`;
 

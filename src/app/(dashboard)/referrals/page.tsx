@@ -102,7 +102,7 @@ export default function ReferralPage() {
                 className="agent-input flex-1 text-xs"
               />
               <button onClick={copyToClipboard} className={copied ? "agent-button" : "agent-button-primary"}>
-                {copied ? "copied" : "copy"}
+                {copied ? "Copied!" : "Copy"}
               </button>
             </div>
             <p className="mono text-xs text-zinc-600 mt-2">Share this link with friends.</p>

@@ -95,10 +95,12 @@ export async function generatePremium(
   options: {
     maxTokens?: number;
     temperature?: number;
+    json?: boolean;
   } = {},
 ): Promise<{ text: string; model: string }> {
   const maxTokens = options.maxTokens || 2000;
   const temperature = options.temperature ?? 0.4;
+  const json = options.json ?? false;
 
   // ── Tier 1: Claude Sonnet ────────────────────────────────────────────────
   if (process.env.ANTHROPIC_API_KEY) {
@@ -131,6 +133,7 @@ export async function generatePremium(
         ],
         max_tokens: maxTokens,
         temperature,
+        ...(json ? { response_format: { type: "json_object" as const } } : {}),
       });
       const text = completion.choices[0]?.message?.content || "";
       return { text, model: "gpt-4o" };
@@ -140,5 +143,5 @@ export async function generatePremium(
   }
 
   // ── Tier 3: Groq (last resort for premium) ───────────────────────────────
-  return generateWithFallback(prompt, systemPrompt, { maxTokens, temperature, json: false });
+  return generateWithFallback(prompt, systemPrompt, { maxTokens, temperature, json });
 }

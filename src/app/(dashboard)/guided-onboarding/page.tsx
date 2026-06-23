@@ -120,7 +120,7 @@ export default function GuidedOnboarding() {
       if (file) {
         const formData = new FormData();
         formData.append("file", file);
-        await fetch("/api/cv-analyze", {
+        await fetch("/api/upload", {
           method: "POST",
           body: formData,
         });
