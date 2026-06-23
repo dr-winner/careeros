@@ -163,24 +163,23 @@ function parseCVText(text: string): ParsedResumeData {
   };
 }
 
-async function extractSkillsWithAI(
-  resumeId: string,
-  text: string,
-  existingSkills: string[],
-): Promise<void> {
+async function extractSkillsWithAI(resumeId: string, text: string): Promise<void> {
   try {
     const { text: aiText } = await generateWithFallback(
-      `Extract ALL skills from this CV. Include technical skills, soft skills, tools, frameworks, and domain knowledge.
+      `Extract all skills from this CV. Include:
+- Technical: programming languages, frameworks, libraries, databases, cloud platforms, tools
+- Domain: industries, methodologies, certifications, standards
+- Soft skills: leadership, communication, project management (only if explicitly mentioned)
 
 CV TEXT:
-${text.substring(0, 3500)}
+${text.substring(0, 6000)}
 
-Return ONLY a JSON object with a "skills" array: {"skills": ["JavaScript", "Team Leadership", "SQL"]}`,
-      "You are a skill extraction expert. Return ONLY valid JSON with a skills array.",
-      { maxTokens: 400, temperature: 0.2, json: true },
+Return ONLY JSON: {"skills": ["React", "Node.js", "AWS", "PostgreSQL", "Agile", "Team Leadership"]}
+Rules: each skill is 1-5 words, proper casing (React not react), no duplicates, 10-40 skills total.`,
+      "You are a skill extraction expert. Return ONLY valid JSON with a skills array. No explanations.",
+      { maxTokens: 600, temperature: 0.1, json: true },
     );
 
-    // GPT-4o-mini returns JSON object; Groq may return a raw array — handle both
     let skills: string[];
     try {
       const parsed = JSON.parse(aiText);
@@ -190,17 +189,17 @@ Return ONLY a JSON object with a "skills" array: {"skills": ["JavaScript", "Team
       if (!match) return;
       skills = JSON.parse(match[0]) as string[];
     }
-    const existingLower = new Set(existingSkills.map((s) => s.toLowerCase()));
-    const newSkills = skills
-      .filter((s) => typeof s === "string" && s.trim().length > 1 && s.trim().length < 60)
-      .filter((s) => !existingLower.has(s.trim().toLowerCase()))
-      .slice(0, 30);
 
-    if (newSkills.length > 0) {
+    const cleanSkills = skills
+      .filter((s) => typeof s === "string" && s.trim().length > 1 && s.trim().length < 60)
+      .map((s) => s.trim())
+      .slice(0, 40);
+
+    if (cleanSkills.length > 0) {
       await prisma.resumeSkill.createMany({
-        data: newSkills.map((skill) => ({
+        data: cleanSkills.map((skill) => ({
           resumeId,
-          skillName: skill.trim(),
+          skillName: skill,
           source: "ai",
         })),
         skipDuplicates: true,
@@ -370,7 +369,11 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      if (parsedData.skills.length > 0) {
+      if (parsedText && hasAiProviderConfigured()) {
+        // AI extraction: await so skills are ready before the response returns
+        await extractSkillsWithAI(resume.id, parsedText);
+      } else if (parsedData.skills.length > 0) {
+        // Keyword fallback when no AI provider is configured
         await prisma.resumeSkill.createMany({
           data: parsedData.skills.map((skill) => ({
             resumeId: resume.id,
@@ -378,11 +381,6 @@ export async function POST(request: NextRequest) {
             source: "parsed",
           })),
         });
-      }
-
-      if (parsedText && hasAiProviderConfigured()) {
-        // Fire-and-forget: AI skill extraction runs after response is sent
-        extractSkillsWithAI(resume.id, parsedText, parsedData.skills).catch(console.error);
       }
 
       const profileUpdates: {

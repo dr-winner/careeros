@@ -3,6 +3,8 @@ import "./globals.css";
 import Nav from "./components/nav";
 import Hero from "./components/hero";
 import HowItWorks from "./components/how-it-works";
+import FeaturesSection from "./components/features-section";
+import WhySection from "./components/why-section";
 import CTA from "./components/cta";
 import Logo from "./components/logo";
 import SocialLinks from "./components/social-links";
@@ -15,12 +17,17 @@ export const metadata: Metadata = {
   keywords: ["career", "job search", "AI", "CV", "interview prep", "job fit", "Africa"],
   authors: [{ name: "CareerOS" }],
   openGraph: {
-    title: "CareerOS - Your AI Career Agent",
-    description: "Stop applying blind. Your AI career agent is ready.",
+    title: "CareerOS — Your AI Career Agent",
+    description: "Stop applying blind. Know your fit, optimize your CV, and prepare for interviews — built for Ghana and Africa.",
     url: "https://careeros.live",
     siteName: "CareerOS",
-    locale: "en_US",
+    locale: "en_GH",
     type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "CareerOS — Your AI Career Agent",
+    description: "Stop applying blind. Know your fit before you apply.",
   },
 };
 
@@ -32,7 +39,9 @@ export default function Home() {
       <AuthCheck>
         <main>
           <Hero />
+          <FeaturesSection />
           <HowItWorks />
+          <WhySection />
           <CTA />
         </main>
       </AuthCheck>
@@ -57,6 +66,7 @@ export default function Home() {
             <SocialLinks className="text-zinc-500 hover:text-white" />
 
             <div className="flex items-center gap-6 mono text-xs text-zinc-600">
+              <a href="/about" className="hover:text-zinc-400 transition-colors">About</a>
               <a href="/privacy" className="hover:text-zinc-400 transition-colors">Privacy</a>
               <a href="/terms" className="hover:text-zinc-400 transition-colors">Terms</a>
               <a href="mailto:support@careeros.live" className="hover:text-zinc-400 transition-colors">Contact</a>
@@ -65,7 +75,7 @@ export default function Home() {
 
           <div className="mt-10 pt-8 border-t border-white/5 text-center">
             <p className="mono text-xs text-zinc-600">
-              Built for African job seekers. Powered by AI.
+              Built for African job seekers. Powered by AI &amp; <span className="text-purple-500">Moolre</span>.
             </p>
             <p className="mono text-xs text-zinc-700 mt-2">
               &copy; {new Date().getFullYear()} CareerOS. All rights reserved.

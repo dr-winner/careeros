@@ -4,8 +4,6 @@ import { useState, useEffect } from "react";
 import { useAuth, useUser } from "@clerk/nextjs";
 import { SignOutButton } from "@clerk/nextjs";
 import { toast } from "sonner";
-import Link from "next/link";
-import CVUpload from "@/app/components/cv-upload";
 import { EXPERIENCE_LEVELS, PROFILE_COUNTRIES, ROLE_TYPES } from "@/lib/user-profile-options";
 
 interface UserProfile {
@@ -27,7 +25,6 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [resumeCount, setResumeCount] = useState(0);
 
   const [formData, setFormData] = useState({
     fullName: "",
@@ -51,7 +48,6 @@ export default function ProfilePage() {
       if (response.ok) {
         const data = await response.json();
         setProfile(data.user);
-        setResumeCount(data.counts?.resumes ?? 0);
         setFormData({
           fullName: data.user?.fullName || "",
           phone: data.user?.phone || "",
@@ -225,23 +221,6 @@ export default function ProfilePage() {
             />
           </div>
         </div>
-      </div>
-
-      <div className="rounded-2xl border border-white/10 bg-[#14141f] p-6">
-        <h2 className="text-lg font-semibold text-white mb-2">Your CV</h2>
-        <p className="text-sm text-zinc-500 mb-4">
-          {resumeCount === 0
-            ? "Upload a CV to power job matching and analysis."
-            : `${resumeCount} CV${resumeCount === 1 ? "" : "s"} on file. Uploading adds a new version.`}
-        </p>
-        <CVUpload onUploadSuccess={fetchProfile} />
-        <p className="mt-4 text-sm text-zinc-500">
-          Manage versions and set a primary CV on the{" "}
-          <Link href="/resumes" className="text-purple-400 hover:underline">
-            CVs
-          </Link>{" "}
-          page.
-        </p>
       </div>
 
       <button

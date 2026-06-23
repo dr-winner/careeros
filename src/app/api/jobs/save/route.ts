@@ -22,6 +22,7 @@ export async function POST(request: NextRequest) {
       location: payload.location,
       country: payload.country,
       workMode: payload.workMode,
+      description: payload.description,
       applicationUrl: payload.applicationUrl,
       status: "active",
     });

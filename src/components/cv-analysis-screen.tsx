@@ -75,6 +75,120 @@ function GlowOrb({ x, y, color }: { x: string; y: string; color: string }) {
   );
 }
 
+function NeuralNetCanvas() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    // Capture as non-nullable for use inside nested functions
+    const cvs = canvas as HTMLCanvasElement;
+
+    let animId: number;
+    let w = 0, h = 0;
+
+    const NODE_COUNT = 40;
+    type Node = { x: number; y: number; vx: number; vy: number; r: number; pulse: number; phase: number };
+    let nodes: Node[] = [];
+
+    const CHARS = "01アイウエオカキクケコサシスセソタチツテトナニヌネノ";
+    type Column = { x: number; y: number; speed: number; chars: string[]; opacity: number };
+    let cols: Column[] = [];
+
+    function resize() {
+      w = cvs.offsetWidth;
+      h = cvs.offsetHeight;
+      cvs.width = w;
+      cvs.height = h;
+      nodes = Array.from({ length: NODE_COUNT }, () => ({
+        x: Math.random() * w, y: Math.random() * h,
+        vx: (Math.random() - 0.5) * 0.3, vy: (Math.random() - 0.5) * 0.3,
+        r: 2 + Math.random() * 3,
+        pulse: Math.random() * Math.PI * 2,
+        phase: Math.random() * Math.PI * 2,
+      }));
+      const colCount = Math.floor(w / 20);
+      cols = Array.from({ length: colCount }, (_, i) => ({
+        x: i * 20 + 10, y: Math.random() * h - h,
+        speed: 0.5 + Math.random() * 1.5,
+        chars: Array.from({ length: 20 }, () => CHARS[Math.floor(Math.random() * CHARS.length)]),
+        opacity: 0.04 + Math.random() * 0.06,
+      }));
+    }
+
+    let t = 0;
+    function draw(c: CanvasRenderingContext2D) {
+      t += 1;
+      c.clearRect(0, 0, w, h);
+
+      cols.forEach((col) => {
+        col.y += col.speed;
+        if (col.y > h + 200) col.y = -200;
+        col.chars.forEach((ch, i) => {
+          const alpha = col.opacity * (1 - i / col.chars.length);
+          c.fillStyle = i === 0 ? `rgba(0,255,150,${alpha})` : `rgba(139,92,246,${alpha})`;
+          c.font = `${i === 0 ? "bold " : ""}11px monospace`;
+          c.fillText(ch, col.x, col.y - i * 16);
+        });
+        if (Math.random() < 0.01) col.chars[0] = CHARS[Math.floor(Math.random() * CHARS.length)];
+      });
+
+      for (let i = 0; i < nodes.length; i++) {
+        for (let j = i + 1; j < nodes.length; j++) {
+          const dx = nodes[i].x - nodes[j].x;
+          const dy = nodes[i].y - nodes[j].y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 160) {
+            const alpha = (1 - dist / 160) * 0.25;
+            const pulse = Math.sin(t * 0.03 + nodes[i].phase) * 0.5 + 0.5;
+            c.strokeStyle = `rgba(139,92,246,${alpha * (0.4 + pulse * 0.6)})`;
+            c.lineWidth = 0.5 + pulse * 0.5;
+            c.beginPath();
+            c.moveTo(nodes[i].x, nodes[i].y);
+            c.lineTo(nodes[j].x, nodes[j].y);
+            c.stroke();
+          }
+        }
+      }
+
+      nodes.forEach((n) => {
+        n.x += n.vx; n.y += n.vy;
+        if (n.x < 0 || n.x > w) n.vx *= -1;
+        if (n.y < 0 || n.y > h) n.vy *= -1;
+        n.pulse += 0.04;
+        const glow = Math.sin(n.pulse) * 0.5 + 0.5;
+        const grad = c.createRadialGradient(n.x, n.y, 0, n.x, n.y, n.r * (2 + glow * 3));
+        grad.addColorStop(0, `rgba(139,92,246,${0.8 + glow * 0.2})`);
+        grad.addColorStop(0.5, `rgba(6,182,212,${0.3 * glow})`);
+        grad.addColorStop(1, "rgba(0,0,0,0)");
+        c.fillStyle = grad;
+        c.beginPath();
+        c.arc(n.x, n.y, n.r * (1 + glow * 2), 0, Math.PI * 2);
+        c.fill();
+      });
+
+      animId = requestAnimationFrame(() => draw(c));
+    }
+
+    resize();
+    draw(ctx);
+    const ro = new ResizeObserver(resize);
+    ro.observe(cvs);
+
+    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+  }, []);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      className="absolute inset-0 w-full h-full pointer-events-none z-0 opacity-60"
+    />
+  );
+}
+
 const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 
 function Spinner() {
@@ -491,7 +605,8 @@ export default function CVAnalysisScreen({
   }, [analysis, onComplete, onClose]);
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#0a0a0f] overflow-hidden">
+    <div className="fixed inset-0 lg:left-56 z-50 bg-[#0a0a0f] overflow-hidden">
+      <NeuralNetCanvas />
       <ScanLines />
       <GlowOrb x="20%" y="30%" color="#8b5cf6" />
       <GlowOrb x="80%" y="70%" color="#06b6d4" />

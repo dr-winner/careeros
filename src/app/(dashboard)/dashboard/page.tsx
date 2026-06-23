@@ -250,6 +250,47 @@ export default function DashboardPage() {
           ))}
         </div>
 
+        {/* Empty state — new user onboarding checklist */}
+        {!isLoadingAction && stats.applications === 0 && stats.savedJobs === 0 && stats.interviews === 0 && (
+          <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-6">
+            <div className="flex items-start gap-4 mb-5">
+              <div className="h-10 w-10 rounded-lg bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+                <svg className="h-5 w-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </div>
+              <div>
+                <h2 className="font-semibold text-white text-base">Get started in 3 steps</h2>
+                <p className="mono text-xs text-zinc-500 mt-0.5">Your agent is ready — here&apos;s what to do first</p>
+              </div>
+            </div>
+            <div className="space-y-3">
+              {[
+                { step: "1", label: "Upload your CV", desc: "Lets AI extract your skills for matching", href: "/resumes" },
+                { step: "2", label: "Browse jobs", desc: "Find roles and see your fit score", href: "/jobs" },
+                { step: "3", label: "Apply with confidence", desc: "Generate a cover letter, prep for interviews", href: "/cover-letter" },
+              ].map((item) => (
+                <a
+                  key={item.step}
+                  href={item.href}
+                  className="flex items-center gap-4 rounded-xl border border-white/5 bg-white/[0.03] p-4 hover:border-white/10 hover:bg-white/[0.06] transition-all group"
+                >
+                  <div className="h-8 w-8 rounded-full border border-amber-500/30 bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+                    <span className="mono text-xs font-bold text-amber-400">{item.step}</span>
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-sm font-medium text-white">{item.label}</div>
+                    <div className="mono text-xs text-zinc-500 mt-0.5">{item.desc}</div>
+                  </div>
+                  <svg className="h-4 w-4 text-zinc-600 group-hover:text-zinc-400 group-hover:translate-x-0.5 transition-all" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                  </svg>
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Quick Actions */}
         <div className="grid gap-4 md:grid-cols-2">
           <button

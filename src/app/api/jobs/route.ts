@@ -416,7 +416,7 @@ async function fetchFromJooble(
           seniorityLevel: detectSeniority(job.title || ""),
           employmentType: job.type || "Full-time",
           description:
-            job.snippet?.replace(/<[^>]*>/g, "").substring(0, 2000) || "",
+            job.snippet?.replace(/<[^>]*>/g, "").substring(0, 8000) || "",
           requirements: "See job posting for details",
           postedAt: job.updated
             ? new Date(job.updated).toISOString()
@@ -474,7 +474,7 @@ async function fetchFromRemoteOK(
         employmentType: "Full-time",
         description: String(job.description ?? "")
           .replace(/<[^>]*>/g, "")
-          .substring(0, 1000),
+          .substring(0, 8000),
         requirements: Array.isArray(job.tags)
           ? (job.tags as string[]).join(", ")
           : "See job posting for details",
@@ -539,9 +539,9 @@ async function fetchFromJobicy(
         workMode: "Remote",
         seniorityLevel: detectSeniority(job.jobTitle),
         employmentType: job.jobType || "Full-time",
-        description: (job.jobExcerpt || job.jobDescription || "")
+        description: (job.jobDescription || job.jobExcerpt || "")
           .replace(/<[^>]*>/g, "")
-          .substring(0, 1000),
+          .substring(0, 8000),
         requirements: "See job posting for details",
         postedAt: job.pubDate || new Date().toISOString(),
         salaryMin: job.annualSalaryMin,
@@ -599,7 +599,7 @@ async function fetchFromGreenhouse(savedJobIds: string[]): Promise<Job[]> {
           workMode: location.toLowerCase().includes("remote") ? "Remote" : "On-site",
           seniorityLevel: detectSeniority(job.title),
           employmentType: "Full-time",
-          description: cleanDescription(job.content || "").substring(0, 1000),
+          description: cleanDescription(job.content || "").substring(0, 8000),
           requirements: job.departments?.[0]?.name || "See job posting for details",
           postedAt: job.updated_at || new Date().toISOString(),
           isSaved: savedJobIds.includes(id),
@@ -658,7 +658,7 @@ async function fetchFromTheMuse(
         workMode: location.toLowerCase().includes("remote") ? "Remote" : "On-site",
         seniorityLevel: job.levels?.[0]?.name ?? detectSeniority(job.name),
         employmentType: "Full-time",
-        description: cleanDescription(job.contents ?? "").substring(0, 1000),
+        description: cleanDescription(job.contents ?? "").substring(0, 8000),
         requirements: job.categories?.map((c) => c.name).join(", ") ?? "See job posting",
         postedAt: job.publication_date ?? new Date().toISOString(),
         isSaved: savedJobIds.includes(id),

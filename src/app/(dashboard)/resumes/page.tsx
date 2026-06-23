@@ -8,6 +8,7 @@ import CVUpload from "@/app/components/cv-upload";
 import { PDFDownloadLink } from "@react-pdf/renderer";
 import CVPDF from "@/components/cv-pdf";
 import CVAnalysisScreen from "@/components/cv-analysis-screen";
+import type { StructuredCV } from "@/app/api/cv-regenerate/route";
 
 const JOB_ROLES = [
   { id: "frontend", label: "Frontend Development", icon: "M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" },
@@ -44,10 +45,9 @@ export default function CVsPage() {
   const [showUpload, setShowUpload] = useState(false);
   const [selectedCV, setSelectedCV] = useState<CV | null>(null);
   const [regenerating, setRegenerating] = useState(false);
-  const [regeneratedCV, setRegeneratedCV] = useState<string | null>(null);
+  const [regeneratedCV, setRegeneratedCV] = useState<StructuredCV | null>(null);
   const [showRegenerated, setShowRegenerated] = useState(false);
   const [isPremium, setIsPremium] = useState(false);
-  const [selectedRole, setSelectedRole] = useState<string | null>(null);
   const [showRoleSelector, setShowRoleSelector] = useState(false);
   const [tailoringForJob, setTailoringForJob] = useState(false);
   const [showAnalysis, setShowAnalysis] = useState(false);
@@ -180,7 +180,7 @@ export default function CVsPage() {
       const data = await response.json();
 
       if (response.ok) {
-        setRegeneratedCV(data.regeneratedCV);
+        setRegeneratedCV(data.cvData);
         setShowRegenerated(true);
         setShowRoleSelector(false);
         toast.success(`${role} CV version created!`);
@@ -220,7 +220,7 @@ export default function CVsPage() {
       const data = await response.json();
       
       if (response.ok) {
-        setRegeneratedCV(data.regeneratedCV);
+        setRegeneratedCV(data.cvData);
         setShowRegenerated(true);
         toast.success("CV regenerated successfully!");
       } else if (data.code === "PREMIUM_REQUIRED") {
@@ -362,69 +362,62 @@ export default function CVsPage() {
           onClose={handleCloseAnalysis}
         />
       )}
-      <div className="max-w-6xl mx-auto space-y-6">
-      <div className="rounded-2xl border border-white/10 bg-[#14141f] p-6">
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
-              <svg className="h-5 w-5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <div className="w-full space-y-4">
+      <div className="rounded-2xl border border-white/10 bg-[#14141f] p-4">
+        <div className="flex items-center justify-between gap-3 mb-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="h-9 w-9 rounded-lg bg-purple-500/20 flex items-center justify-center flex-shrink-0">
+              <svg className="h-4 w-4 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
             </div>
-            <div>
-              <h1 className="text-xl font-bold text-white">My CVs</h1>
-              <p className="mono text-xs text-zinc-500">{cvs.length} uploaded • {Object.keys(groupedCVs).length} versions</p>
+            <div className="min-w-0">
+              <h1 className="text-base font-bold text-white">My CVs</h1>
+              <p className="mono text-xs text-zinc-500">{cvs.length} uploaded</p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            {selectedCV && isPremium && (
+          <button
+            onClick={() => setShowUpload(!showUpload)}
+            className="flex-shrink-0 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 transition-opacity"
+          >
+            {showUpload ? "Cancel" : "Upload CV"}
+          </button>
+        </div>
+        {selectedCV && (
+          <div className="flex flex-wrap gap-2 pt-2 border-t border-white/5">
+            {isPremium ? (
               <>
-                <button
-                  onClick={() => setShowRoleSelector(true)}
-                  className="agent-button flex items-center gap-2"
-                >
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <button onClick={() => setShowRoleSelector(true)} className="agent-button text-xs flex items-center gap-1.5">
+                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                   </svg>
-                  Create Role Version
+                  Role Version
                 </button>
                 <button
                   onClick={regenerateCV}
                   disabled={regenerating || !selectedCV?.parsedText}
-                  className="agent-button flex items-center gap-2"
+                  className="agent-button text-xs flex items-center gap-1.5 disabled:opacity-50"
                 >
                   {regenerating ? (
-                    <>
-                      <div className="h-4 w-4 rounded-full border-2 border-purple-500/30 border-t-purple-400 animate-spin" />
-                      Regenerating...
-                    </>
+                    <div className="h-3 w-3 rounded-full border-2 border-purple-500/30 border-t-purple-400 animate-spin" />
                   ) : (
-                    <>
-                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                      </svg>
-                      Regenerate CV
-                    </>
+                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
                   )}
+                  {regenerating ? "Regenerating..." : "Regenerate"}
                 </button>
               </>
-            )}
-            {!isPremium && selectedCV && (
-              <a href="/pricing" className="agent-button-primary flex items-center gap-2">
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            ) : (
+              <a href="/pricing" className="agent-button-primary text-xs flex items-center gap-1.5">
+                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
-                Upgrade for Full Access
+                Upgrade
               </a>
             )}
-            <button
-              onClick={() => setShowUpload(!showUpload)}
-              className="rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 px-4 py-2 text-sm font-medium text-white hover:opacity-90 transition-opacity"
-            >
-              {showUpload ? "Cancel" : "Upload CV"}
-            </button>
           </div>
-        </div>
+        )}
       </div>
 
       {showRoleSelector && (
@@ -487,16 +480,97 @@ export default function CVsPage() {
             </button>
           </div>
 
-          <div className="rounded-xl bg-zinc-900/50 border border-zinc-800 p-4 max-h-[400px] overflow-y-auto">
-            <pre className="whitespace-pre-wrap text-sm text-zinc-300 font-mono leading-relaxed">
-              {regeneratedCV}
-            </pre>
+          {/* Styled CV Preview */}
+          <div className="rounded-xl bg-white border border-zinc-200 p-8 max-h-[520px] overflow-y-auto shadow-sm">
+            {/* Name & contact */}
+            <div className="border-b-2 border-indigo-500 pb-4 mb-5">
+              <h1 className="text-2xl font-bold text-[#1e1b4b] tracking-tight">{regeneratedCV.name}</h1>
+              <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-sm text-zinc-500">
+                {[regeneratedCV.email, regeneratedCV.phone, regeneratedCV.location].filter(Boolean).map((item, i, arr) => (
+                  <span key={i} className="flex items-center gap-3">
+                    {item}
+                    {i < arr.length - 1 && <span className="text-zinc-300">|</span>}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* Summary */}
+            {regeneratedCV.summary && (
+              <div className="mb-5">
+                <h2 className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-2">Professional Summary</h2>
+                <p className="text-sm text-zinc-600 leading-relaxed">{regeneratedCV.summary}</p>
+              </div>
+            )}
+
+            {/* Experience */}
+            {regeneratedCV.experience?.length > 0 && (
+              <div className="mb-5">
+                <h2 className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-3">Work Experience</h2>
+                {regeneratedCV.experience.map((exp, i) => (
+                  <div key={i} className="mb-4">
+                    <div className="flex justify-between items-baseline">
+                      <span className="font-semibold text-sm text-[#1e1b4b]">{exp.title}</span>
+                      {exp.duration && <span className="text-xs text-zinc-400">{exp.duration}</span>}
+                    </div>
+                    {exp.company && <div className="text-xs text-indigo-500 font-medium mb-2">{exp.company}</div>}
+                    <ul className="space-y-1">
+                      {exp.bullets?.map((b, j) => (
+                        <li key={j} className="flex gap-2 text-xs text-zinc-600 leading-relaxed">
+                          <span className="text-indigo-400 mt-0.5 shrink-0">▸</span>
+                          <span>{b}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Education */}
+            {regeneratedCV.education?.length > 0 && (
+              <div className="mb-5">
+                <h2 className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-3">Education</h2>
+                {regeneratedCV.education.map((edu, i) => (
+                  <div key={i} className="mb-2">
+                    <div className="font-semibold text-sm text-[#1e1b4b]">{edu.degree}</div>
+                    <div className="text-xs text-zinc-500">{edu.institution}{edu.year ? ` · ${edu.year}` : ""}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Skills */}
+            {regeneratedCV.skills?.length > 0 && (
+              <div className="mb-5">
+                <h2 className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-3">Skills</h2>
+                <div className="flex flex-wrap gap-2">
+                  {regeneratedCV.skills.map((skill, i) => (
+                    <span key={i} className="text-xs bg-indigo-50 text-zinc-700 border border-indigo-100 px-2.5 py-1 rounded">
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Certifications */}
+            {regeneratedCV.certifications && regeneratedCV.certifications.length > 0 && (
+              <div>
+                <h2 className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-2">Certifications</h2>
+                {regeneratedCV.certifications.map((cert, i) => (
+                  <div key={i} className="text-xs text-zinc-600 flex gap-2">
+                    <span className="text-indigo-400">▸</span>{cert}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-3 mt-4 flex-wrap">
             <PDFDownloadLink
-              document={<CVPDF content={regeneratedCV} />}
-              fileName="careeros-cv.pdf"
+              document={<CVPDF data={regeneratedCV} />}
+              fileName={`${regeneratedCV.name?.replace(/\s+/g, "-") || "cv"}-careeros.pdf`}
               className="agent-button-primary flex items-center gap-2"
             >
               {({ loading: pdfLoading }) => (
@@ -582,7 +656,7 @@ export default function CVsPage() {
                 </span>
                 <div className="h-px flex-1 bg-gradient-to-r from-transparent via-zinc-700 to-transparent" />
               </div>
-              <div className="grid gap-3 md:grid-cols-2">
+              <div className="grid gap-2">
                 {roleCVs.map((cv) => {
                   const isSelected = selectedCV?.id === cv.id;
 
@@ -609,30 +683,30 @@ export default function CVsPage() {
                           : "border-white/10 bg-[#14141f] hover:border-white/20"
                       }`}
                     >
-                      <div className="flex items-start gap-3">
-                        <div className="h-10 w-10 rounded-lg bg-purple-500/20 flex items-center justify-center flex-shrink-0">
-                          <svg className="h-5 w-5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <div className="flex items-center gap-3">
+                        <div className="h-8 w-8 rounded-lg bg-purple-500/20 flex items-center justify-center flex-shrink-0">
+                          <svg className="h-4 w-4 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                           </svg>
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-white truncate">{cv.originalName}</span>
+                          <div className="flex items-center gap-1.5">
                             {cv.isPrimary && (
-                              <span className="mono text-xs px-1.5 py-0.5 rounded border bg-purple-500/20 border-purple-500/30 text-purple-400">
+                              <span className="mono text-[10px] px-1.5 py-0.5 rounded border bg-purple-500/20 border-purple-500/30 text-purple-400 flex-shrink-0">
                                 primary
                               </span>
                             )}
+                            <span className="text-sm font-medium text-white truncate">{cv.originalName}</span>
                           </div>
-                          <p className="mono text-xs text-zinc-500 mt-1">
-                            {formatDate(cv.createdAt)} • {cv.skills.length} skills
+                          <p className="mono text-xs text-zinc-500 mt-0.5">
+                            {formatDate(cv.createdAt)} · {cv.skills.length} skills
                           </p>
                         </div>
-                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                        <div className="flex items-center gap-1 flex-shrink-0">
                           {!cv.isPrimary && (
                             <button
                               onClick={(e) => { e.stopPropagation(); setPrimary(cv.id); }}
-                              className="mono text-xs px-2 py-1 rounded border border-white/10 text-zinc-500 hover:border-purple-500/50 hover:text-purple-400 transition-colors"
+                              className="mono text-[10px] px-2 py-1 rounded border border-white/10 text-zinc-500 hover:border-purple-500/50 hover:text-purple-400 transition-colors"
                             >
                               Set Primary
                             </button>
@@ -640,9 +714,9 @@ export default function CVsPage() {
                           <button
                             onClick={(e) => { e.stopPropagation(); deleteCV(cv.id); }}
                             disabled={deleting === cv.id}
-                            className="mono text-xs px-2 py-1 rounded border border-white/10 text-zinc-500 hover:border-red-500/50 hover:text-red-400 transition-colors disabled:opacity-50"
+                            className="mono text-[10px] px-2 py-1 rounded border border-white/10 text-zinc-500 hover:border-red-500/50 hover:text-red-400 transition-colors disabled:opacity-50"
                           >
-                            {deleting === cv.id ? "..." : "Remove"}
+                            {deleting === cv.id ? "..." : "✕"}
                           </button>
                         </div>
                       </div>

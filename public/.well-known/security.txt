@@ -1,0 +1,5 @@
+Contact: mailto:security@careeros.live
+Expires: 2027-06-20T00:00:00.000Z
+Preferred-Languages: en
+Canonical: https://careeros.live/.well-known/security.txt
+Policy: https://careeros.live/privacy

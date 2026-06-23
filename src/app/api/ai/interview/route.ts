@@ -48,34 +48,33 @@ export async function POST(request: NextRequest) {
       Keep your response concise and professional.`;
       userPrompt = `History: ${JSON.stringify(history)}`;
     } else if (action === "feedback") {
-      systemPrompt = `You are an expert interview coach. 
-      Analyze the candidate's response to the following interview question for a ${role} position.
-      Question: "${currentQuestion}"
-      Candidate's Answer: "${userResponse}"
-      
-      Provide constructive feedback in the following JSON format:
-      {
-        "score": number (1-10),
-        "strengths": string[],
-        "weaknesses": string[],
-        "improvementTips": string[],
-        "betterSampleAnswer": string
-      }`;
-      userPrompt = `Please provide feedback on my answer.`;
+      systemPrompt = `You are an expert interview coach for ${role} positions. Return ONLY valid JSON — no markdown, no explanation.`;
+      userPrompt = `Interview question: "${currentQuestion}"
+Candidate's answer: "${userResponse}"
+
+Return this JSON:
+{
+  "score": <integer 1-10>,
+  "strengths": ["<specific strength from their actual answer>"],
+  "weaknesses": ["<specific gap in their actual answer>"],
+  "improvementTips": ["<concrete, actionable tip>"],
+  "betterSampleAnswer": "<a complete, specific sample answer — NO placeholders like [mention X], write actual example content>"
+}`;
     }
 
     const { text } = await generateWithFallback(userPrompt, systemPrompt, {
       temperature: action === "feedback" ? 0.3 : 0.7,
+      json: action === "feedback",
     });
 
     if (action === "feedback") {
       try {
-        // Try to parse the JSON if it's feedback action
         const jsonMatch = text.match(/\{[\s\S]*\}/);
-        const feedbackJson = jsonMatch ? JSON.parse(jsonMatch[0]) : { text };
+        const feedbackJson = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
+        if (!feedbackJson?.score) throw new Error("Invalid feedback JSON");
         return NextResponse.json(feedbackJson);
-      } catch (e) {
-        return NextResponse.json({ feedback: text });
+      } catch {
+        return NextResponse.json({ error: "Failed to parse feedback" }, { status: 500 });
       }
     }
 

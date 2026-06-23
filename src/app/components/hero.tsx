@@ -109,7 +109,7 @@ export default function Hero() {
 
         {/* Trust indicators */}
         <p className="animate-fade-up delay-500 mt-8 mono text-xs text-zinc-500">
-          $ free to start • no credit card required
+          Free to start · No credit card required
         </p>
 
         {/* Agent visualization */}
@@ -173,9 +173,9 @@ export default function Hero() {
         {/* Stats */}
         <div className="animate-fade-up delay-700 mt-16 grid grid-cols-3 gap-6 max-w-lg mx-auto">
           {[
-            { value: "50K+", label: "Jobs analyzed" },
-            { value: "92%", label: "Match accuracy" },
-            { value: "3.2x", label: "Interview rate" },
+            { value: "9", label: "Job sources" },
+            { value: "AI", label: "Skills analysis" },
+            { value: "Ghana", label: "Market focus" },
           ].map((stat, i) => (
             <div key={i} className="text-center">
               <div className="text-2xl font-bold text-white">{stat.value}</div>

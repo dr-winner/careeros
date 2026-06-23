@@ -78,7 +78,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f]">
+    <div className="min-h-screen bg-[#0a0a0f] overflow-x-hidden">
       <Toaster position="top-center" />
 
       {/* Desktop Sidebar */}
