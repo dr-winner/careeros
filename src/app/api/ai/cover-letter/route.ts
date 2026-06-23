@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { generateWithFallback } from "@/lib/ai";
 import { coverLetterRequestSchema, getZodErrorMessage } from "@/lib/validation";
 import { checkRateLimit, getRateLimitHeaders, RATE_LIMITS } from "@/lib/ratelimit";
+import { hasAiProviderConfigured } from "@/lib/env";
 
 async function findPreferredResume(userId: string) {
   const include = {
@@ -64,7 +65,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (!process.env.GROQ_API_KEY) {
+    if (!hasAiProviderConfigured()) {
       return NextResponse.json({ error: "AI not configured" }, { status: 500 });
     }
 

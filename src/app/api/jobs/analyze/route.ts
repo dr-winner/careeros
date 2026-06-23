@@ -4,6 +4,8 @@ import { getDbUserId } from "@/lib/auth";
 import { generateWithFallback } from "@/lib/ai";
 import { hasAiProviderConfigured } from "@/lib/env";
 import { isUserPremium } from "@/lib/auth";
+import { checkRateLimit, getRateLimitHeaders, RATE_LIMITS } from "@/lib/ratelimit";
+import { ensureJobRecord } from "@/lib/jobs";
 
 const SKILL_KEYWORDS: Record<string, string[]> = {
   JavaScript: ["javascript", "js", "ecmascript"],
@@ -67,14 +69,28 @@ function extractSkills(text: string): string[] {
 
 export async function POST(request: NextRequest) {
   try {
+    const ip = request.headers.get("x-forwarded-for")?.split(",")[0] || "anonymous";
+    const rateLimitResult = await checkRateLimit("ai", RATE_LIMITS.ai, ip);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: "Too many requests. Please wait before trying again." },
+        { status: 429, headers: getRateLimitHeaders(rateLimitResult) },
+      );
+    }
+
     const userId = await getDbUserId();
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { jobId, jobDescription: clientDescription, jobTitle } = await request.json();
+    const { jobId, jobDescription: clientDescription, jobTitle, companyName } = await request.json();
     if (!jobId) {
       return NextResponse.json({ error: "Job ID required" }, { status: 400 });
+    }
+
+    // Persist job to DB (upsert) so description is available for future analyses
+    if (clientDescription || jobTitle) {
+      ensureJobRecord({ jobId, title: jobTitle, companyName, description: clientDescription }).catch(() => {});
     }
 
     // Prefer the full description stored in DB over the truncated client-sent one
