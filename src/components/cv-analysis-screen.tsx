@@ -625,7 +625,6 @@ export default function CVAnalysisScreen({
     <div className="fixed inset-0 lg:left-56 z-50 bg-[#0a0a0f] overflow-hidden">
       {!showResults && (
         <>
-          <NeuralNetCanvas />
           <ScanLines />
           <GlowOrb x="20%" y="30%" color="#8b5cf6" />
           <GlowOrb x="80%" y="70%" color="#06b6d4" />
