@@ -55,27 +55,7 @@ const TASKS = [
   { id: "report",  label: "Generate report",      sub: "Scoring · recommendations",  completeAt: 100 },
 ];
 
-function ScanLines() {
-  return (
-    <div
-      className="absolute inset-0 pointer-events-none z-0"
-      style={{
-        backgroundImage: "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.05) 2px, rgba(0,0,0,0.05) 4px)",
-      }}
-    />
-  );
-}
-
-function GlowOrb({ x, y, color }: { x: string; y: string; color: string }) {
-  return (
-    <div
-      className="absolute rounded-full blur-3xl opacity-10 pointer-events-none"
-      style={{ left: x, top: y, width: 300, height: 300, background: color, transform: "translate(-50%,-50%)" }}
-    />
-  );
-}
-
-function NeuralNetCanvas() {
+function BreathingNet() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -84,107 +64,106 @@ function NeuralNetCanvas() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // Capture as non-nullable for use inside nested functions
-    const cvs = canvas as HTMLCanvasElement;
-
-    let animId: number;
-    let w = 0, h = 0;
-
-    const NODE_COUNT = 40;
-    type Node = { x: number; y: number; vx: number; vy: number; r: number; pulse: number; phase: number };
-    let nodes: Node[] = [];
-
-    const CHARS = "01アイウエオカキクケコサシスセソタチツテトナニヌネノ";
-    type Column = { x: number; y: number; speed: number; chars: string[]; opacity: number };
-    let cols: Column[] = [];
+    let raf: number;
+    const start = performance.now();
 
     function resize() {
-      w = cvs.offsetWidth;
-      h = cvs.offsetHeight;
-      cvs.width = w;
-      cvs.height = h;
-      nodes = Array.from({ length: NODE_COUNT }, () => ({
-        x: Math.random() * w, y: Math.random() * h,
-        vx: (Math.random() - 0.5) * 0.3, vy: (Math.random() - 0.5) * 0.3,
-        r: 2 + Math.random() * 3,
-        pulse: Math.random() * Math.PI * 2,
-        phase: Math.random() * Math.PI * 2,
-      }));
-      const colCount = Math.floor(w / 20);
-      cols = Array.from({ length: colCount }, (_, i) => ({
-        x: i * 20 + 10, y: Math.random() * h - h,
-        speed: 0.5 + Math.random() * 1.5,
-        chars: Array.from({ length: 20 }, () => CHARS[Math.floor(Math.random() * CHARS.length)]),
-        opacity: 0.04 + Math.random() * 0.06,
-      }));
+      if (!canvas) return;
+      canvas.width = canvas.offsetWidth;
+      canvas.height = canvas.offsetHeight;
     }
+    resize();
+    const ro = new ResizeObserver(resize);
+    ro.observe(canvas);
 
-    let t = 0;
-    function draw(c: CanvasRenderingContext2D) {
-      t += 1;
-      c.clearRect(0, 0, w, h);
+    function draw() {
+      if (!canvas || !ctx) return;
+      const W = canvas.width;
+      const H = canvas.height;
+      const t = (performance.now() - start) / 1000; // seconds elapsed
 
-      cols.forEach((col) => {
-        col.y += col.speed;
-        if (col.y > h + 200) col.y = -200;
-        col.chars.forEach((ch, i) => {
-          const alpha = col.opacity * (1 - i / col.chars.length);
-          c.fillStyle = i === 0 ? `rgba(0,255,150,${alpha})` : `rgba(139,92,246,${alpha})`;
-          c.font = `${i === 0 ? "bold " : ""}11px monospace`;
-          c.fillText(ch, col.x, col.y - i * 16);
-        });
-        if (Math.random() < 0.01) col.chars[0] = CHARS[Math.floor(Math.random() * CHARS.length)];
-      });
+      ctx.clearRect(0, 0, W, H);
 
-      for (let i = 0; i < nodes.length; i++) {
-        for (let j = i + 1; j < nodes.length; j++) {
-          const dx = nodes[i].x - nodes[j].x;
-          const dy = nodes[i].y - nodes[j].y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < 160) {
-            const alpha = (1 - dist / 160) * 0.25;
-            const pulse = Math.sin(t * 0.03 + nodes[i].phase) * 0.5 + 0.5;
-            c.strokeStyle = `rgba(139,92,246,${alpha * (0.4 + pulse * 0.6)})`;
-            c.lineWidth = 0.5 + pulse * 0.5;
-            c.beginPath();
-            c.moveTo(nodes[i].x, nodes[i].y);
-            c.lineTo(nodes[j].x, nodes[j].y);
-            c.stroke();
-          }
+      const SPACING = 54;
+      const WAVE_AMP = 5; // px — how far nodes shift vertically
+      const cols = Math.ceil(W / SPACING) + 2;
+      const rows = Math.ceil(H / SPACING) + 2;
+
+      // Master breathe: one full in/out cycle every 5 seconds
+      const breathe = (Math.sin(t * (2 * Math.PI) / 5) + 1) * 0.5;
+
+      // Wave phase: columns ripple slowly left→right, one full pass every 12 seconds
+      const wavePhase = (t * (2 * Math.PI)) / 12;
+
+      // Displaced node position — each column is at a different wave phase
+      const nodeY = (col: number, row: number) =>
+        row * SPACING + WAVE_AMP * Math.sin(wavePhase + col * 0.45);
+      const nodeX = (col: number) => col * SPACING;
+
+      // Lines — opacity pulses gently with breath
+      const lineAlpha = 0.03 + breathe * 0.04;
+      ctx.strokeStyle = `rgba(139, 92, 246, ${lineAlpha})`;
+      ctx.lineWidth = 0.5;
+
+      // Horizontal strands (follow the wave)
+      for (let row = 0; row <= rows; row++) {
+        ctx.beginPath();
+        for (let col = 0; col <= cols; col++) {
+          const x = nodeX(col);
+          const y = nodeY(col, row);
+          col === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+
+      // Vertical strands
+      for (let col = 0; col <= cols; col++) {
+        ctx.beginPath();
+        for (let row = 0; row <= rows; row++) {
+          const x = nodeX(col);
+          const y = nodeY(col, row);
+          row === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+
+      // Intersection nodes — each pulses independently with staggered phase
+      for (let col = 0; col <= cols; col++) {
+        for (let row = 0; row <= rows; row++) {
+          const x = nodeX(col);
+          const y = nodeY(col, row);
+          // Stagger phase so nodes don't all pulse in sync
+          const phase = col * 1.7 + row * 2.9;
+          const pulse = (Math.sin((t * (2 * Math.PI)) / 4 + phase) + 1) * 0.5;
+          const alpha = 0.04 + pulse * 0.13;
+          const radius = 1.0 + pulse * 0.9;
+          ctx.fillStyle = `rgba(139, 92, 246, ${alpha})`;
+          ctx.beginPath();
+          ctx.arc(x, y, radius, 0, Math.PI * 2);
+          ctx.fill();
         }
       }
 
-      nodes.forEach((n) => {
-        n.x += n.vx; n.y += n.vy;
-        if (n.x < 0 || n.x > w) n.vx *= -1;
-        if (n.y < 0 || n.y > h) n.vy *= -1;
-        n.pulse += 0.04;
-        const glow = Math.sin(n.pulse) * 0.5 + 0.5;
-        const grad = c.createRadialGradient(n.x, n.y, 0, n.x, n.y, n.r * (2 + glow * 3));
-        grad.addColorStop(0, `rgba(139,92,246,${0.8 + glow * 0.2})`);
-        grad.addColorStop(0.5, `rgba(6,182,212,${0.3 * glow})`);
-        grad.addColorStop(1, "rgba(0,0,0,0)");
-        c.fillStyle = grad;
-        c.beginPath();
-        c.arc(n.x, n.y, n.r * (1 + glow * 2), 0, Math.PI * 2);
-        c.fill();
-      });
+      // Subtle horizontal scan glow — one sweep every 10 seconds, very soft
+      const scanY = ((t / 10) % 1) * H;
+      const sg = ctx.createLinearGradient(0, scanY - 90, 0, scanY + 90);
+      sg.addColorStop(0, "rgba(6, 182, 212, 0)");
+      sg.addColorStop(0.5, `rgba(6, 182, 212, ${0.022 + breathe * 0.018})`);
+      sg.addColorStop(1, "rgba(6, 182, 212, 0)");
+      ctx.fillStyle = sg;
+      ctx.fillRect(0, Math.max(0, scanY - 90), W, 180);
 
-      animId = requestAnimationFrame(() => draw(c));
+      raf = requestAnimationFrame(draw);
     }
 
-    resize();
-    draw(ctx);
-    const ro = new ResizeObserver(resize);
-    ro.observe(cvs);
-
-    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
+    draw();
+    return () => { cancelAnimationFrame(raf); ro.disconnect(); };
   }, []);
 
   return (
     <canvas
       ref={canvasRef}
-      className="absolute inset-0 w-full h-full pointer-events-none z-0 opacity-60"
+      className="absolute inset-0 w-full h-full pointer-events-none z-0"
     />
   );
 }
@@ -623,13 +602,7 @@ export default function CVAnalysisScreen({
 
   return (
     <div className="fixed inset-0 lg:left-56 z-50 bg-[#0a0a0f] overflow-hidden">
-      {!showResults && (
-        <>
-          <ScanLines />
-          <GlowOrb x="20%" y="30%" color="#8b5cf6" />
-          <GlowOrb x="80%" y="70%" color="#06b6d4" />
-        </>
-      )}
+      {!showResults && <BreathingNet />}
 
       {!showResults ? (
         <AnalyzingPhase progress={progress} lines={visibleLogs} />
