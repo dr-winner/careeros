@@ -78,7 +78,7 @@ type SavedJobRecord = Awaited<
   ReturnType<typeof prisma.savedJob.findMany>
 >[number];
 
-type JobSourceName = "adzuna" | "remotive" | "arbeitnow" | "rise" | "jooble" | "remoteok" | "themuse" | "jobicy" | "greenhouse";
+type JobSourceName = "adzuna" | "remotive" | "arbeitnow" | "rise" | "jooble" | "remoteok" | "themuse" | "jobicy" | "greenhouse" | "ashby" | "workable" | "smartrecruiters";
 
 type CachedJobsPayload = {
   jobs: Job[];
@@ -215,7 +215,7 @@ async function fetchJsonWithTimeout(
   }
 }
 
-// Adzuna supported country codes + regions for broader global coverage
+// Adzuna supported country codes (NG/GH not in their API — confirmed 404)
 const ADZUNA_COUNTRIES = [
   { code: "za", label: "South Africa" },
   { code: "ca", label: "Canada" },
@@ -223,7 +223,6 @@ const ADZUNA_COUNTRIES = [
   { code: "us", label: "United States" },
   { code: "au", label: "Australia" },
   { code: "in", label: "India" },
-  { code: "ng", label: "Nigeria" }, // may 404 — caught per-country
 ] as const;
 
 async function fetchFromAdzuna(
@@ -557,8 +556,7 @@ async function fetchFromJobicy(
   }
 }
 
-// Greenhouse public job boards — Africa-focused companies with verified active listings
-// No API key required
+// Greenhouse public job boards — Africa-focused companies, no API key required
 interface GreenhouseJob {
   id: number;
   title: string;
@@ -571,9 +569,10 @@ interface GreenhouseJob {
 }
 
 const GREENHOUSE_BOARDS = [
-  { slug: "paystack",    company: "Paystack" },
+  { slug: "paystack",    company: "Paystack"   },
   { slug: "moniepoint", company: "Moniepoint" },
-  { slug: "jumia",      company: "Jumia" },
+  { slug: "jumia",      company: "Jumia"      },
+  { slug: "wavemm1",    company: "Wave"       }, // Wave Mobile Money — confirmed 55 jobs, strong Ghana presence
 ] as const;
 
 async function fetchFromGreenhouse(savedJobIds: string[]): Promise<Job[]> {
@@ -672,6 +671,238 @@ async function fetchFromTheMuse(
   }
 }
 
+// Ashby public job board API — free, no key, clean JSON
+// https://developers.ashbyhq.com/docs/public-job-posting-api
+interface AshbyJobPosting {
+  id: string;
+  title: string;
+  teamName?: string;
+  locationName?: string;
+  locationIsRemote?: boolean;
+  employmentType?: string;
+  descriptionHtml?: string;
+  descriptionPlain?: string;
+  publishedDate?: string;
+  applicationLink?: string;
+  jobUrl?: string;
+  compensation?: { minValue?: number; maxValue?: number };
+}
+
+const ASHBY_BOARDS = [
+  { slug: "m-kopa",     company: "M-KOPA",    defaultCountry: "GH" }, // confirmed Ghana (Accra) + Nigeria (Lagos)
+  { slug: "taptapsend", company: "TapTap Send", defaultCountry: "NG" }, // confirmed Nigeria
+  { slug: "andela",     company: "Andela",    defaultCountry: "NG" }, // Pan-African talent network
+] as const;
+
+async function fetchFromAshby(savedJobIds: string[]): Promise<Job[]> {
+  const results = await Promise.allSettled(
+    ASHBY_BOARDS.map(async ({ slug, company, defaultCountry }) => {
+      const data = (await fetchJsonWithTimeout(
+        `https://api.ashbyhq.com/posting-api/job-board/${slug}`,
+        {},
+        8_000,
+      )) as { jobPostings?: AshbyJobPosting[] };
+
+      if (!Array.isArray(data.jobPostings)) return [];
+
+      return data.jobPostings.map((job): Job => {
+        const id = `ashby-${slug}-${job.id}`;
+        const location = job.locationName || "Not specified";
+        const detectedCountry = getCountry("ashby", location);
+        const country = detectedCountry === "GLOBAL" ? defaultCountry : detectedCountry;
+        return {
+          id,
+          title: job.title,
+          companyName: company,
+          location,
+          country,
+          workMode: job.locationIsRemote ? "Remote" : "On-site",
+          seniorityLevel: detectSeniority(job.title),
+          employmentType: job.employmentType || "Full-time",
+          description: (job.descriptionPlain || job.descriptionHtml || "")
+            .replace(/<[^>]*>/g, "")
+            .substring(0, 8000),
+          requirements: job.teamName || "See job posting for details",
+          postedAt: job.publishedDate || new Date().toISOString(),
+          salaryMin: job.compensation?.minValue,
+          salaryMax: job.compensation?.maxValue,
+          isSaved: savedJobIds.includes(id),
+          applicationUrl: job.applicationLink || job.jobUrl || "#",
+          source: "ashby",
+        };
+      });
+    }),
+  );
+
+  return results.flatMap((r) => (r.status === "fulfilled" ? r.value : []));
+}
+
+// Workable — free cross-company search by country (GH/NG) + Kuda per-company board
+async function fetchFromWorkable(query: string, savedJobIds: string[]): Promise<Job[]> {
+  const jobs: Job[] = [];
+
+  // Cross-company search for Ghana and Nigeria
+  for (const countryCode of ["GH", "NG"] as const) {
+    try {
+      const qs = query
+        ? `query=${encodeURIComponent(query)}&country=${countryCode}`
+        : `country=${countryCode}`;
+      const data = (await fetchJsonWithTimeout(
+        `https://jobs.workable.com/api/v1/jobs?${qs}`,
+        { headers: { "User-Agent": "CareerOS/1.0 (careeros.live)" } },
+      )) as {
+        results?: Array<{
+          id?: string;
+          title?: string;
+          company?: string;
+          location?: string;
+          url?: string;
+          type?: string;
+          created?: string;
+        }>;
+      };
+
+      if (!Array.isArray(data.results)) continue;
+
+      for (const job of data.results.slice(0, 25)) {
+        const id = `workable-${countryCode}-${job.id || job.title?.slice(0, 20)}`;
+        jobs.push({
+          id,
+          title: job.title || "Position",
+          companyName: job.company || "Unknown Company",
+          location: job.location || (countryCode === "GH" ? "Ghana" : "Nigeria"),
+          country: countryCode,
+          workMode: job.type?.toLowerCase().includes("remote") ? "Remote" : "On-site",
+          seniorityLevel: detectSeniority(job.title || ""),
+          employmentType: job.type || "Full-time",
+          description: "",
+          requirements: "See job posting for details",
+          postedAt: job.created || new Date().toISOString(),
+          isSaved: savedJobIds.includes(id),
+          applicationUrl: job.url || "#",
+          source: "workable",
+        });
+      }
+    } catch (err) {
+      console.error(`Workable ${countryCode} error:`, err);
+    }
+  }
+
+  // Kuda per-company (Nigerian neobank, confirmed 15 jobs)
+  try {
+    const data = (await fetchJsonWithTimeout(
+      "https://apply.workable.com/api/v1/widget/accounts/kuda",
+      { headers: { "User-Agent": "CareerOS/1.0 (careeros.live)" } },
+    )) as {
+      job_openings?: Array<{
+        shortcode?: string;
+        title?: string;
+        department?: string;
+        type?: string;
+        remote?: boolean;
+        location?: { location_str?: string; country_code?: string };
+        url?: string;
+        application_url?: string;
+        created_at?: string;
+        created?: string;
+      }>;
+    };
+
+    if (Array.isArray(data.job_openings)) {
+      for (const job of data.job_openings) {
+        const id = `workable-kuda-${job.shortcode || job.title?.slice(0, 20)}`;
+        const location = job.location?.location_str || "Nigeria";
+        const cc = job.location?.country_code?.toUpperCase() || getCountry("workable", location);
+        jobs.push({
+          id,
+          title: job.title || "Position",
+          companyName: "Kuda",
+          location,
+          country: cc === "GLOBAL" ? "NG" : cc,
+          workMode: job.remote ? "Remote" : "On-site",
+          seniorityLevel: detectSeniority(job.title || ""),
+          employmentType: job.type || "Full-time",
+          description: "",
+          requirements: job.department || "See job posting for details",
+          postedAt: job.created_at || job.created || new Date().toISOString(),
+          isSaved: savedJobIds.includes(id),
+          applicationUrl: job.application_url || job.url || "#",
+          source: "workable",
+        });
+      }
+    }
+  } catch (err) {
+    console.error("Kuda Workable error:", err);
+  }
+
+  return jobs;
+}
+
+// SmartRecruiters public posting API — free, no key
+// Deloitte West Africa: confirmed 301 jobs across Ghana, Nigeria, and other African countries
+interface SmartRecruiterPosting {
+  id: string;
+  name: string;
+  ref: string;
+  department?: { label: string };
+  location?: { city?: string; country?: string; countryCode?: string; remote?: boolean };
+  releasedDate?: string;
+  function?: { label: string };
+  experienceLevel?: { label: string };
+  typeOfEmployment?: { label: string };
+}
+
+const SMARTRECRUITERS_BOARDS = [
+  { slug: "Deloitte6", company: "Deloitte" },
+] as const;
+
+async function fetchFromSmartRecruiters(savedJobIds: string[]): Promise<Job[]> {
+  const results = await Promise.allSettled(
+    SMARTRECRUITERS_BOARDS.map(async ({ slug, company }) => {
+      const data = (await fetchJsonWithTimeout(
+        `https://api.smartrecruiters.com/v1/companies/${slug}/postings?limit=100`,
+        {},
+        8_000,
+      )) as { content?: SmartRecruiterPosting[] };
+
+      if (!Array.isArray(data.content)) return [];
+
+      // Filter to Ghana and Nigeria only to avoid flooding other regions
+      const westAfrica = data.content.filter((job) => {
+        const cc = (job.location?.countryCode || "").toUpperCase();
+        const country = (job.location?.country || "").toLowerCase();
+        return cc === "GH" || cc === "NG" || country.includes("ghana") || country.includes("nigeria");
+      });
+
+      return westAfrica.map((job): Job => {
+        const id = `smartrecruiters-${job.id}`;
+        const city = job.location?.city || "";
+        const country = job.location?.country || "";
+        const location = city && country ? `${city}, ${country}` : city || country || "Not specified";
+        const cc = (job.location?.countryCode || "").toUpperCase() || getCountry("smartrecruiters", location);
+        return {
+          id,
+          title: job.name,
+          companyName: company,
+          location,
+          country: cc || "GH",
+          workMode: job.location?.remote ? "Remote" : "On-site",
+          seniorityLevel: job.experienceLevel?.label || detectSeniority(job.name),
+          employmentType: job.typeOfEmployment?.label || "Full-time",
+          description: "",
+          requirements: job.function?.label || job.department?.label || "See job posting for details",
+          postedAt: job.releasedDate || new Date().toISOString(),
+          isSaved: savedJobIds.includes(id),
+          applicationUrl: job.ref || "#",
+          source: "smartrecruiters",
+        };
+      });
+    }),
+  );
+
+  return results.flatMap((r) => (r.status === "fulfilled" ? r.value : []));
+}
+
 function buildSavedJobMap(
   savedJobs: SavedJobRecord[],
 ): Record<string, SavedJobRecord> {
@@ -708,15 +939,18 @@ async function fetchSearchResults(
     source: JobSourceName;
     run: () => Promise<Job[]>;
   }> = [
-    { source: "adzuna",     run: () => fetchFromAdzuna(query, savedJobIds) },
-    { source: "remotive",   run: () => fetchFromRemotive(query, savedJobIds) },
-    { source: "arbeitnow",  run: () => fetchFromArbeitnow(savedJobIds) },
-    { source: "rise",       run: () => fetchFromRise(query, savedJobIds) },
-    { source: "jooble",     run: () => fetchFromJooble(query, savedJobIds) },
-    { source: "remoteok",   run: () => fetchFromRemoteOK(query, savedJobIds) },
-    { source: "themuse",    run: () => fetchFromTheMuse(query, savedJobIds) },
-    { source: "jobicy",     run: () => fetchFromJobicy(query, savedJobIds) },
-    { source: "greenhouse", run: () => fetchFromGreenhouse(savedJobIds) },
+    { source: "adzuna",          run: () => fetchFromAdzuna(query, savedJobIds) },
+    { source: "remotive",        run: () => fetchFromRemotive(query, savedJobIds) },
+    { source: "arbeitnow",       run: () => fetchFromArbeitnow(savedJobIds) },
+    { source: "rise",            run: () => fetchFromRise(query, savedJobIds) },
+    { source: "jooble",          run: () => fetchFromJooble(query, savedJobIds) },
+    { source: "remoteok",        run: () => fetchFromRemoteOK(query, savedJobIds) },
+    { source: "themuse",         run: () => fetchFromTheMuse(query, savedJobIds) },
+    { source: "jobicy",          run: () => fetchFromJobicy(query, savedJobIds) },
+    { source: "greenhouse",      run: () => fetchFromGreenhouse(savedJobIds) },
+    { source: "ashby",           run: () => fetchFromAshby(savedJobIds) },
+    { source: "workable",        run: () => fetchFromWorkable(query, savedJobIds) },
+    { source: "smartrecruiters", run: () => fetchFromSmartRecruiters(savedJobIds) },
   ];
 
   const results = await Promise.allSettled(
@@ -737,6 +971,9 @@ async function fetchSearchResults(
     themuse: 0,
     jobicy: 0,
     greenhouse: 0,
+    ashby: 0,
+    workable: 0,
+    smartrecruiters: 0,
   };
   const warnings: string[] = [];
   let partialFailure = false;

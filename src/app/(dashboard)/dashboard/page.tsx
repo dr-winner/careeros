@@ -28,6 +28,19 @@ export default function DashboardPage() {
     icon: string;
   } | null>(null);
   const [isLoadingAction, setIsLoadingAction] = useState(true);
+  const [analytics, setAnalytics] = useState<{
+    responseRate: number;
+    resumeCount: number;
+    alertCount: number;
+    statusCounts: Record<string, number>;
+    recentApps: { id: string; jobTitle: string | null; companyName: string | null; status: string; appliedAt: string | null }[];
+  }>({
+    responseRate: 0,
+    resumeCount: 0,
+    alertCount: 0,
+    statusCounts: {},
+    recentApps: [],
+  });
 
   useEffect(() => {
     if (isLoaded && isUserLoaded && userId) {
@@ -57,18 +70,42 @@ export default function DashboardPage() {
     Promise.all([
       fetch("/api/applications").then((res) => res.json()),
       fetch("/api/saved-jobs").then((res) => res.json()),
+      fetch("/api/user/resumes").then((res) => res.json()),
+      fetch("/api/searches").then((res) => res.json()),
     ])
-      .then(([appsData, savedData]) => {
-        const applications = appsData.applications || [];
+      .then(([appsData, savedData, resumesData, alertsData]) => {
+        const applications: { status?: string; jobTitle?: string | null; companyName?: string | null; id: string; appliedAt?: string | null }[] = appsData.applications || [];
         const interviews = applications.filter(
-          (application: { status?: string }) =>
-            ["Screening", "Interview"].includes(application.status || ""),
+          (application) => ["Screening", "Interview"].includes(application.status || ""),
         ).length;
+
+        const statusCounts: Record<string, number> = {};
+        applications.forEach((app) => {
+          statusCounts[app.status || "Applied"] = (statusCounts[app.status || "Applied"] || 0) + 1;
+        });
+
+        const responses = applications.filter((a) =>
+          ["Screening", "Interview", "Offer"].includes(a.status || ""),
+        ).length;
+        const responseRate = applications.length > 0 ? Math.round((responses / applications.length) * 100) : 0;
 
         setStats({
           applications: applications.length,
           savedJobs: savedData.savedJobs?.length || 0,
           interviews,
+        });
+        setAnalytics({
+          responseRate,
+          resumeCount: resumesData.resumes?.length || 0,
+          alertCount: alertsData.searches?.length || 0,
+          statusCounts,
+          recentApps: applications.slice(0, 5).map((a) => ({
+            id: a.id,
+            jobTitle: a.jobTitle ?? null,
+            companyName: a.companyName ?? null,
+            status: a.status || "Applied",
+            appliedAt: a.appliedAt ?? null,
+          })),
         });
       })
       .catch(console.error);
@@ -268,7 +305,7 @@ export default function DashboardPage() {
               {[
                 { step: "1", label: "Upload your CV", desc: "Lets AI extract your skills for matching", href: "/resumes" },
                 { step: "2", label: "Browse jobs", desc: "Find roles and see your fit score", href: "/jobs" },
-                { step: "3", label: "Apply with confidence", desc: "Generate a cover letter, prep for interviews", href: "/cover-letter" },
+                { step: "3", label: "Apply with confidence", desc: "Generate a cover letter, prep for interviews", href: "/resumes?tab=cover-letter" },
               ].map((item) => (
                 <a
                   key={item.step}
@@ -362,15 +399,15 @@ export default function DashboardPage() {
               color: "purple",
             },
             {
-              href: "/cover-letter",
+              href: "/resumes?tab=cover-letter",
               label: "Cover Letter",
               icon: "M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z",
               color: "cyan",
             },
             {
-              href: "/analytics",
-              label: "Analytics",
-              icon: "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z",
+              href: "/applications",
+              label: "Applications",
+              icon: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2",
               color: "amber",
             },
             {
@@ -408,6 +445,108 @@ export default function DashboardPage() {
             </Link>
           ))}
         </div>
+        {/* Analytics section — only shown once user has activity */}
+        {stats.applications > 0 && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <div className="h-px flex-1 bg-gradient-to-r from-transparent via-zinc-800 to-transparent" />
+              <span className="mono text-[10px] text-zinc-600 uppercase tracking-widest px-2">Progress</span>
+              <div className="h-px flex-1 bg-gradient-to-r from-transparent via-zinc-800 to-transparent" />
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-3">
+              {[
+                { label: "Response Rate", value: `${analytics.responseRate}%`, color: "cyan" },
+                { label: "CVs Uploaded", value: analytics.resumeCount, color: "purple" },
+                { label: "Active Alerts", value: analytics.alertCount, color: "amber" },
+              ].map((item, i) => (
+                <div key={i} className="rounded-xl border border-white/10 bg-[#14141f] p-4">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="mono text-[10px] text-zinc-500 uppercase tracking-wider">{item.label}</span>
+                    <div className={`h-1.5 w-1.5 rounded-full ${item.color === "cyan" ? "bg-cyan-400" : item.color === "purple" ? "bg-purple-400" : "bg-amber-400"}`} />
+                  </div>
+                  <div className="text-2xl font-bold text-white">{item.value}</div>
+                </div>
+              ))}
+            </div>
+
+            {Object.keys(analytics.statusCounts).length > 0 && (
+              <div className="rounded-xl border border-white/10 bg-[#14141f] p-5">
+                <span className="text-xs font-medium text-zinc-400">Application Status</span>
+                <div className="mt-3 space-y-2.5">
+                  {Object.entries(analytics.statusCounts).map(([status, count]) => {
+                    const total = stats.applications;
+                    const pct = Math.round((count / total) * 100);
+                    const colors: Record<string, string> = {
+                      Applied: "bg-cyan-500",
+                      Screening: "bg-amber-500",
+                      Interview: "bg-purple-500",
+                      Offer: "bg-green-500",
+                      Rejected: "bg-red-500",
+                      Withdrawn: "bg-zinc-500",
+                    };
+                    const textColors: Record<string, string> = {
+                      Applied: "text-cyan-400 border-cyan-500/30 bg-cyan-500/10",
+                      Screening: "text-amber-400 border-amber-500/30 bg-amber-500/10",
+                      Interview: "text-purple-400 border-purple-500/30 bg-purple-500/10",
+                      Offer: "text-green-400 border-green-500/30 bg-green-500/10",
+                      Rejected: "text-red-400 border-red-500/30 bg-red-500/10",
+                      Withdrawn: "text-zinc-400 border-zinc-500/30 bg-zinc-500/10",
+                    };
+                    return (
+                      <div key={status} className="flex items-center gap-3">
+                        <span className={`mono text-xs px-2 py-0.5 rounded border flex-shrink-0 ${textColors[status] || textColors.Applied}`}>
+                          {status}
+                        </span>
+                        <div className="flex-1 h-1.5 rounded-full bg-zinc-900 overflow-hidden">
+                          <div
+                            className={`h-full rounded-full ${colors[status] || colors.Applied}`}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                        <span className="mono text-xs text-zinc-500 w-6 text-right">{count}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {analytics.recentApps.length > 0 && (
+              <div className="rounded-xl border border-white/10 bg-[#14141f] p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-medium text-zinc-400">Recent Applications</span>
+                  <a href="/applications" className="mono text-xs text-purple-400 hover:text-purple-300">View all →</a>
+                </div>
+                <div className="space-y-2">
+                  {analytics.recentApps.map((app) => {
+                    const textColors: Record<string, string> = {
+                      Applied: "text-cyan-400 border-cyan-500/30 bg-cyan-500/10",
+                      Screening: "text-amber-400 border-amber-500/30 bg-amber-500/10",
+                      Interview: "text-purple-400 border-purple-500/30 bg-purple-500/10",
+                      Offer: "text-green-400 border-green-500/30 bg-green-500/10",
+                      Rejected: "text-red-400 border-red-500/30 bg-red-500/10",
+                      Withdrawn: "text-zinc-400 border-zinc-500/30 bg-zinc-500/10",
+                    };
+                    return (
+                      <div key={app.id} className="flex items-center justify-between py-2 px-3 rounded-lg bg-zinc-900/30">
+                        <div className="flex-1 min-w-0">
+                          <span className="text-sm font-medium text-white truncate block">
+                            {app.jobTitle || "Untitled Role"}
+                          </span>
+                          {app.companyName && <span className="mono text-xs text-zinc-500">{app.companyName}</span>}
+                        </div>
+                        <span className={`mono text-xs px-1.5 py-0.5 rounded border flex-shrink-0 ml-3 ${textColors[app.status] || textColors.Applied}`}>
+                          {app.status}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </>
   );

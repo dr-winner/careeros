@@ -200,8 +200,8 @@ export default function AlertsPage() {
                   onChange={(e) => setFormData({ ...formData, alertFrequency: e.target.value })}
                   className="agent-input w-full"
                 >
-                  <option value="daily">daily</option>
-                  <option value="weekly">weekly</option>
+                  <option value="daily">Daily</option>
+                  <option value="weekly">Weekly</option>
                 </select>
               </div>
               <div>
@@ -211,10 +211,10 @@ export default function AlertsPage() {
                   onChange={(e) => setFormData({ ...formData, workMode: e.target.value })}
                   className="agent-input w-full"
                 >
-                  <option value="">any</option>
-                  <option value="Remote">remote</option>
-                  <option value="Hybrid">hybrid</option>
-                  <option value="On-site">on-site</option>
+                  <option value="">Any</option>
+                  <option value="Remote">Remote</option>
+                  <option value="Hybrid">Hybrid</option>
+                  <option value="On-site">On-site</option>
                 </select>
               </div>
               <div>
@@ -224,10 +224,10 @@ export default function AlertsPage() {
                   onChange={(e) => setFormData({ ...formData, seniority: e.target.value })}
                   className="agent-input w-full"
                 >
-                  <option value="">any</option>
-                  <option value="Entry-Level">entry-level</option>
-                  <option value="Mid-Level">mid-level</option>
-                  <option value="Senior">senior</option>
+                  <option value="">Any</option>
+                  <option value="Entry-Level">Entry Level</option>
+                  <option value="Mid-Level">Mid Level</option>
+                  <option value="Senior">Senior</option>
                 </select>
               </div>
             </div>
@@ -258,8 +258,8 @@ export default function AlertsPage() {
           </div>
           <h3 className="text-lg font-medium text-white">No alerts</h3>
           <p className="mono text-xs text-zinc-500 mt-2">Create an alert to get notified.</p>
-          <button onClick={() => setShowCreate(true)} className="mono text-xs text-purple-400 hover:text-purple-300 mt-4">
-            + create_alert
+          <button onClick={() => setShowCreate(true)} className="text-xs text-purple-400 hover:text-purple-300 mt-4">
+            + Create Alert
           </button>
         </div>
       ) : (
@@ -294,7 +294,7 @@ export default function AlertsPage() {
                     <div className="peer h-5 w-9 rounded-full bg-zinc-800 after:absolute after:left-0.5 after:top-0.5 after:h-4 after:w-4 after:rounded-full after:border after:border-zinc-600 after:bg-zinc-500 after:transition-all peer-checked:bg-purple-600 peer-checked:after:translate-x-full peer-checked:after:border-white" />
                   </label>
                   <Link href={`/jobs?search=${encodeURIComponent(search.searchQuery)}`} className="agent-button text-xs px-2 py-1">
-                    search
+                    Search
                   </Link>
                   <button onClick={() => deleteSearch(search.id)} className="mono text-xs px-2 py-1 rounded border border-zinc-800 text-zinc-500 hover:border-red-500/50 hover:text-red-400 transition-colors">
                     Remove
@@ -314,7 +314,7 @@ export default function AlertsPage() {
             "Email notification when found",
             "Toggle on/off without losing search",
           ].map((item, i) => (
-            <li key={i} className="mono text-xs text-zinc-500 flex items-center gap-2">
+            <li key={i} className="text-xs text-zinc-500 flex items-center gap-2">
               <span className="text-purple-400">→</span> {item}
             </li>
           ))}

@@ -92,12 +92,29 @@ export function parseSalary(salary?: string): { min?: number; max?: number } {
 export function getCountry(source: string, location: unknown): string {
   const loc = String(location || "").toLowerCase();
 
-  // Africa
-  if (loc.includes("nigeria") || loc.includes("lagos") || loc.includes("abuja")) return "NG";
-  if (loc.includes("ghana") || loc.includes("accra")) return "GH";
+  // Africa — Ghana
+  if (loc.includes("ghana") || loc.includes("accra") || loc.includes("kumasi") ||
+      loc.includes("tema") || loc.includes("takoradi") || loc.includes("cape coast") ||
+      loc.includes("tamale") || loc.includes("ho,") || loc.includes("sunyani")) return "GH";
+
+  // Africa — Nigeria
+  if (loc.includes("nigeria") || loc.includes("lagos") || loc.includes("abuja") ||
+      loc.includes("port harcourt") || loc.includes("ibadan") || loc.includes("kano") ||
+      loc.includes("enugu") || loc.includes("benin city") || loc.includes("aba,") ||
+      loc.includes("onitsha") || loc.includes("kaduna") || loc.includes("uyo")) return "NG";
+
+  // Africa — Kenya
   if (loc.includes("kenya") || loc.includes("nairobi")) return "KE";
-  if (loc.includes("south africa") || loc.includes("johannesburg") || loc.includes("cape town")) return "ZA";
-  if (loc.includes("africa")) return "ZA";
+
+  // Africa — South Africa (explicit mentions only — no longer the catch-all)
+  if (loc.includes("south africa") || loc.includes("johannesburg") || loc.includes("cape town") ||
+      loc.includes("durban") || loc.includes("pretoria") || loc.includes("soweto")) return "ZA";
+
+  // Africa — West Africa generic (region, not a specific country)
+  if (loc.includes("west africa")) return "AF";
+
+  // Africa — other/generic (not ZA)
+  if (loc.includes("africa")) return "AF";
 
   // North America
   if (loc.includes("canada") || loc.includes("toronto") || loc.includes("vancouver") || loc.includes("montreal") || loc.includes("ottawa") || loc.includes("calgary")) return "CA";
@@ -119,7 +136,8 @@ export function getCountry(source: string, location: unknown): string {
   if (source === "arbeitnow") return "EU";
   if (source === "themuse") return "US";
 
-  return "ZA";
+  // Default: GLOBAL, not ZA (was incorrectly South Africa before)
+  return "GLOBAL";
 }
 
 export function filterJobs<T extends FilterableJob>(
