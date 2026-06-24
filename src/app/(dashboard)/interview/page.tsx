@@ -30,7 +30,7 @@ interface PastSession {
 }
 
 export default function InterviewPrepPage() {
-  const [activeTab, setActiveTab] = useState<"bank" | "mock">("bank");
+  const [activeTab, setActiveTab] = useState<"bank" | "mock" | "live">("bank");
   const [category, setCategory] = useState("all");
   const [roleType, setRoleType] = useState("all");
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -52,6 +52,13 @@ export default function InterviewPrepPage() {
   const [expandedSession, setExpandedSession] = useState<string | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Live Session state
+  const [liveRole, setLiveRole] = useState("Software Engineer");
+  const [liveExperience, setLiveExperience] = useState("Mid-level");
+  const [createdRoom, setCreatedRoom] = useState<{ roomCode: string; role: string; experienceLevel?: string } | null>(null);
+  const [isCreatingRoom, setIsCreatingRoom] = useState(false);
+  const [joinCode, setJoinCode] = useState("");
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -206,6 +213,24 @@ export default function InterviewPrepPage() {
     }
   };
 
+  const createRoom = async () => {
+    setIsCreatingRoom(true);
+    try {
+      const res = await fetch("/api/interview-rooms", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role: liveRole, experienceLevel: liveExperience }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setCreatedRoom(data.room);
+    } catch {
+      toast.error("Failed to create room");
+    } finally {
+      setIsCreatingRoom(false);
+    }
+  };
+
   const deleteSession = async (id: string) => {
     try {
       await fetch(`/api/user/interview-sessions/${id}`, { method: "DELETE" });
@@ -238,6 +263,15 @@ export default function InterviewPrepPage() {
             }`}
           >
             AI Mock Interview
+          </button>
+          <button
+            onClick={() => setActiveTab("live")}
+            className={`px-4 py-2 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
+              activeTab === "live" ? "bg-green-600 text-white shadow-lg shadow-green-900/20" : "text-zinc-500 hover:text-zinc-300"
+            }`}
+          >
+            <span className={`h-1.5 w-1.5 rounded-full ${activeTab === "live" ? "bg-white" : "bg-green-500"}`} />
+            Live Session
           </button>
         </div>
       </div>
@@ -349,7 +383,7 @@ export default function InterviewPrepPage() {
             </div>
           )}
         </div>
-      ) : (
+      ) : activeTab === "mock" ? (
         <div className="animate-fade-up">
           {!isInterviewing ? (
             <div className="space-y-6">
@@ -639,6 +673,176 @@ export default function InterviewPrepPage() {
               </div>
             </div>
           )}
+        </div>
+      ) : (
+        <div className="animate-fade-up max-w-2xl mx-auto space-y-6">
+          {/* Create Room */}
+          {!createdRoom ? (
+            <div className="agent-card p-8">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="h-10 w-10 rounded-xl bg-green-500/20 border border-green-500/20 flex items-center justify-center">
+                  <svg className="h-5 w-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.069A1 1 0 0121 8.868V15.132a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-white">Start a Live Interview</h2>
+                  <p className="text-xs text-zinc-500 mt-0.5">Create a room and share the link with your interviewer or candidate</p>
+                </div>
+              </div>
+
+              <div className="grid sm:grid-cols-2 gap-4 mb-6">
+                <div>
+                  <label className="block text-xs text-zinc-400 mb-2">Role / Position</label>
+                  <input
+                    type="text"
+                    value={liveRole}
+                    onChange={(e) => setLiveRole(e.target.value)}
+                    placeholder="e.g. Software Engineer"
+                    className="w-full agent-input text-sm py-3"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-zinc-400 mb-2">Experience Level</label>
+                  <select
+                    value={liveExperience}
+                    onChange={(e) => setLiveExperience(e.target.value)}
+                    className="w-full agent-input text-sm py-3"
+                  >
+                    <option>Junior</option>
+                    <option>Mid-level</option>
+                    <option>Senior</option>
+                    <option>Lead / Principal</option>
+                    <option>Executive</option>
+                  </select>
+                </div>
+              </div>
+
+              <button
+                onClick={createRoom}
+                disabled={isCreatingRoom || !liveRole.trim()}
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 text-white font-medium hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {isCreatingRoom ? (
+                  <>
+                    <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Creating Room...
+                  </>
+                ) : (
+                  <>
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    Create Interview Room
+                  </>
+                )}
+              </button>
+
+              <div className="relative my-6">
+                <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/10" /></div>
+                <div className="relative flex justify-center"><span className="bg-[#14141f] px-3 text-xs text-zinc-600">or join existing</span></div>
+              </div>
+
+              <div className="flex gap-3">
+                <input
+                  type="text"
+                  value={joinCode}
+                  onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                  placeholder="Enter room code (e.g. ABC123)"
+                  maxLength={6}
+                  className="flex-1 agent-input text-sm py-3 mono tracking-widest"
+                />
+                <a
+                  href={joinCode.length === 6 ? `/interview/room/${joinCode}` : undefined}
+                  className={`px-5 py-3 rounded-xl text-sm font-medium transition-all ${
+                    joinCode.length === 6
+                      ? "bg-purple-600 text-white hover:bg-purple-500"
+                      : "bg-white/5 border border-white/10 text-zinc-600 cursor-not-allowed pointer-events-none"
+                  }`}
+                >
+                  Join
+                </a>
+              </div>
+            </div>
+          ) : (
+            <div className="agent-card p-8">
+              <div className="text-center mb-6">
+                <div className="h-12 w-12 mx-auto rounded-xl bg-green-500/20 border border-green-500/20 flex items-center justify-center mb-3">
+                  <svg className="h-6 w-6 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <h2 className="text-lg font-bold text-white">Room Ready</h2>
+                <p className="text-xs text-zinc-500 mt-1">{createdRoom.role}{createdRoom.experienceLevel ? ` · ${createdRoom.experienceLevel}` : ""}</p>
+              </div>
+
+              <div className="bg-zinc-900/50 rounded-xl border border-white/10 p-4 mb-6 text-center">
+                <p className="text-xs text-zinc-500 mb-2">Room Code</p>
+                <p className="mono text-3xl font-bold tracking-[0.3em] text-white">{createdRoom.roomCode}</p>
+              </div>
+
+              <div className="flex gap-3 mb-6">
+                <input
+                  readOnly
+                  value={`${typeof window !== "undefined" ? window.location.origin : ""}/interview/room/${createdRoom.roomCode}`}
+                  className="flex-1 agent-input text-xs py-2.5 text-zinc-400"
+                />
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(`${window.location.origin}/interview/room/${createdRoom.roomCode}`);
+                    toast.success("Link copied!");
+                  }}
+                  className="px-4 py-2.5 rounded-lg border border-white/20 bg-white/5 text-xs text-zinc-300 hover:bg-white/10 transition-colors"
+                >
+                  Copy
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <a
+                  href={`/interview/room/${createdRoom.roomCode}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="py-3 rounded-xl border border-purple-500/30 bg-purple-500/10 text-center text-sm text-purple-300 hover:bg-purple-500/20 transition-colors font-medium"
+                >
+                  Join as Interviewer
+                </a>
+                <a
+                  href={`/interview/room/${createdRoom.roomCode}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="py-3 rounded-xl border border-cyan-500/30 bg-cyan-500/10 text-center text-sm text-cyan-300 hover:bg-cyan-500/20 transition-colors font-medium"
+                >
+                  Join as Candidate
+                </a>
+              </div>
+
+              <button
+                onClick={() => setCreatedRoom(null)}
+                className="w-full py-2.5 rounded-xl border border-white/10 bg-white/5 text-xs text-zinc-400 hover:text-zinc-200 transition-colors"
+              >
+                Create New Room
+              </button>
+            </div>
+          )}
+
+          {/* Info */}
+          <div className="agent-card p-5">
+            <h3 className="text-xs font-bold text-white mb-3">How Live Sessions Work</h3>
+            <ul className="space-y-2">
+              {[
+                "Create a room and share the link — no account needed to join",
+                "Both parties join a private video call via Jitsi Meet",
+                "Audio and video are peer-to-peer — CareerOS never sees the call",
+                "Use the Question Bank to prepare questions as the interviewer",
+              ].map((tip, i) => (
+                <li key={i} className="flex items-start gap-2 text-xs text-zinc-500">
+                  <span className="text-green-500 mt-0.5">→</span>
+                  {tip}
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       )}
     </div>
