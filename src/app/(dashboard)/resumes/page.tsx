@@ -704,30 +704,30 @@ export default function CVsPage() {
                 {/* Right sidebar: analysis for selected CV */}
                 {selectedCV && (
                   <div className="rounded-2xl border border-white/10 bg-[#14141f] p-4 space-y-4">
-                    {/* Compact stats row */}
+                    {/* Stats row */}
                     <div>
-                      <p className="mono text-[10px] text-zinc-500 uppercase tracking-wider mb-2">CV Analysis</p>
+                      <p className="text-[10px] text-zinc-400 uppercase tracking-wider font-semibold mb-2">CV Analysis</p>
                       <div className="flex items-center gap-0">
                         <div className="flex-1 text-center py-2">
                           <div className="text-xl font-bold text-purple-400">{selectedCV.skills.length}</div>
-                          <div className="mono text-[10px] text-zinc-600">skills</div>
+                          <div className="text-[10px] text-zinc-500">skills</div>
                         </div>
                         <div className="w-px h-10 bg-white/5" />
                         <div className="flex-1 text-center py-2">
-                          <div className="text-xl font-bold text-cyan-400">{selectedCV.experiences.length}</div>
-                          <div className="mono text-[10px] text-zinc-600">exp</div>
+                          <div className="text-xl font-bold text-purple-300">{selectedCV.experiences.length}</div>
+                          <div className="text-[10px] text-zinc-500">exp</div>
                         </div>
                         <div className="w-px h-10 bg-white/5" />
                         <div className="flex-1 text-center py-2">
-                          <div className="text-xl font-bold text-amber-400">{selectedCV.education.length}</div>
-                          <div className="mono text-[10px] text-zinc-600">edu</div>
+                          <div className="text-xl font-bold text-purple-200">{selectedCV.education.length}</div>
+                          <div className="text-[10px] text-zinc-500">edu</div>
                         </div>
                       </div>
                     </div>
 
-                    {/* Compact tips */}
+                    {/* Optimization tips */}
                     <div>
-                      <p className="mono text-[10px] text-zinc-500 uppercase tracking-wider mb-2">Tips</p>
+                      <p className="text-[10px] text-zinc-400 uppercase tracking-wider font-semibold mb-2">Optimization Tips</p>
                       <div className="space-y-2">
                         {suggestions.map((item, index) => (
                           <div
@@ -740,8 +740,17 @@ export default function CVsPage() {
                                   : "border-green-500/50"
                             }`}
                           >
-                            <p className="text-xs font-medium text-white leading-snug">{item.issue}</p>
-                            <p className="mono text-[10px] text-zinc-500 mt-0.5 leading-snug">{item.suggestion}</p>
+                            <div className="flex items-center gap-1.5 mb-0.5">
+                              <span className={`px-1.5 py-px rounded text-[9px] font-bold uppercase tracking-wide ${
+                                item.priority === "high"
+                                  ? "bg-red-500/15 text-red-400"
+                                  : item.priority === "medium"
+                                    ? "bg-amber-500/15 text-amber-400"
+                                    : "bg-green-500/15 text-green-400"
+                              }`}>{item.priority}</span>
+                              <p className="text-xs font-medium text-white leading-snug">{item.issue}</p>
+                            </div>
+                            <p className="text-[10px] text-zinc-500 leading-snug">{item.suggestion}</p>
                           </div>
                         ))}
                       </div>
@@ -749,7 +758,7 @@ export default function CVsPage() {
 
                     {/* Best practices */}
                     <div className="pt-3 border-t border-white/5">
-                      <p className="mono text-[10px] text-zinc-500 uppercase tracking-wider mb-2">Best Practices</p>
+                      <p className="text-[10px] text-zinc-400 uppercase tracking-wider font-semibold mb-2">Best Practices</p>
                       <ul className="space-y-1.5">
                         {[
                           "Keep to 1–2 pages",
@@ -759,7 +768,7 @@ export default function CVsPage() {
                         ].map((item, i) => (
                           <li key={i} className="flex items-center gap-2">
                             <span className="text-green-400 text-xs">✓</span>
-                            <span className="mono text-[10px] text-zinc-500">{item}</span>
+                            <span className="text-[10px] text-zinc-500">{item}</span>
                           </li>
                         ))}
                       </ul>
