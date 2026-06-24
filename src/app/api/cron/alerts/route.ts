@@ -10,7 +10,6 @@ const PROVIDER_TIMEOUT_MS = 6_000;
 
 const ADZUNA_COUNTRIES = [
   { name: "South Africa", code: "ZA", region: "Africa" },
-  { name: "Nigeria", code: "NG", region: "Africa" },
   { name: "Kenya", code: "KE", region: "Africa" },
   { name: "Ghana", code: "GH", region: "Africa" },
 ];
@@ -99,7 +98,6 @@ async function fetchFromAdzuna(query: string, country: string): Promise<JobAlert
 
   const countryMap: Record<string, string> = {
     "South Africa": "za",
-    Nigeria: "ng",
     Kenya: "ke",
     Ghana: "gh",
   };
@@ -155,14 +153,14 @@ async function fetchFromRemotive(query: string): Promise<JobAlert[]> {
 async function fetchJobsForQuery(query: string, location?: string | null): Promise<JobAlert[]> {
   const allJobs: JobAlert[] = [];
 
+  // Fetch only from the matched country (or all countries if no location match)
+  const matchedCountry = location
+    ? ADZUNA_COUNTRIES.find((c) => location.toLowerCase().includes(c.name.toLowerCase()))
+    : null;
+  const countriesToSearch = matchedCountry ? [matchedCountry] : ADZUNA_COUNTRIES;
+
   const [adzunaJobs, remotiveJobs] = await Promise.all([
-    Promise.all(
-      ADZUNA_COUNTRIES.map((c) =>
-        location && location.toLowerCase().includes(c.name.toLowerCase())
-          ? fetchFromAdzuna(query, c.name)
-          : fetchFromAdzuna(query, "South Africa"),
-      ),
-    ),
+    Promise.all(countriesToSearch.map((c) => fetchFromAdzuna(query, c.name))),
     fetchFromRemotive(query),
   ]);
 
