@@ -29,6 +29,7 @@ model User {
   savedSearches  SavedSearch[]
   referrals         Referral[]
   interviewSessions InterviewSession[]
+  interviewRooms    InterviewRoom[]
 
   @@index([clerkId])
   @@index([email])
@@ -240,6 +241,20 @@ model InterviewSession {
 
   @@index([userId])
   @@index([userId, createdAt(sort: Desc)])
+}
+
+model InterviewRoom {
+  id              String   @id @default(cuid())
+  roomCode        String   @unique
+  createdBy       String
+  role            String
+  experienceLevel String?
+  status          String   @default("active")
+  createdAt       DateTime @default(now())
+  user            User     @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+
+  @@index([roomCode])
+  @@index([createdBy])
 }
 
 model WaitlistReferral {
