@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useAuth, useUser } from "@clerk/nextjs";
-import { SignOutButton } from "@clerk/nextjs";
 import { toast } from "sonner";
 import { EXPERIENCE_LEVELS, PROFILE_COUNTRIES, ROLE_TYPES } from "@/lib/user-profile-options";
 
@@ -106,7 +105,7 @@ export default function ProfilePage() {
   const selectClass = "w-full rounded-lg border border-white/10 bg-[#0d0d15] px-4 py-3 text-white focus:border-purple-500/50 focus:outline-none focus:ring-2 focus:ring-purple-500/20 transition-all cursor-pointer";
 
   return (
-    <div className="max-w-xl mx-auto space-y-6">
+    <div className="max-w-4xl mx-auto space-y-6">
       <div className="rounded-2xl border border-white/10 bg-[#14141f] p-6">
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
@@ -116,109 +115,111 @@ export default function ProfilePage() {
           </div>
           <div>
             <h1 className="text-xl font-bold text-white">Profile Settings</h1>
-             <p className="text-sm text-zinc-500">Manage your settings</p>
+            <p className="text-sm text-zinc-500">Manage your settings</p>
           </div>
         </div>
       </div>
 
-      <div className="rounded-2xl border border-white/10 bg-[#14141f] p-6">
-        <h2 className="text-lg font-semibold text-white mb-4">Account</h2>
-        <div className="space-y-4">
-          <div>
-            <label className={labelClass}>Email</label>
-            <input
-              type="email"
-              value={profile?.email || user?.primaryEmailAddress?.emailAddress || ""}
-              disabled
-              className={`${inputClass} opacity-60`}
-            />
-            <p className="mono text-xs text-zinc-600 mt-1">Email cannot be changed</p>
-          </div>
-          <div>
-            <label className={labelClass}>Full Name</label>
-            <input
-              type="text"
-              value={formData.fullName}
-              onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-              placeholder="Enter your full name"
-              className={inputClass}
-            />
-          </div>
-          <div>
-            <label className={labelClass}>Phone Number</label>
-            <input
-              type="tel"
-              value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              placeholder="+233 XX XXX XXXX"
-              className={inputClass}
-            />
-          </div>
-          <div>
-            <label className={labelClass}>Country</label>
-            <select
-              value={PROFILE_COUNTRIES.includes(formData.country as (typeof PROFILE_COUNTRIES)[number]) ? formData.country : "Other"}
-              onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-              className={selectClass}
-            >
-              {PROFILE_COUNTRIES.map((c) => (
-                <option key={c} value={c} className="bg-[#0d0d15]">
-                  {c}
-                </option>
-              ))}
-            </select>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+        <div className="rounded-2xl border border-white/10 bg-[#14141f] p-6">
+          <h2 className="text-lg font-semibold text-white mb-4">Account</h2>
+          <div className="space-y-4">
+            <div>
+              <label className={labelClass}>Email</label>
+              <input
+                type="email"
+                value={profile?.email || user?.primaryEmailAddress?.emailAddress || ""}
+                disabled
+                className={`${inputClass} opacity-60`}
+              />
+              <p className="mono text-xs text-zinc-600 mt-1">Email cannot be changed</p>
+            </div>
+            <div>
+              <label className={labelClass}>Full Name</label>
+              <input
+                type="text"
+                value={formData.fullName}
+                onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                placeholder="Enter your full name"
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Phone Number</label>
+              <input
+                type="tel"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                placeholder="+233 XX XXX XXXX"
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Country</label>
+              <select
+                value={PROFILE_COUNTRIES.includes(formData.country as (typeof PROFILE_COUNTRIES)[number]) ? formData.country : "Other"}
+                onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                className={selectClass}
+              >
+                {PROFILE_COUNTRIES.map((c) => (
+                  <option key={c} value={c} className="bg-[#0d0d15]">
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="rounded-2xl border border-white/10 bg-[#14141f] p-6">
-        <h2 className="text-lg font-semibold text-white mb-4">Professional Info</h2>
-        <div className="space-y-4">
-          <div>
-            <label className={labelClass}>Professional Headline</label>
-            <input
-              type="text"
-              value={formData.headline}
-              onChange={(e) => setFormData({ ...formData, headline: e.target.value })}
-              placeholder="e.g., Software Developer | React & Node.js"
-              className={inputClass}
-            />
-          </div>
-          <div>
-            <label className={labelClass}>Role Type</label>
-            <select
-              value={formData.roleType}
-              onChange={(e) => setFormData({ ...formData, roleType: e.target.value })}
-              className={selectClass}
-            >
-              <option value="" className="bg-[#0d0d15]">Select role type</option>
-              {ROLE_TYPES.map((r) => (
-                <option key={r} value={r} className="bg-[#0d0d15]">{r}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className={labelClass}>Experience Level</label>
-            <select
-              value={formData.experience}
-              onChange={(e) => setFormData({ ...formData, experience: e.target.value })}
-              className={selectClass}
-            >
-              <option value="" className="bg-[#0d0d15]">Select experience</option>
-              {EXPERIENCE_LEVELS.map((e) => (
-                <option key={e} value={e} className="bg-[#0d0d15]">{e}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className={labelClass}>Desired Role</label>
-            <input
-              type="text"
-              value={formData.desiredRole}
-              onChange={(e) => setFormData({ ...formData, desiredRole: e.target.value })}
-              placeholder="e.g., Senior Software Engineer"
-              className={inputClass}
-            />
+        <div className="rounded-2xl border border-white/10 bg-[#14141f] p-6">
+          <h2 className="text-lg font-semibold text-white mb-4">Professional Info</h2>
+          <div className="space-y-4">
+            <div>
+              <label className={labelClass}>Professional Headline</label>
+              <input
+                type="text"
+                value={formData.headline}
+                onChange={(e) => setFormData({ ...formData, headline: e.target.value })}
+                placeholder="e.g., Software Developer | React & Node.js"
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Role Type</label>
+              <select
+                value={formData.roleType}
+                onChange={(e) => setFormData({ ...formData, roleType: e.target.value })}
+                className={selectClass}
+              >
+                <option value="" className="bg-[#0d0d15]">Select role type</option>
+                {ROLE_TYPES.map((r) => (
+                  <option key={r} value={r} className="bg-[#0d0d15]">{r}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className={labelClass}>Experience Level</label>
+              <select
+                value={formData.experience}
+                onChange={(e) => setFormData({ ...formData, experience: e.target.value })}
+                className={selectClass}
+              >
+                <option value="" className="bg-[#0d0d15]">Select experience</option>
+                {EXPERIENCE_LEVELS.map((e) => (
+                  <option key={e} value={e} className="bg-[#0d0d15]">{e}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className={labelClass}>Desired Role</label>
+              <input
+                type="text"
+                value={formData.desiredRole}
+                onChange={(e) => setFormData({ ...formData, desiredRole: e.target.value })}
+                placeholder="e.g., Senior Software Engineer"
+                className={inputClass}
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -231,17 +232,6 @@ export default function ProfilePage() {
         {saving ? "Saving..." : "Save Changes"}
       </button>
 
-      <div className="mt-6 pt-6 border-t border-white/10">
-        <h3 className="text-sm font-medium text-zinc-400 mb-4">Account</h3>
-        <SignOutButton redirectUrl="/">
-          <button className="w-full flex items-center justify-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 py-3 text-sm font-medium text-red-400 hover:bg-red-500/20 transition-colors">
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
-            Log out
-          </button>
-        </SignOutButton>
-      </div>
     </div>
   );
 }
