@@ -701,91 +701,91 @@ export default function CVsPage() {
                 ))}
                 </div>
 
-                {/* Right sidebar: analysis for selected CV */}
+                {/* Right sidebar */}
                 {selectedCV && (
-                  <div className="rounded-2xl border border-white/10 bg-[#14141f] p-4 space-y-4">
-                    {/* Compact stats row */}
-                    <div>
-                      <p className="mono text-[10px] text-zinc-500 uppercase tracking-wider mb-2">CV Analysis</p>
-                      <div className="flex items-center gap-0">
-                        <div className="flex-1 text-center py-2">
-                          <div className="text-xl font-bold text-purple-400">{selectedCV.skills.length}</div>
-                          <div className="mono text-[10px] text-zinc-600">skills</div>
-                        </div>
-                        <div className="w-px h-10 bg-white/5" />
-                        <div className="flex-1 text-center py-2">
-                          <div className="text-xl font-bold text-cyan-400">{selectedCV.experiences.length}</div>
-                          <div className="mono text-[10px] text-zinc-600">exp</div>
-                        </div>
-                        <div className="w-px h-10 bg-white/5" />
-                        <div className="flex-1 text-center py-2">
-                          <div className="text-xl font-bold text-amber-400">{selectedCV.education.length}</div>
-                          <div className="mono text-[10px] text-zinc-600">edu</div>
-                        </div>
-                      </div>
-                    </div>
+                  <div className="space-y-3">
 
-                    {/* Compact tips */}
-                    <div>
-                      <p className="mono text-[10px] text-zinc-500 uppercase tracking-wider mb-2">Tips</p>
-                      <div className="space-y-2">
-                        {suggestions.map((item, index) => (
-                          <div
-                            key={index}
-                            className={`pl-2.5 py-1.5 border-l-2 ${
-                              item.priority === "high"
-                                ? "border-red-500/50"
-                                : item.priority === "medium"
-                                  ? "border-amber-500/50"
-                                  : "border-green-500/50"
-                            }`}
-                          >
-                            <p className="text-xs font-medium text-white leading-snug">{item.issue}</p>
-                            <p className="mono text-[10px] text-zinc-500 mt-0.5 leading-snug">{item.suggestion}</p>
+                    {/* Stat cards */}
+                    <div className="rounded-2xl border border-white/10 bg-[#14141f] p-4">
+                      <p className="text-xs font-semibold text-zinc-400 mb-3">CV Overview</p>
+                      <div className="grid grid-cols-3 gap-2">
+                        {[
+                          { label: "Skills", value: selectedCV.skills.length, color: "text-purple-400", bg: "bg-purple-500/8 border-purple-500/15" },
+                          { label: "Experience", value: selectedCV.experiences.length, color: "text-cyan-400", bg: "bg-cyan-500/8 border-cyan-500/15" },
+                          { label: "Education", value: selectedCV.education.length, color: "text-green-400", bg: "bg-green-500/8 border-green-500/15" },
+                        ].map((s) => (
+                          <div key={s.label} className={`rounded-xl border p-3 text-center ${s.bg}`}>
+                            <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
+                            <p className="text-[10px] text-zinc-500 mt-0.5 leading-tight">{s.label}</p>
                           </div>
                         ))}
                       </div>
                     </div>
 
+                    {/* Suggestions */}
+                    {suggestions.length > 0 && (
+                      <div className="rounded-2xl border border-white/10 bg-[#14141f] p-4">
+                        <p className="text-xs font-semibold text-zinc-400 mb-3">Suggestions</p>
+                        <div className="space-y-2">
+                          {suggestions.map((item, i) => (
+                            <div key={i} className="flex items-start gap-2.5 p-3 rounded-xl border border-white/6 bg-white/[0.02]">
+                              <span className={`mt-0.5 shrink-0 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border ${
+                                item.priority === "high"
+                                  ? "bg-red-500/12 border-red-500/25 text-red-400"
+                                  : item.priority === "medium"
+                                    ? "bg-amber-500/12 border-amber-500/25 text-amber-400"
+                                    : "bg-green-500/12 border-green-500/25 text-green-400"
+                              }`}>
+                                {item.priority}
+                              </span>
+                              <div className="min-w-0">
+                                <p className="text-xs font-medium text-white leading-snug">{item.issue}</p>
+                                <p className="text-[11px] text-zinc-500 mt-0.5 leading-snug">{item.suggestion}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Best practices */}
-                    <div className="pt-3 border-t border-white/5">
-                      <p className="mono text-[10px] text-zinc-500 uppercase tracking-wider mb-2">Best Practices</p>
-                      <ul className="space-y-1.5">
+                    <div className="rounded-2xl border border-white/10 bg-[#14141f] p-4">
+                      <p className="text-xs font-semibold text-zinc-400 mb-3">Best Practices</p>
+                      <ul className="space-y-2">
                         {[
                           "Keep to 1–2 pages",
                           "Use job posting keywords",
                           "Quantify achievements",
                           "Proofread carefully",
-                        ].map((item, i) => (
-                          <li key={i} className="flex items-center gap-2">
-                            <span className="text-green-400 text-xs">✓</span>
-                            <span className="mono text-[10px] text-zinc-500">{item}</span>
+                        ].map((tip, i) => (
+                          <li key={i} className="flex items-center gap-2.5 text-xs text-zinc-400">
+                            <svg className="h-3.5 w-3.5 text-green-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                            </svg>
+                            {tip}
                           </li>
                         ))}
                       </ul>
                     </div>
 
-                    {/* Non-premium upsell */}
+                    {/* Actions */}
                     {!isPremium && (
-                      <div className="pt-3 border-t border-white/5">
-                        <a
-                          href="/pricing"
-                          className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-purple-500/10 border border-purple-500/20 text-xs text-purple-400 hover:bg-purple-500/20 transition-colors"
-                        >
-                          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                          </svg>
-                          Upgrade for AI CV tools
-                        </a>
-                      </div>
+                      <a
+                        href="/pricing"
+                        className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-purple-500/10 border border-purple-500/20 text-xs font-medium text-purple-400 hover:bg-purple-500/18 transition-colors"
+                      >
+                        <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                        Upgrade for AI CV tools
+                      </a>
                     )}
 
-                    {/* Premium actions inside panel */}
                     {isPremium && selectedCV.parsedText && (
-                      <div className="pt-3 border-t border-white/5 flex flex-col gap-1.5">
+                      <div className="grid grid-cols-2 gap-2">
                         <button
                           onClick={() => setShowRoleSelector(true)}
-                          className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border border-white/20 bg-white/5 text-xs text-zinc-300 hover:border-purple-500/50 hover:text-purple-400 hover:bg-purple-500/5 transition-colors"
+                          className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border border-white/12 bg-white/[0.03] text-xs font-medium text-zinc-300 hover:border-purple-500/40 hover:text-purple-400 hover:bg-purple-500/8 transition-colors"
                         >
                           <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
@@ -795,16 +795,16 @@ export default function CVsPage() {
                         <button
                           onClick={regenerateCV}
                           disabled={regenerating}
-                          className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border border-white/20 bg-white/5 text-xs text-zinc-300 hover:border-purple-500/50 hover:text-purple-400 hover:bg-purple-500/5 transition-colors disabled:opacity-40"
+                          className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border border-white/12 bg-white/[0.03] text-xs font-medium text-zinc-300 hover:border-cyan-500/40 hover:text-cyan-400 hover:bg-cyan-500/8 transition-colors disabled:opacity-40"
                         >
                           {regenerating ? (
-                            <div className="h-3 w-3 rounded-full border-2 border-purple-500/30 border-t-purple-400 animate-spin" />
+                            <div className="h-3.5 w-3.5 rounded-full border-2 border-purple-400/30 border-t-purple-400 animate-spin" />
                           ) : (
                             <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                             </svg>
                           )}
-                          {regenerating ? "Regenerating..." : "Regenerate CV"}
+                          {regenerating ? "Working…" : "Regenerate"}
                         </button>
                       </div>
                     )}
