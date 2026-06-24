@@ -167,7 +167,7 @@ export async function POST(request: NextRequest) {
         const narrativePrompt = `You are a career advisor speaking directly to a job seeker. Analyze their fit for this role and speak in second person ("you", "your").
 
 JOB: ${jobTitle || "Position"}
-JOB DESCRIPTION (first 3000 chars): ${(jobDescription || "").substring(0, 3000)}
+JOB DESCRIPTION: ${(jobDescription || "").substring(0, 5000)}
 
 ABOUT THE USER:
 - Skills: ${allUserSkills.join(", ") || "None listed"}
@@ -213,7 +213,7 @@ Return ONLY this JSON (no markdown). Use "you"/"your" throughout, never "the can
           const optimizePrompt = `You are an expert CV optimization specialist for the African job market. Speak directly to the user using "you"/"your".
 
 JOB TITLE: ${jobTitle || "This position"}
-JOB DESCRIPTION: ${(jobDescription || "").substring(0, 2000)}
+JOB DESCRIPTION: ${(jobDescription || "").substring(0, 4000)}
 
 ABOUT THE USER:
 - Headline: ${user?.headline || "Not set"}

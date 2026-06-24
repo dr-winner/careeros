@@ -388,145 +388,162 @@ function AnalyzingPhase({ progress, lines }: { progress: number; lines: typeof A
   );
 }
 
+function ScoreRing({ score, size = 120 }: { score: number; size?: number }) {
+  const r = size * 0.42;
+  const circ = 2 * Math.PI * r;
+  const glow = score >= 80 ? "#22c55e" : score >= 60 ? "#f59e0b" : "#ef4444";
+  const textColor = score >= 80 ? "text-green-400" : score >= 60 ? "text-amber-400" : "text-red-400";
+  const offset = circ * (1 - score / 100);
+
+  return (
+    <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
+      <svg viewBox={`0 0 ${size} ${size}`} className="w-full h-full -rotate-90">
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={size * 0.05} />
+        <circle
+          cx={size / 2} cy={size / 2} r={r} fill="none"
+          stroke={glow} strokeWidth={size * 0.05}
+          strokeLinecap="round"
+          strokeDasharray={circ}
+          strokeDashoffset={offset}
+          style={{ transition: "stroke-dashoffset 0.05s linear", filter: `drop-shadow(0 0 ${size * 0.07}px ${glow})` }}
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span className={`font-bold ${textColor}`} style={{ fontSize: size * 0.27 }}>{score}</span>
+        <span className="text-zinc-600" style={{ fontSize: size * 0.1 }}>/100</span>
+      </div>
+    </div>
+  );
+}
+
 function ResultsPhase({ analysis, onContinue }: { analysis: CVAnalysisResult | null; onContinue: () => void }) {
   const [displayScore, setDisplayScore] = useState(0);
-  const [showContent, setShowContent] = useState(false);
-  const [visibleRecs, setVisibleRecs] = useState(0);
+  const [showSections, setShowSections] = useState(false);
+  const [showRecs, setShowRecs] = useState(false);
 
   useEffect(() => {
     if (!analysis) return;
     const start = Date.now();
-    const duration = 1400;
+    const duration = 1200;
     const animate = () => {
-      const elapsed = Date.now() - start;
-      const p = Math.min(elapsed / duration, 1);
+      const p = Math.min((Date.now() - start) / duration, 1);
       const eased = 1 - Math.pow(1 - p, 3);
       setDisplayScore(Math.round(eased * analysis.overall.score));
       if (p < 1) requestAnimationFrame(animate);
       else {
-        setTimeout(() => setShowContent(true), 200);
+        setTimeout(() => setShowSections(true), 150);
+        setTimeout(() => setShowRecs(true), 500);
       }
     };
-    setTimeout(() => requestAnimationFrame(animate), 300);
+    setTimeout(() => requestAnimationFrame(animate), 200);
   }, [analysis]);
-
-  useEffect(() => {
-    if (!showContent || !analysis) return;
-    let i = 0;
-    const t = setInterval(() => {
-      i++;
-      setVisibleRecs(i);
-      if (i >= analysis.recommendations.length) clearInterval(t);
-    }, 500);
-    return () => clearInterval(t);
-  }, [showContent, analysis]);
 
   if (!analysis) return null;
 
-  const scoreColor =
-    displayScore >= 80 ? "text-green-400" : displayScore >= 60 ? "text-yellow-400" : "text-red-400";
-  const scoreGlow =
-    displayScore >= 80 ? "#22c55e" : displayScore >= 60 ? "#eab308" : "#ef4444";
+  const verdict = analysis.overall.verdict;
+  const sections = [
+    { label: "Content",   score: analysis.content.score,   strength: analysis.content.strengths[0]   },
+    { label: "Style",     score: analysis.style.score,     strength: analysis.style.strengths[0]     },
+    { label: "Structure", score: analysis.structure.score, strength: analysis.structure.strengths[0] },
+  ];
 
   return (
-    <div className="relative z-10 flex flex-col h-screen overflow-hidden font-mono">
+    <div className="relative z-10 flex flex-col h-screen overflow-hidden bg-[#0a0a0f]">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/5 bg-black/40 backdrop-blur-sm flex-shrink-0">
+      <div className="flex-shrink-0 flex items-center justify-between px-5 py-3 border-b border-white/8 bg-[#0a0a0f]/80 backdrop-blur-xl">
         <div className="flex items-center gap-3">
-          <div className="flex gap-1.5">
-            <div className="w-2.5 h-2.5 rounded-full bg-red-500/70" />
-            <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/70" />
-            <div className="w-2.5 h-2.5 rounded-full bg-green-500/70" />
+          <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center">
+            <svg className="h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
           </div>
-          <span className="text-xs text-zinc-500">careeros_agent — analysis_report</span>
+          <span className="text-sm font-semibold text-white">CV Analysis Report</span>
         </div>
-        <div className="flex items-center gap-1.5 text-xs">
-          <div className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
-          <span className="text-cyan-400">COMPLETE</span>
+        <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-green-500/10 border border-green-500/25">
+          <svg className="h-3.5 w-3.5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+          </svg>
+          <span className="text-xs font-medium text-green-400">Analysis Complete</span>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4">
-        {/* Score header */}
-        <div className="flex items-center gap-5 p-4 rounded-xl border border-white/8 bg-white/3">
-          <div className="relative flex-shrink-0" style={{ width: 88, height: 88 }}>
-            <svg viewBox="0 0 88 88" className="w-full h-full -rotate-90">
-              <circle cx="44" cy="44" r="38" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="6" />
-              <circle
-                cx="44" cy="44" r="38" fill="none"
-                stroke={scoreGlow} strokeWidth="6"
-                strokeLinecap="round"
-                strokeDasharray={`${2 * Math.PI * 38}`}
-                strokeDashoffset={`${2 * Math.PI * 38 * (1 - displayScore / 100)}`}
-                style={{ transition: "stroke-dashoffset 0.05s linear", filter: `drop-shadow(0 0 8px ${scoreGlow})` }}
-              />
-            </svg>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <span className={`text-2xl font-bold ${scoreColor}`}>{displayScore}</span>
+      {/* Body */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-3xl mx-auto p-5 md:p-8 space-y-5">
+
+          {/* Hero card — score + verdict */}
+          <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-purple-500/8 via-transparent to-cyan-500/5 p-6 md:p-8">
+            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
+              <ScoreRing score={displayScore} size={120} />
+              <div className="text-center sm:text-left">
+                <p className="text-xs font-medium text-zinc-500 uppercase tracking-widest mb-1">Overall Assessment</p>
+                <h2 className="text-2xl md:text-3xl font-bold text-white mb-3">{verdict}</h2>
+                <p className="text-sm text-zinc-400 leading-relaxed max-w-md">{analysis.overall.summary}</p>
+              </div>
             </div>
           </div>
-          <div>
-            <div className="text-[10px] text-zinc-500 uppercase tracking-widest mb-1">overall score</div>
-            <div className="text-xl font-bold text-white">{analysis.overall.verdict}</div>
-            <div className="text-xs text-zinc-400 mt-1 leading-relaxed max-w-xs">{analysis.overall.summary}</div>
-          </div>
-        </div>
 
-        {showContent && (
-          <>
-            {/* Section scores */}
-            <div className="grid grid-cols-3 gap-3">
-              {[
-                { label: "content", score: analysis.content.score },
-                { label: "style", score: analysis.style.score },
-                { label: "structure", score: analysis.structure.score },
-              ].map((item) => (
-                <div key={item.label} className="p-3 rounded-lg border border-white/8 bg-white/3 text-center">
-                  <div className="text-[10px] text-zinc-500 uppercase tracking-widest mb-2">{item.label}</div>
-                  <div className={`text-xl font-bold ${item.score >= 75 ? "text-green-400" : item.score >= 55 ? "text-yellow-400" : "text-red-400"}`}>
-                    {item.score}
-                  </div>
-                  <div className="mt-2 h-1 rounded-full bg-white/10 overflow-hidden">
+          {/* Section scores */}
+          <div className={`grid grid-cols-3 gap-3 md:gap-4 transition-all duration-500 ${showSections ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"}`}>
+            {sections.map((s) => {
+              const color = s.score >= 80 ? "#22c55e" : s.score >= 60 ? "#f59e0b" : "#ef4444";
+              const textCls = s.score >= 80 ? "text-green-400" : s.score >= 60 ? "text-amber-400" : "text-red-400";
+              return (
+                <div key={s.label} className="rounded-xl border border-white/8 bg-white/[0.02] p-4">
+                  <p className="text-xs text-zinc-500 font-medium uppercase tracking-wider mb-3">{s.label}</p>
+                  <p className={`text-3xl font-bold ${textCls}`}>{s.score}</p>
+                  <div className="mt-3 h-1.5 rounded-full bg-white/8 overflow-hidden">
                     <div
-                      className="h-full rounded-full bg-gradient-to-r from-purple-500 to-cyan-500 transition-all duration-700"
-                      style={{ width: `${item.score}%` }}
+                      className="h-full rounded-full transition-all duration-700"
+                      style={{ width: showSections ? `${s.score}%` : "0%", background: `linear-gradient(90deg, #8b5cf6, ${color})` }}
                     />
                   </div>
+                  {s.strength && (
+                    <p className="mt-2.5 text-[11px] text-zinc-500 leading-snug flex items-start gap-1">
+                      <span className="text-green-500 mt-0.5">✓</span>
+                      {s.strength}
+                    </p>
+                  )}
                 </div>
-              ))}
-            </div>
+              );
+            })}
+          </div>
 
-            {/* Recommendations as terminal output */}
-            <div className="rounded-xl border border-white/8 bg-black/60 overflow-hidden">
-              <div className="flex items-center gap-2 px-3 py-2 border-b border-white/5 bg-white/2">
-                <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-                <span className="text-[10px] text-zinc-500 uppercase tracking-widest">recommendations</span>
-              </div>
-              <div className="p-4 space-y-2">
-                {analysis.recommendations.slice(0, 4).map((rec, i) => (
-                  <div
-                    key={i}
-                    className={`flex items-start gap-2 text-xs transition-all duration-500 ${
-                      i <= visibleRecs ? "opacity-100" : "opacity-0"
-                    }`}
-                  >
-                    <span className="text-purple-400 flex-shrink-0 mt-0.5">→</span>
-                    <span className="text-zinc-300 leading-relaxed">{rec}</span>
-                  </div>
-                ))}
-              </div>
+          {/* Recommendations */}
+          <div className={`space-y-3 transition-all duration-500 ${showRecs ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"}`}>
+            <div className="flex items-center gap-2 mb-1">
+              <svg className="h-4 w-4 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+              </svg>
+              <h3 className="text-sm font-semibold text-white">Recommendations</h3>
             </div>
-          </>
-        )}
+            {analysis.recommendations.slice(0, 4).map((rec, i) => (
+              <div
+                key={i}
+                className="flex items-start gap-3 p-4 rounded-xl border border-white/8 bg-white/[0.02] hover:bg-white/[0.04] transition-colors"
+                style={{ transitionDelay: showRecs ? `${i * 80}ms` : "0ms" }}
+              >
+                <div className="h-6 w-6 rounded-lg bg-amber-500/15 border border-amber-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-[11px] font-bold text-amber-400">{i + 1}</span>
+                </div>
+                <p className="text-sm text-zinc-300 leading-relaxed">{rec}</p>
+              </div>
+            ))}
+          </div>
+
+        </div>
       </div>
 
       {/* CTA */}
-      <div className="flex-shrink-0 p-4 border-t border-white/5 bg-black/40 backdrop-blur-sm">
+      <div className="flex-shrink-0 p-4 md:p-5 border-t border-white/8 bg-[#0a0a0f]/60 backdrop-blur-xl">
         <button
           onClick={onContinue}
-          className="w-full py-3 rounded-lg bg-gradient-to-r from-purple-600 to-cyan-600 text-white text-sm font-semibold tracking-wide hover:opacity-90 active:scale-[0.99] transition-all shadow-lg shadow-purple-500/20"
+          className="w-full py-3.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-sm font-semibold hover:opacity-90 active:scale-[0.99] transition-all shadow-lg shadow-purple-900/30 flex items-center justify-center gap-2"
         >
-          ▸ continue to dashboard
+          Continue to Dashboard
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+          </svg>
         </button>
       </div>
     </div>
@@ -606,10 +623,14 @@ export default function CVAnalysisScreen({
 
   return (
     <div className="fixed inset-0 lg:left-56 z-50 bg-[#0a0a0f] overflow-hidden">
-      <NeuralNetCanvas />
-      <ScanLines />
-      <GlowOrb x="20%" y="30%" color="#8b5cf6" />
-      <GlowOrb x="80%" y="70%" color="#06b6d4" />
+      {!showResults && (
+        <>
+          <NeuralNetCanvas />
+          <ScanLines />
+          <GlowOrb x="20%" y="30%" color="#8b5cf6" />
+          <GlowOrb x="80%" y="70%" color="#06b6d4" />
+        </>
+      )}
 
       {!showResults ? (
         <AnalyzingPhase progress={progress} lines={visibleLogs} />
