@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useAuth, useUser } from "@clerk/nextjs";
 import { toast } from "sonner";
-import { EXPERIENCE_LEVELS, PROFILE_COUNTRIES, ROLE_TYPES } from "@/lib/user-profile-options";
+import { EXPERIENCE_LEVELS, PROFILE_COUNTRIES, ROLE_TYPE_GROUPS } from "@/lib/user-profile-options";
 
 interface UserProfile {
   id: string;
@@ -185,15 +185,22 @@ export default function ProfilePage() {
               />
             </div>
             <div>
-              <label className={labelClass}>Role Type</label>
+              <label className={labelClass}>
+                Field / Specialisation
+                <span className="text-zinc-600 font-normal ml-1">— your professional area</span>
+              </label>
               <select
                 value={formData.roleType}
                 onChange={(e) => setFormData({ ...formData, roleType: e.target.value })}
                 className={selectClass}
               >
-                <option value="" className="bg-[#0d0d15]">Select role type</option>
-                {ROLE_TYPES.map((r) => (
-                  <option key={r} value={r} className="bg-[#0d0d15]">{r}</option>
+                <option value="" className="bg-[#0d0d15]">Select your field…</option>
+                {ROLE_TYPE_GROUPS.map((group) => (
+                  <optgroup key={group.group} label={group.group} className="bg-[#0d0d15] text-zinc-400">
+                    {group.roles.map((r) => (
+                      <option key={r} value={r} className="bg-[#0d0d15] text-white">{r}</option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
             </div>
@@ -211,12 +218,15 @@ export default function ProfilePage() {
               </select>
             </div>
             <div>
-              <label className={labelClass}>Desired Role</label>
+              <label className={labelClass}>
+                Target Job Title
+                <span className="text-zinc-600 font-normal ml-1">— the specific role you&apos;re after</span>
+              </label>
               <input
                 type="text"
                 value={formData.desiredRole}
                 onChange={(e) => setFormData({ ...formData, desiredRole: e.target.value })}
-                placeholder="e.g., Senior Software Engineer"
+                placeholder="e.g., Cloud Security Engineer, Senior DevOps Lead…"
                 className={inputClass}
               />
             </div>
