@@ -32,7 +32,9 @@ export default function PricingPage() {
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [isPremium, setIsPremium] = useState(false);
+  const [verifying, setVerifying] = useState(false);
   const isSuccess = searchParams.get("success") === "true";
+  const paymentRef = searchParams.get("ref") || "";
 
   useEffect(() => {
     if (isLoaded && !userId) router.push("/");
@@ -68,6 +70,29 @@ export default function PricingPage() {
     }, 2000);
     return () => clearInterval(interval);
   }, [isSuccess]);
+
+  const handleManualVerify = async () => {
+    if (!paymentRef) return;
+    setVerifying(true);
+    try {
+      const res = await fetch("/api/payment/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ref: paymentRef }),
+      });
+      const d = await res.json();
+      if (d.isPremium) {
+        setIsPremium(true);
+        toast.success("Premium activated!");
+      } else {
+        toast.error(d.message || "Payment not yet confirmed. Please wait and try again.");
+      }
+    } catch {
+      toast.error("Verification failed. Please try again.");
+    } finally {
+      setVerifying(false);
+    }
+  };
 
   const handleUpgrade = async () => {
     if (!userId) {
@@ -131,12 +156,28 @@ export default function PricingPage() {
           ) : (
             <>
               <h1 className="text-2xl font-bold text-white mb-3">Verifying payment…</h1>
-              <p className="text-zinc-400 mb-8">
+              <p className="text-zinc-400 mb-6">
                 Your payment is being confirmed. This usually takes a few seconds.
               </p>
+              {paymentRef && (
+                <button
+                  onClick={handleManualVerify}
+                  disabled={verifying}
+                  className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-purple-500/15 border border-purple-500/30 text-sm font-medium text-purple-300 hover:bg-purple-500/25 transition-colors disabled:opacity-50 mb-4"
+                >
+                  {verifying ? (
+                    <>
+                      <div className="h-4 w-4 rounded-full border-2 border-purple-400/30 border-t-purple-400 animate-spin" />
+                      Checking…
+                    </>
+                  ) : (
+                    "Check payment status"
+                  )}
+                </button>
+              )}
               <button
                 onClick={() => router.push("/dashboard")}
-                className="text-sm text-zinc-500 hover:text-zinc-300"
+                className="block text-sm text-zinc-600 hover:text-zinc-400 transition-colors"
               >
                 Continue to Dashboard
               </button>
