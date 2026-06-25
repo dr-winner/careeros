@@ -8,7 +8,7 @@ const MOOLRE_BASE =
     : "https://api.moolre.com";
 
 const PREMIUM_AMOUNT = process.env.MOOLRE_PREMIUM_AMOUNT || "99";
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://www.careeros.live";
+const APP_URL = (process.env.NEXT_PUBLIC_APP_URL || "https://careeros.live").replace(/\/+$/, "");
 
 export async function POST() {
   try {
@@ -47,7 +47,8 @@ export async function POST() {
         email: user.email,
         externalref,
         callback: `${APP_URL}/api/webhooks/moolre`,
-        redirect: `${APP_URL}/pricing?success=true`,
+        // Include the ref in the redirect so the success page can trigger manual verification
+        redirect: `${APP_URL}/pricing?success=true&ref=${encodeURIComponent(externalref)}`,
         reusable: 0,
         currency: "GHS",
         accountnumber: process.env.MOOLRE_ACCOUNT_NUMBER,
@@ -65,7 +66,13 @@ export async function POST() {
       );
     }
 
-    return NextResponse.json({ url: data.data?.url || data.url });
+    const paymentUrl = data.data?.url || data.url || data.data?.link || data.link;
+    if (!paymentUrl) {
+      console.error("Moolre returned POS09 but no URL in response:", JSON.stringify(data));
+      return NextResponse.json({ error: "Payment URL not returned. Please try again." }, { status: 502 });
+    }
+
+    return NextResponse.json({ url: paymentUrl });
   } catch (error) {
     console.error("Payment create-link error:", error);
     return NextResponse.json({ error: "Payment setup failed" }, { status: 500 });
