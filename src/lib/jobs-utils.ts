@@ -3,6 +3,9 @@ export interface JobFilters {
   seniority?: string;
   location?: string;
   search?: string;
+  country?: string;
+  employmentType?: string;
+  datePosted?: string; // "today" | "week" | "month"
 }
 
 export interface FilterableJob {
@@ -12,6 +15,8 @@ export interface FilterableJob {
   country: string;
   workMode: string;
   seniorityLevel: string;
+  employmentType?: string;
+  postedAt?: string;
 }
 
 export function detectSeniority(title: string): string {
@@ -144,6 +149,8 @@ export function filterJobs<T extends FilterableJob>(
   jobs: T[],
   filters: JobFilters,
 ): T[] {
+  const nowMs = Date.now();
+
   return jobs.filter((job) => {
     if (filters.workMode && filters.workMode !== "") {
       if (filters.workMode === "Remote" && !job.workMode.includes("Remote")) {
@@ -191,6 +198,30 @@ export function filterJobs<T extends FilterableJob>(
         !job.companyName.toLowerCase().includes(search)
       ) {
         return false;
+      }
+    }
+
+    if (filters.country && filters.country !== "") {
+      if (filters.country === "REMOTE") {
+        if (job.workMode !== "Remote" && job.country !== "GLOBAL") return false;
+      } else {
+        if (job.country !== filters.country) return false;
+      }
+    }
+
+    if (filters.employmentType && filters.employmentType !== "") {
+      const jobType = (job.employmentType || "Full-time").toLowerCase();
+      const filterType = filters.employmentType.toLowerCase();
+      if (!jobType.includes(filterType) && jobType !== "not specified") return false;
+    }
+
+    if (filters.datePosted && filters.datePosted !== "" && job.postedAt) {
+      const postedMs = new Date(job.postedAt).getTime();
+      if (!isNaN(postedMs)) {
+        const hoursAgo = (nowMs - postedMs) / (1000 * 60 * 60);
+        if (filters.datePosted === "today" && hoursAgo > 24) return false;
+        if (filters.datePosted === "week" && hoursAgo > 168) return false;
+        if (filters.datePosted === "month" && hoursAgo > 720) return false;
       }
     }
 

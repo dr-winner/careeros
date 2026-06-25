@@ -249,79 +249,56 @@ async function fetchFromRemotive(
   query: string,
   savedJobIds: string[],
 ): Promise<Job[]> {
-  const jobs: Job[] = [];
-
-  try {
-    const searchData = (await fetchJsonWithTimeout(
+  // Run search + top 5 category fetches in parallel instead of sequentially
+  const [searchResult, ...categoryResults] = await Promise.allSettled([
+    fetchJsonWithTimeout(
       `https://remotive.com/api/remote-jobs?search=${encodeURIComponent(query)}&limit=50`,
-    )) as { jobs?: RawJob[] };
+    ) as Promise<{ jobs?: RawJob[] }>,
+    ...REMOTIVE_CATEGORIES.slice(0, 5).map(
+      (cat) =>
+        fetchJsonWithTimeout(
+          `https://remotive.com/api/remote-jobs?category=${encodeURIComponent(cat)}&limit=50`,
+        ) as Promise<{ jobs?: RawJob[] }>,
+    ),
+  ]);
 
-    if (Array.isArray(searchData.jobs)) {
-      jobs.push(
-        ...searchData.jobs.map((job) =>
-          formatJob(job, job.id, "remotive", savedJobIds),
-        ),
-      );
-    }
-  } catch (error) {
-    console.error("Remotive search error:", error);
+  const jobs: Job[] = [];
+  const queryLower = query.toLowerCase();
+
+  if (searchResult.status === "fulfilled" && Array.isArray(searchResult.value.jobs)) {
+    jobs.push(
+      ...searchResult.value.jobs.map((job) => formatJob(job, job.id, "remotive", savedJobIds)),
+    );
   }
 
-  for (const category of REMOTIVE_CATEGORIES.slice(0, 5)) {
-    if (jobs.length >= 100) break;
-
-    try {
-      const data = (await fetchJsonWithTimeout(
-        `https://remotive.com/api/remote-jobs?category=${encodeURIComponent(category)}&limit=50`,
-      )) as { jobs?: RawJob[] };
-
-      if (!Array.isArray(data.jobs)) continue;
-
-      const filtered = data.jobs.filter(
-        (job) =>
-          !query || job.title.toLowerCase().includes(query.toLowerCase()),
-      );
-
-      jobs.push(
-        ...filtered.map((job) =>
-          formatJob(job, job.id, "remotive", savedJobIds),
-        ),
-      );
-    } catch (error) {
-      console.error(`Remotive ${category} error:`, error);
-    }
+  for (const result of categoryResults) {
+    if (result.status !== "fulfilled" || !Array.isArray(result.value.jobs)) continue;
+    const filtered = result.value.jobs.filter(
+      (job) => !query || job.title.toLowerCase().includes(queryLower),
+    );
+    jobs.push(...filtered.map((job) => formatJob(job, job.id, "remotive", savedJobIds)));
   }
 
   return jobs;
 }
 
 async function fetchFromArbeitnow(savedJobIds: string[]): Promise<Job[]> {
-  const jobs: Job[] = [];
+  // Fetch 3 pages in parallel instead of sequentially
+  const results = await Promise.allSettled(
+    [1, 2, 3].map((page) =>
+      fetchJsonWithTimeout(`https://www.arbeitnow.com/api/job-board-api?page=${page}`) as Promise<
+        { data?: RawJob[] } | RawJob[]
+      >,
+    ),
+  );
 
-  for (let page = 1; page <= 3; page += 1) {
-    try {
-      const data = (await fetchJsonWithTimeout(
-        `https://www.arbeitnow.com/api/job-board-api?page=${page}`,
-      )) as { data?: RawJob[] } | RawJob[];
-
-      const jobList = Array.isArray(data) ? data : data.data;
-
-      if (!Array.isArray(jobList) || jobList.length === 0) {
-        break;
-      }
-
-      jobs.push(
-        ...jobList.map((job) =>
-          formatJob(job, job.slug || job.id, "arbeitnow", savedJobIds),
-        ),
-      );
-    } catch (error) {
-      console.error("Arbeitnow error:", error);
-      break;
-    }
-  }
-
-  return jobs;
+  return results.flatMap((result) => {
+    if (result.status !== "fulfilled") return [];
+    const data = result.value;
+    const jobList = Array.isArray(data) ? data : data.data;
+    if (!Array.isArray(jobList)) return [];
+    return jobList.map((job) => formatJob(job, job.slug || job.id, "arbeitnow", savedJobIds));
+  });
 }
 
 async function fetchFromRise(
@@ -349,6 +326,18 @@ async function fetchFromRise(
   }
 }
 
+const JOOBLE_COUNTRIES = [
+  { name: "Nigeria",       code: "NG" },
+  { name: "Ghana",         code: "GH" },
+  { name: "Kenya",         code: "KE" },
+  { name: "South Africa",  code: "ZA" },
+  { name: "Canada",        code: "CA" },
+  { name: "United States", code: "US" },
+  { name: "United Kingdom",code: "GB" },
+  { name: "Australia",     code: "AU" },
+  { name: "India",         code: "IN" },
+] as const;
+
 async function fetchFromJooble(
   query: string,
   savedJobIds: string[],
@@ -356,36 +345,15 @@ async function fetchFromJooble(
   const apiKey = process.env.JOOBLE_API_KEY;
   if (!apiKey) return [];
 
-  const jobs: Job[] = [];
-  const joobleCountries = [
-    // Africa
-    { name: "Nigeria", code: "NG" },
-    { name: "Ghana", code: "GH" },
-    { name: "Kenya", code: "KE" },
-    { name: "South Africa", code: "ZA" },
-    // North America
-    { name: "Canada", code: "CA" },
-    { name: "United States", code: "US" },
-    // Europe / Oceania
-    { name: "United Kingdom", code: "GB" },
-    { name: "Australia", code: "AU" },
-    // Asia
-    { name: "India", code: "IN" },
-  ] as const;
-
-  for (const country of joobleCountries) {
-    try {
+  // Fetch all 9 countries in parallel instead of sequentially
+  const results = await Promise.allSettled(
+    JOOBLE_COUNTRIES.map(async (country) => {
       const data = (await fetchJsonWithTimeout(
         `https://jooble.org/api/${encodeURIComponent(apiKey)}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            keywords: query,
-            location: country.name,
-            radius: 50,
-            page: 1,
-          }),
+          body: JSON.stringify({ keywords: query, location: country.name, radius: 50, page: 1 }),
         },
       )) as {
         jobs?: Array<{
@@ -400,39 +368,30 @@ async function fetchFromJooble(
         }>;
       };
 
-      if (!Array.isArray(data.jobs)) continue;
+      if (!Array.isArray(data.jobs)) return [];
 
-      for (const job of data.jobs.slice(0, 20)) {
-        jobs.push({
-          id: `jooble-${job.id}`,
-          title: job.title || "Unknown Position",
-          companyName: job.company || "Unknown Company",
-          location: job.location || country.name,
-          country: country.code,
-          workMode: job.type?.toLowerCase().includes("remote")
-            ? "Remote"
-            : "Not specified",
-          seniorityLevel: detectSeniority(job.title || ""),
-          employmentType: job.type || "Full-time",
-          description:
-            job.snippet?.replace(/<[^>]*>/g, "").substring(0, 8000) || "",
-          requirements: "See job posting for details",
-          postedAt: job.updated
-            ? new Date(job.updated).toISOString()
-            : new Date().toISOString(),
-          salaryMin: undefined,
-          salaryMax: undefined,
-          isSaved: savedJobIds.includes(`jooble-${job.id}`),
-          applicationUrl: job.link || "#",
-          source: "jooble",
-        });
-      }
-    } catch (error) {
-      console.error(`Jooble ${country.name} error:`, error);
-    }
-  }
+      return data.jobs.slice(0, 20).map((job): Job => ({
+        id: `jooble-${job.id}`,
+        title: job.title || "Unknown Position",
+        companyName: job.company || "Unknown Company",
+        location: job.location || country.name,
+        country: country.code,
+        workMode: job.type?.toLowerCase().includes("remote") ? "Remote" : "Not specified",
+        seniorityLevel: detectSeniority(job.title || ""),
+        employmentType: job.type || "Full-time",
+        description: job.snippet?.replace(/<[^>]*>/g, "").substring(0, 8000) || "",
+        requirements: "See job posting for details",
+        postedAt: job.updated ? new Date(job.updated).toISOString() : new Date().toISOString(),
+        salaryMin: undefined,
+        salaryMax: undefined,
+        isSaved: savedJobIds.includes(`jooble-${job.id}`),
+        applicationUrl: job.link || "#",
+        source: "jooble",
+      }));
+    }),
+  );
 
-  return jobs;
+  return results.flatMap((r) => (r.status === "fulfilled" ? r.value : []));
 }
 
 // Remote OK — completely free, no API key, global remote jobs
@@ -1021,6 +980,9 @@ export async function GET(request: NextRequest) {
     const location = searchParams.get("location") || "";
     const workMode = searchParams.get("workMode") || "";
     const seniority = searchParams.get("seniority") || "";
+    const country = searchParams.get("country") || "";
+    const employmentType = searchParams.get("employmentType") || "";
+    const datePosted = searchParams.get("datePosted") || "";
     const cursor = searchParams.get("cursor") || undefined;
     const page = Number.parseInt(searchParams.get("page") || "1", 10);
     const pageSize = Number.parseInt(searchParams.get("pageSize") || "20", 10);
@@ -1093,6 +1055,9 @@ export async function GET(request: NextRequest) {
       seniority,
       location,
       search,
+      country,
+      employmentType,
+      datePosted,
     });
 
     const uniqueJobs = dedupeJobsByTitleAndCompany(filteredJobs);
