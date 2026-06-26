@@ -1,7 +1,6 @@
 "use client";
 
 import { useAuth, UserButton } from "@clerk/nextjs";
-import { SignOutButton } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -11,21 +10,25 @@ import { Toaster } from "sonner";
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6", color: "purple" },
   { href: "/jobs", label: "Jobs", icon: "M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z", color: "cyan" },
-  { href: "/saved-jobs", label: "Saved", icon: "M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z", color: "amber" },
-  { href: "/applications", label: "Applications", icon: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01", color: "green" },
-  { href: "/resumes", label: "CVs", icon: "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z", color: "purple" },
-  { href: "/interview", label: "Interview", icon: "M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z", color: "cyan" },
-  { href: "/profile", label: "Profile", icon: "M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z", color: "amber" },
+  { href: "/applications", label: "Applications", icon: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01", color: "purple" },
+  { href: "/interview", label: "Interview", icon: "M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z", color: "cyan" },
+  { href: "/saved-jobs", label: "Saved", icon: "M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z", color: "purple" },
+  { href: "/resumes", label: "CVs", icon: "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z", color: "cyan" },
+  { href: "/profile", label: "Profile", icon: "M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z", color: "purple" },
 ];
 
-const primaryNav = navItems.slice(0, 5);
+// Bottom nav: the 5 most-reached pages (Saved/CVs still accessible via drawer)
+const primaryNav = [navItems[0], navItems[1], navItems[2], navItems[3], navItems[6]];
 
-const colorMap: Record<string, { bg: string; text: string; border: string }> = {
-  purple: { bg: "bg-purple-500/15", text: "text-purple-400", border: "border-purple-500/30" },
-  cyan: { bg: "bg-cyan-500/15", text: "text-cyan-400", border: "border-cyan-500/30" },
-  amber: { bg: "bg-amber-500/15", text: "text-amber-400", border: "border-amber-500/30" },
-  green: { bg: "bg-green-500/15", text: "text-green-400", border: "border-green-500/30" },
+const colorMap: Record<string, { bg: string; text: string }> = {
+  purple: { bg: "bg-purple-500/15", text: "text-purple-400" },
+  cyan: { bg: "bg-cyan-500/15", text: "text-cyan-400" },
 };
+
+function isNavActive(href: string, pathname: string) {
+  if (href === "/dashboard") return pathname === "/dashboard";
+  return pathname === href || pathname.startsWith(href + "/");
+}
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { userId, isLoaded } = useAuth();
@@ -47,10 +50,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         .catch(console.error);
     }
   }, [userId, synced]);
-
-  const handleNavClick = () => {
-    setSidebarOpen(false);
-  };
 
   if (!isLoaded) {
     return (
@@ -93,18 +92,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         <nav className="flex-1 flex flex-col gap-1 p-3 overflow-y-auto">
           {navItems.map((item) => {
-            const isActive = pathname === item.href;
+            const active = isNavActive(item.href, pathname);
             const colors = colorMap[item.color] || colorMap.purple;
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 className={`group flex items-center gap-3 rounded-lg px-3 py-2.5 transition-all ${
-                  isActive ? `${colors.bg} ${colors.text}` : "text-zinc-500 hover:bg-white/5 hover:text-zinc-300"
+                  active ? `${colors.bg} ${colors.text}` : "text-zinc-500 hover:bg-white/5 hover:text-zinc-300"
                 }`}
               >
-                <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${isActive ? "bg-white/10" : "bg-white/5 group-hover:bg-white/10"}`}>
-                  <svg className={`h-4 w-4 ${isActive ? colors.text : "text-zinc-500 group-hover:text-zinc-400"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${active ? "bg-white/10" : "bg-white/5 group-hover:bg-white/10"}`}>
+                  <svg className={`h-4 w-4 ${active ? colors.text : "text-zinc-500 group-hover:text-zinc-400"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d={item.icon} />
                   </svg>
                 </div>
@@ -114,23 +113,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           })}
         </nav>
 
-        <div className="p-3 border-t border-white/5 space-y-3">
+        <div className="p-3 border-t border-white/5">
           <div className="flex items-center gap-3 px-3 py-2">
             <UserButton />
-            <div className="flex items-center gap-2 px-2 py-1 rounded-full bg-green-500/10 border border-green-500/20">
-              <div className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
-              <span className="mono text-[10px] text-green-400">Agent ready</span>
-            </div>
+            <span className="text-xs text-zinc-500">Account</span>
           </div>
-          
-          <SignOutButton redirectUrl="/">
-            <button className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors text-sm font-medium border border-red-500/30">
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-              </svg>
-              <span>Log out</span>
-            </button>
-          </SignOutButton>
         </div>
       </aside>
 
@@ -179,19 +166,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
             <nav className="flex-1 overflow-y-auto p-3 space-y-1">
               {navItems.map((item) => {
-                const isActive = pathname === item.href;
+                const active = isNavActive(item.href, pathname);
                 const colors = colorMap[item.color] || colorMap.purple;
                 return (
                   <Link
                     key={item.href}
                     href={item.href}
-                    onClick={handleNavClick}
+                    onClick={() => setSidebarOpen(false)}
                     className={`group flex items-center gap-3 rounded-lg px-3 py-2.5 transition-all ${
-                      isActive ? `${colors.bg} ${colors.text}` : "text-zinc-500 hover:bg-white/5 hover:text-zinc-300"
+                      active ? `${colors.bg} ${colors.text}` : "text-zinc-500 hover:bg-white/5 hover:text-zinc-300"
                     }`}
                   >
-                    <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${isActive ? "bg-white/10" : "bg-white/5 group-hover:bg-white/10"}`}>
-                      <svg className={`h-4 w-4 ${isActive ? colors.text : "text-zinc-500 group-hover:text-zinc-400"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${active ? "bg-white/10" : "bg-white/5 group-hover:bg-white/10"}`}>
+                      <svg className={`h-4 w-4 ${active ? colors.text : "text-zinc-500 group-hover:text-zinc-400"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d={item.icon} />
                       </svg>
                     </div>
@@ -200,22 +187,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 );
               })}
             </nav>
-
-            <div className="p-3 border-t border-white/5 space-y-3">
-              <div className="flex items-center gap-2 px-3 py-2">
-                <div className="h-2 w-2 rounded-full bg-green-400 animate-pulse" />
-                <span className="mono text-xs text-green-400">Agent ready</span>
-              </div>
-              
-              <SignOutButton redirectUrl="/">
-                <button className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors text-sm font-medium border border-red-500/30">
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                  </svg>
-                  <span>Log out</span>
-                </button>
-              </SignOutButton>
-            </div>
           </aside>
         </div>
       )}
@@ -224,19 +195,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-white/5 bg-[#0a0a0f]/98 backdrop-blur-xl">
         <div className="flex items-center justify-around px-2 py-1">
           {primaryNav.map((item) => {
-            const isActive = pathname === item.href;
+            const active = isNavActive(item.href, pathname);
             const colors = colorMap[item.color] || colorMap.purple;
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 className={`flex flex-col items-center gap-1 py-2 px-3 rounded-lg transition-all ${
-                  isActive ? `${colors.text}` : "text-zinc-500"
+                  active ? colors.text : "text-zinc-500"
                 }`}
               >
-                <div className={`p-1.5 rounded-lg ${isActive ? colors.bg : ""}`}>
+                <div className={`p-1.5 rounded-lg ${active ? colors.bg : ""}`}>
                   <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={isActive ? 2 : 1.5} d={item.icon} />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={active ? 2 : 1.5} d={item.icon} />
                   </svg>
                 </div>
                 <span className="text-[10px] font-medium">{item.label}</span>

@@ -1,6 +1,6 @@
 "use client";
 
-import { SignInButton, SignUpButton, Show, UserButton, SignOutButton } from "@clerk/nextjs";
+import { SignInButton, SignUpButton, Show, UserButton } from "@clerk/nextjs";
 import Link from "next/link";
 import Logo from "./logo";
 
@@ -45,18 +45,7 @@ export default function Nav() {
             </SignUpButton>
           </Show>
           <Show when="signed-in">
-            <Link
-              href="/dashboard"
-              className="rounded-lg px-4 py-2 text-sm font-medium text-zinc-400 transition-colors hover:text-white hover:bg-white/5"
-            >
-              Dashboard
-            </Link>
             <UserButton />
-            <SignOutButton redirectUrl="/">
-              <button className="rounded-lg px-3 py-1.5 text-xs font-medium text-red-400 border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 transition-colors">
-                Log out
-              </button>
-            </SignOutButton>
           </Show>
         </div>
       </div>

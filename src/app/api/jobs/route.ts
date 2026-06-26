@@ -725,12 +725,14 @@ async function fetchFromWorkable(query: string, savedJobIds: string[]): Promise<
 
       for (const job of data.results.slice(0, 25)) {
         const id = `workable-${countryCode}-${job.id || job.title?.slice(0, 20)}`;
+        const jobLocation = job.location || (countryCode === "GH" ? "Ghana" : "Nigeria");
+        const detectedCountry = getCountry("workable", jobLocation);
         jobs.push({
           id,
           title: job.title || "Position",
           companyName: job.company || "Unknown Company",
-          location: job.location || (countryCode === "GH" ? "Ghana" : "Nigeria"),
-          country: countryCode,
+          location: jobLocation,
+          country: detectedCountry === "GLOBAL" ? countryCode : detectedCountry,
           workMode: job.type?.toLowerCase().includes("remote") ? "Remote" : "On-site",
           seniorityLevel: detectSeniority(job.title || ""),
           employmentType: job.type || "Full-time",
