@@ -370,12 +370,15 @@ async function fetchFromJooble(
 
       if (!Array.isArray(data.jobs)) return [];
 
-      return data.jobs.slice(0, 20).map((job): Job => ({
+      return data.jobs.slice(0, 20).map((job): Job => {
+        const jobLocation = job.location || country.name;
+        const detectedCountry = getCountry("jooble", jobLocation);
+        return {
         id: `jooble-${job.id}`,
         title: job.title || "Unknown Position",
         companyName: job.company || "Unknown Company",
-        location: job.location || country.name,
-        country: country.code,
+        location: jobLocation,
+        country: detectedCountry === "GLOBAL" ? country.code : detectedCountry,
         workMode: job.type?.toLowerCase().includes("remote") ? "Remote" : "Not specified",
         seniorityLevel: detectSeniority(job.title || ""),
         employmentType: job.type || "Full-time",
@@ -387,7 +390,8 @@ async function fetchFromJooble(
         isSaved: savedJobIds.includes(`jooble-${job.id}`),
         applicationUrl: job.link || "#",
         source: "jooble",
-      }));
+        };
+      });
     }),
   );
 

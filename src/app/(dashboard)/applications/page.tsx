@@ -227,22 +227,18 @@ export default function ApplicationsPage() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <div className="rounded-xl border border-white/10 bg-[#14141f] p-4 text-center">
-          <div className="mono text-2xl font-bold text-white">{stats.total}</div>
-          <div className="mono text-xs text-zinc-500">Total</div>
-        </div>
-        <div className="rounded-xl border border-white/10 bg-[#14141f] p-4 text-center">
-          <div className="mono text-2xl font-bold text-cyan-400">{stats.active}</div>
-          <div className="mono text-xs text-zinc-500">Active</div>
-        </div>
-        <div className="rounded-xl border border-white/10 bg-[#14141f] p-4 text-center">
-          <div className="mono text-2xl font-bold text-purple-400">{stats.interviews}</div>
-          <div className="mono text-xs text-zinc-500">Interviews</div>
-        </div>
-        <div className="rounded-xl border border-white/10 bg-[#14141f] p-4 text-center">
-          <div className="mono text-2xl font-bold text-green-400">{stats.offers}</div>
-          <div className="mono text-xs text-zinc-500">Offers</div>
-        </div>
+        {[
+          { label: "Total",      value: stats.total,      accent: "bg-zinc-500/40" },
+          { label: "Active",     value: stats.active,     accent: "bg-cyan-500/60" },
+          { label: "Interviews", value: stats.interviews, accent: "bg-purple-500/60" },
+          { label: "Offers",     value: stats.offers,     accent: "bg-green-500/60" },
+        ].map(({ label, value, accent }) => (
+          <div key={label} className="rounded-xl border border-white/10 bg-[#14141f] p-4 text-center overflow-hidden relative">
+            <div className={`absolute top-0 left-0 right-0 h-0.5 ${accent}`} />
+            <div className="mono text-2xl font-bold text-white">{value}</div>
+            <div className="mono text-xs text-zinc-500">{label}</div>
+          </div>
+        ))}
       </div>
 
       <div className="flex flex-wrap gap-2">
