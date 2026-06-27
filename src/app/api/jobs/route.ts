@@ -372,13 +372,15 @@ async function fetchFromJooble(
 
       return data.jobs.slice(0, 20).map((job): Job => {
         const jobLocation = job.location || country.name;
+        // Jooble doesn't truly filter by location — it returns global results.
+        // Keep GLOBAL if we can't identify the country; don't assume it's the search country.
         const detectedCountry = getCountry("jooble", jobLocation);
         return {
         id: `jooble-${job.id}`,
         title: job.title || "Unknown Position",
         companyName: job.company || "Unknown Company",
         location: jobLocation,
-        country: detectedCountry === "GLOBAL" ? country.code : detectedCountry,
+        country: detectedCountry,
         workMode: job.type?.toLowerCase().includes("remote") ? "Remote" : "Not specified",
         seniorityLevel: detectSeniority(job.title || ""),
         employmentType: job.type || "Full-time",
