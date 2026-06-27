@@ -95,7 +95,8 @@ export function parseSalary(salary?: string): { min?: number; max?: number } {
 }
 
 export function getCountry(source: string, location: unknown): string {
-  const loc = String(location || "").toLowerCase();
+  // Normalize accented characters so "montréal" matches "montreal", etc.
+  const loc = String(location || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 
   // Africa — Ghana
   if (loc.includes("ghana") || loc.includes("accra") || loc.includes("kumasi") ||
