@@ -88,20 +88,31 @@ function FilterSelect({
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className={`h-9 pl-3 pr-7 rounded-lg text-xs border appearance-none cursor-pointer focus:outline-none transition-all ${
+      className={`h-8 pl-3 pr-7 rounded-lg text-xs border appearance-none cursor-pointer focus:outline-none transition-all ${
         active
-          ? "bg-purple-500/15 border-purple-500/40 text-purple-300"
-          : "bg-white/[0.04] border-white/10 text-zinc-400 hover:border-white/20 hover:text-zinc-200"
+          ? "bg-purple-500/20 border-purple-500/40 text-purple-300"
+          : "bg-white/[0.04] border-white/[0.06] text-zinc-400 hover:border-white/20 hover:text-zinc-200"
       }`}
       style={{ backgroundImage: "none" }}
     >
       {options.map((o) => (
-        <option key={o.value} value={o.value} className="bg-[#14141f] text-zinc-200">
+        <option key={o.value} value={o.value} className="bg-[#0d0d18] text-zinc-200">
           {o.label}
         </option>
       ))}
     </select>
   );
+}
+
+function getWorkModeAccentBar(workMode: string): string {
+  switch (workMode) {
+    case "Remote": return "accent-bar-cyan";
+    case "Contract": return "accent-bar-amber";
+    case "Hybrid": return "accent-bar-green";
+    case "Full-time": return "accent-bar-purple";
+    case "On-site": return "accent-bar-zinc";
+    default: return "accent-bar-zinc";
+  }
 }
 
 export default function JobsPage() {
@@ -286,20 +297,15 @@ export default function JobsPage() {
   return (
     <div className="max-w-4xl mx-auto">
       {/* Header */}
-      <div className="mb-5 flex items-center gap-3">
-        <div className="h-10 w-10 rounded-lg bg-purple-500/20 flex items-center justify-center flex-shrink-0">
-          <svg className="h-5 w-5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-          </svg>
-        </div>
-        <div>
-          <h1 className="text-xl font-bold text-white">Job Search</h1>
-          <p className="text-xs text-zinc-500">Live opportunities across Africa & globally</p>
-        </div>
+      <div className="mb-5 animate-fade-up">
+        <h1 className="text-2xl font-bold gradient-text">Find Jobs</h1>
+        <p className="text-sm text-zinc-400 mt-0.5">
+          {loading ? "Searching..." : <><span className="text-white font-medium">{totalJobs.toLocaleString()}</span> live opportunities across Africa &amp; globally</>}
+        </p>
       </div>
 
       {/* Search bar */}
-      <div className="agent-card p-2 mb-3">
+      <div className="animate-fade-up delay-100 agent-card p-2 mb-3">
         <div className="flex gap-2">
           <div className="flex-1 relative">
             <svg className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -317,15 +323,15 @@ export default function JobsPage() {
           </div>
           <button
             onClick={handleSearch}
-            className="px-5 py-2.5 rounded-lg bg-gradient-to-r from-purple-500 to-indigo-600 text-white text-sm font-medium hover:opacity-90 transition-opacity"
+            className="agent-button-primary press-scale"
           >
             Search
           </button>
         </div>
       </div>
 
-      {/* Filter bar — always visible */}
-      <div className="mb-5 flex flex-wrap items-center gap-2">
+      {/* Filter bar */}
+      <div className="animate-fade-up delay-200 mb-5 flex flex-wrap items-center gap-2">
         <FilterSelect
           value={country}
           onChange={(v) => handleFilterChange(setCountry, v, "country")}
@@ -368,10 +374,10 @@ export default function JobsPage() {
             value={location}
             onChange={(e) => setLocation(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-            className={`h-9 pl-8 pr-3 rounded-lg text-xs border focus:outline-none transition-all w-36 ${
+            className={`h-8 pl-8 pr-3 rounded-lg text-xs border focus:outline-none transition-all w-36 ${
               location
-                ? "bg-purple-500/15 border-purple-500/40 text-purple-300 placeholder:text-purple-400/50"
-                : "bg-white/[0.04] border-white/10 text-zinc-400 placeholder:text-zinc-600 hover:border-white/20"
+                ? "bg-purple-500/20 border-purple-500/40 text-purple-300 placeholder:text-purple-400/50"
+                : "bg-white/[0.04] border-white/[0.06] text-zinc-400 placeholder:text-zinc-600 hover:border-white/20"
             }`}
           />
         </div>
@@ -380,7 +386,7 @@ export default function JobsPage() {
         {activeFilterCount > 0 && (
           <button
             onClick={clearAllFilters}
-            className="h-9 px-3 rounded-lg text-xs text-zinc-500 hover:text-white border border-white/8 hover:border-white/20 transition-all flex items-center gap-1.5"
+            className="h-8 px-3 rounded-lg text-xs text-zinc-500 hover:text-white border border-white/[0.08] hover:border-white/20 transition-all flex items-center gap-1.5"
           >
             <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -413,14 +419,14 @@ export default function JobsPage() {
         </div>
       ) : jobs.length === 0 ? (
         <div className="agent-card p-12 text-center">
-          <div className="h-12 w-12 rounded-xl bg-purple-500/20 mx-auto mb-4 flex items-center justify-center">
-            <svg className="h-6 w-6 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div className="empty-state-icon">
+            <svg className="h-7 w-7 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
             </svg>
           </div>
           <p className="text-zinc-400 mb-4">No jobs match your filters</p>
           {activeFilterCount > 0 && (
-            <button onClick={clearAllFilters} className="text-sm text-purple-400 hover:text-purple-300">
+            <button onClick={clearAllFilters} className="text-sm text-purple-400 hover:text-purple-300 transition-colors">
               Clear all filters
             </button>
           )}
@@ -440,76 +446,85 @@ export default function JobsPage() {
 
           <div className="space-y-3">
             {jobs.map((job) => (
-              <div key={job.id} className="agent-card p-5 glass-card-hover">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2.5 flex-wrap">
-                      <h3 className="text-sm font-semibold text-white">{job.title}</h3>
-                      {userId && (
-                        <button
-                          onClick={() => toggleSave(job.id)}
-                          title={job.isSaved ? "Unsave" : "Save job"}
-                          className={`p-1 rounded-md transition-all flex-shrink-0 ${
-                            job.isSaved
-                              ? "text-amber-400"
-                              : "text-zinc-600 hover:text-amber-400"
-                          }`}
-                        >
-                          <svg className="h-4 w-4" fill={job.isSaved ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-                          </svg>
-                        </button>
-                      )}
-                    </div>
-                    <p className="text-xs text-purple-400 mt-0.5 font-medium">{job.companyName}</p>
+              <div
+                key={job.id}
+                className={`rounded-2xl border border-white/[0.08] bg-[#0d0d18] overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:border-purple-500/30 hover:shadow-lg hover:shadow-purple-500/5 ${getWorkModeAccentBar(job.workMode)}`}
+              >
+                <div className="p-5">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start gap-2 flex-wrap">
+                        <h3 className="text-sm font-bold text-white">{job.title}</h3>
+                        {userId && (
+                          <button
+                            onClick={() => toggleSave(job.id)}
+                            title={job.isSaved ? "Unsave" : "Save job"}
+                            className={`p-1 rounded-md transition-all flex-shrink-0 mt-0.5 ${
+                              job.isSaved ? "text-amber-400" : "text-zinc-600 hover:text-amber-400"
+                            }`}
+                          >
+                            <svg className="h-3.5 w-3.5" fill={job.isSaved ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                            </svg>
+                          </button>
+                        )}
+                      </div>
+                      <p className="text-xs text-cyan-400 mt-0.5 font-medium">{job.companyName}</p>
 
-                    <div className="flex flex-wrap items-center gap-2 mt-2.5">
-                      <span className="inline-flex items-center gap-1 text-xs text-zinc-500">
-                        <svg className="h-3 w-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                        </svg>
-                        {job.location}
-                      </span>
-                      <span className={`text-[11px] font-medium px-2 py-0.5 rounded-md ${
-                        job.workMode === "Remote"
-                          ? "bg-green-500/15 text-green-400"
-                          : job.workMode === "Hybrid"
-                            ? "bg-cyan-500/15 text-cyan-400"
-                            : "bg-purple-500/15 text-purple-400"
-                      }`}>
-                        {job.workMode}
-                      </span>
-                      <span className="text-[11px] text-zinc-600">{job.seniorityLevel}</span>
+                      <div className="flex flex-wrap items-center gap-2 mt-2">
+                        {job.location && (
+                          <span className="inline-flex items-center gap-1 text-xs text-zinc-500">
+                            <svg className="h-3 w-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            </svg>
+                            {job.location}
+                          </span>
+                        )}
+                        <span className={`text-[11px] font-medium px-2 py-0.5 rounded-md border ${
+                          job.workMode === "Remote"
+                            ? "bg-cyan-500/10 text-cyan-400 border-cyan-500/20"
+                            : job.workMode === "Hybrid"
+                              ? "bg-green-500/10 text-green-400 border-green-500/20"
+                              : job.workMode === "Contract"
+                                ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                                : "bg-purple-500/10 text-purple-400 border-purple-500/20"
+                        }`}>
+                          {job.workMode}
+                        </span>
+                        {job.seniorityLevel && (
+                          <span className="text-[11px] text-zinc-600">{job.seniorityLevel}</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex-shrink-0 text-right">
+                      <span className="text-[11px] text-zinc-600">{formatDate(job.postedAt)}</span>
                     </div>
                   </div>
 
-                  <div className="flex-shrink-0 text-right">
-                    <span className="text-[11px] text-zinc-600">{formatDate(job.postedAt)}</span>
+                  {job.description && (
+                    <p className="mt-3 text-xs text-zinc-500 line-clamp-2 leading-relaxed">
+                      {stripHtml(job.description)}
+                    </p>
+                  )}
+
+                  <div className="mt-4 flex gap-2">
+                    <Link
+                      href={`/jobs/${job.id}`}
+                      onClick={() => persistJobs([job])}
+                      className="flex-1 text-center py-2 rounded-lg border border-purple-500/25 text-purple-400 hover:bg-purple-500/10 transition-all text-xs font-medium"
+                    >
+                      View Details
+                    </Link>
+                    <a
+                      href={job.applicationUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 text-center py-2 rounded-lg agent-button-primary text-xs font-medium"
+                    >
+                      Apply
+                    </a>
                   </div>
-                </div>
-
-                {job.description && (
-                  <p className="mt-3 text-xs text-zinc-500 line-clamp-2 leading-relaxed">
-                    {stripHtml(job.description)}
-                  </p>
-                )}
-
-                <div className="mt-4 flex gap-2">
-                  <Link
-                    href={`/jobs/${job.id}`}
-                    onClick={() => persistJobs([job])}
-                    className="flex-1 text-center py-2 rounded-lg border border-purple-500/25 text-purple-400 hover:bg-purple-500/10 transition-all text-xs font-medium"
-                  >
-                    View Details
-                  </Link>
-                  <a
-                    href={job.applicationUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex-1 text-center py-2 rounded-lg bg-gradient-to-r from-purple-500 to-indigo-600 text-white text-xs font-medium hover:opacity-90 transition-opacity"
-                  >
-                    Apply
-                  </a>
                 </div>
               </div>
             ))}
@@ -520,16 +535,16 @@ export default function JobsPage() {
               <button
                 onClick={() => fetchJobs(false)}
                 disabled={loadingMore}
-                className="px-8 py-2.5 rounded-lg border border-white/10 text-sm text-zinc-400 hover:bg-white/5 transition-all disabled:opacity-50 flex items-center gap-2"
+                className="w-full py-3 rounded-xl border border-white/[0.08] text-sm text-zinc-400 hover:bg-white/5 hover:border-white/20 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {loadingMore ? (
                   <>
                     <div className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                    Loading…
+                    Loading more jobs...
                   </>
                 ) : (
                   <>
-                    Load more
+                    Load more results
                     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>

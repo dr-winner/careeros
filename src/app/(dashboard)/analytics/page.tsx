@@ -103,13 +103,13 @@ export default function AnalyticsPage() {
   };
 
   const getStatusConfig = (status: string) => {
-    const config: Record<string, { bg: string; text: string; border: string }> = {
-      Applied: { bg: "bg-cyan-500/20", text: "text-cyan-400", border: "border-cyan-500/30" },
-      Screening: { bg: "bg-amber-500/20", text: "text-amber-400", border: "border-amber-500/30" },
-      Interview: { bg: "bg-purple-500/20", text: "text-purple-400", border: "border-purple-500/30" },
-      Offer: { bg: "bg-green-500/20", text: "text-green-400", border: "border-green-500/30" },
-      Rejected: { bg: "bg-red-500/20", text: "text-red-400", border: "border-red-500/30" },
-      Withdrawn: { bg: "bg-zinc-500/20", text: "text-zinc-400", border: "border-zinc-500/30" },
+    const config: Record<string, { bg: string; text: string; border: string; bar: string }> = {
+      Applied:   { bg: "bg-cyan-500/15",   text: "text-cyan-400",   border: "border-cyan-500/30",   bar: "bg-cyan-500" },
+      Screening: { bg: "bg-amber-500/15",  text: "text-amber-400",  border: "border-amber-500/30",  bar: "bg-amber-500" },
+      Interview: { bg: "bg-purple-500/15", text: "text-purple-400", border: "border-purple-500/30", bar: "bg-purple-500" },
+      Offer:     { bg: "bg-green-500/15",  text: "text-green-400",  border: "border-green-500/30",  bar: "bg-green-500" },
+      Rejected:  { bg: "bg-red-500/15",    text: "text-red-400",    border: "border-red-500/30",    bar: "bg-red-500" },
+      Withdrawn: { bg: "bg-zinc-500/15",   text: "text-zinc-400",   border: "border-zinc-500/30",   bar: "bg-zinc-500" },
     };
     return config[status] || config.Applied;
   };
@@ -131,73 +131,67 @@ export default function AnalyticsPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="agent-card p-6 mb-6 animate-fade-up">
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
-            <svg className="h-5 w-5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-            </svg>
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-white">Analytics</h1>
-             <p className="text-sm text-zinc-500">Track your job search progress</p>
-          </div>
-        </div>
+    <div className="max-w-4xl mx-auto space-y-6">
+      {/* Page header */}
+      <div className="animate-fade-up">
+        <h1 className="text-2xl font-bold gradient-text">Analytics</h1>
+        <p className="text-sm text-zinc-400 mt-0.5">Track your job search performance</p>
       </div>
 
       {loading ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="agent-card p-5">
-              <div className="animate-pulse">
-                <div className="h-8 w-1/2 rounded bg-zinc-800 mb-2" />
-                <div className="h-4 w-2/3 rounded bg-zinc-800" />
-              </div>
+            <div key={i} className="stat-card animate-pulse">
+              <div className="h-8 w-1/2 rounded bg-white/5 mb-2" />
+              <div className="h-4 w-2/3 rounded bg-white/5" />
             </div>
           ))}
         </div>
       ) : (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
-            {[
-              { label: "Applications", value: stats.totalApplications, color: "purple" },
-              { label: "Response Rate", value: `${stats.responseRate}%`, color: "cyan" },
-              { label: "Saved Jobs", value: stats.savedJobs, color: "amber" },
-              { label: "Alerts", value: stats.alerts, color: "green" },
-            ].map((item, i) => (
-              <div key={i} className="agent-card p-5">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-medium text-zinc-400">{item.label}</span>
-                  <div className={`h-2 w-2 rounded-full ${item.color === "purple" ? "bg-purple-400" : item.color === "cyan" ? "bg-cyan-400" : item.color === "amber" ? "bg-amber-400" : "bg-green-400"}`} />
-                </div>
-                <div className="text-2xl font-bold text-white">{item.value}</div>
-              </div>
-            ))}
+          {/* Stat cards */}
+          <div className="animate-fade-up delay-100 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="stat-card stat-card-purple">
+              <div className="section-label mb-2">Applications</div>
+              <div className="text-3xl font-bold text-white">{stats.totalApplications}</div>
+            </div>
+            <div className="stat-card stat-card-cyan">
+              <div className="section-label mb-2">Response Rate</div>
+              <div className="text-3xl font-bold text-white">{stats.responseRate}%</div>
+            </div>
+            <div className="stat-card stat-card-amber">
+              <div className="section-label mb-2">Saved Jobs</div>
+              <div className="text-3xl font-bold text-white">{stats.savedJobs}</div>
+            </div>
+            <div className="stat-card stat-card-green">
+              <div className="section-label mb-2">Active Alerts</div>
+              <div className="text-3xl font-bold text-white">{stats.alerts}</div>
+            </div>
           </div>
 
-          <div className="grid gap-6 lg:grid-cols-2 mb-6">
-            <div className="agent-card p-5">
-              <span className="text-sm font-medium text-zinc-400">Application Status</span>
+          <div className="animate-fade-up delay-200 grid gap-5 lg:grid-cols-2">
+            {/* Application Status breakdown */}
+            <div className="rounded-2xl border border-white/[0.08] bg-[#0d0d18] p-5">
+              <p className="section-label">Application Status</p>
               {stats.totalApplications === 0 ? (
-                <p className="text-sm text-zinc-600 mt-4">No data</p>
+                <div className="flex items-center justify-center h-32">
+                  <p className="text-sm text-zinc-600">No applications yet</p>
+                </div>
               ) : (
-                <div className="mt-4 space-y-3">
+                <div className="space-y-3">
                   {Object.entries(stats.applicationsByStatus).map(([status, count]) => {
                     const config = getStatusConfig(status);
                     const percentage = Math.round((count / stats.totalApplications) * 100);
                     return (
-                      <div key={status} className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className={`mono text-xs px-2 py-0.5 rounded border ${config.bg} ${config.border} ${config.text}`}>
-                            {status}
-                          </span>
-                          <span className="mono text-xs text-zinc-500">{count}</span>
+                      <div key={status} className="flex items-center gap-3">
+                        <span className={`mono text-[10px] px-2 py-0.5 rounded border flex-shrink-0 w-20 text-center ${config.bg} ${config.border} ${config.text}`}>
+                          {status}
+                        </span>
+                        <div className="flex-1 h-1 rounded-full bg-zinc-900 overflow-hidden">
+                          <div className={`h-full rounded-full ${config.bar}`} style={{ width: `${percentage}%` }} />
                         </div>
-                        <div className="flex items-center gap-2">
-                          <div className="h-1.5 w-24 rounded-full bg-zinc-900 overflow-hidden">
-                            <div className={`h-full rounded-full ${config.text.replace("text-", "bg-")}`} style={{ width: `${percentage}%` }} />
-                          </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <span className="mono text-xs text-white font-medium w-4 text-right">{count}</span>
                           <span className="mono text-xs text-zinc-600 w-8">{percentage}%</span>
                         </div>
                       </div>
@@ -207,43 +201,48 @@ export default function AnalyticsPage() {
               )}
             </div>
 
-            <div className="agent-card p-5">
-              <span className="text-sm font-medium text-zinc-400">Activity Overview</span>
-              <div className="mt-4 space-y-3">
+            {/* Activity overview */}
+            <div className="rounded-2xl border border-white/[0.08] bg-[#0d0d18] p-5">
+              <p className="section-label">Activity Overview</p>
+              <div className="space-y-3">
                 {[
                   { label: "CVs Uploaded", value: stats.resumes },
                   { label: "Avg. Days Active", value: `${stats.avgTimeToResponse}d` },
                   { label: "Offers Received", value: stats.applicationsByStatus["Offer"] || 0 },
+                  { label: "Interviews", value: stats.applicationsByStatus["Interview"] || 0 },
                 ].map((item, i) => (
-                  <div key={i} className="flex items-center justify-between py-2 border-b border-zinc-800/50 last:border-0">
-                    <span className="text-xs text-zinc-500">{item.label}</span>
-                    <span className="text-sm font-medium text-white">{item.value}</span>
+                  <div key={i} className="flex items-center justify-between py-2.5 border-b border-white/[0.05] last:border-0">
+                    <span className="text-sm text-zinc-400">{item.label}</span>
+                    <span className="text-sm font-bold text-white">{item.value}</span>
                   </div>
                 ))}
               </div>
             </div>
           </div>
 
-          <div className="agent-card p-5">
-              <span className="text-sm font-medium text-zinc-400">Recent Applications</span>
+          {/* Recent applications */}
+          <div className="animate-fade-up delay-300 rounded-2xl border border-white/[0.08] bg-[#0d0d18] p-5">
+            <p className="section-label">Recent Applications</p>
             {applications.length === 0 ? (
-              <p className="text-sm text-zinc-600 mt-4">No data</p>
+              <div className="flex items-center justify-center h-24">
+                <p className="text-sm text-zinc-600">No applications to display</p>
+              </div>
             ) : (
-              <div className="mt-4 space-y-2">
+              <div className="space-y-2">
                 {applications.slice(0, 5).map((app) => {
                   const config = getStatusConfig(app.status);
                   return (
-                    <div key={app.id} className="flex items-center justify-between py-2 px-3 rounded-lg bg-zinc-900/30">
+                    <div key={app.id} className="flex items-center justify-between py-2.5 px-3 rounded-xl bg-white/[0.02] border border-white/[0.04] hover:border-white/[0.08] transition-colors">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-medium text-white truncate">{app.jobTitle || `Job #${app.jobId.slice(0, 8)}`}</span>
-                          <span className={`mono text-xs px-1.5 py-0.5 rounded border ${config.bg} ${config.border} ${config.text}`}>
+                          <span className={`mono text-[10px] px-1.5 py-0.5 rounded border flex-shrink-0 ${config.bg} ${config.border} ${config.text}`}>
                             {app.status}
                           </span>
                         </div>
-                        <div className="flex items-center gap-2 mt-1">
+                        <div className="flex items-center gap-2 mt-0.5">
                           {app.companyName && <span className="mono text-xs text-cyan-400">{app.companyName}</span>}
-                          <span className="mono text-xs text-zinc-600">• {formatDate(app.appliedAt)}</span>
+                          <span className="mono text-xs text-zinc-600">· {formatDate(app.appliedAt)}</span>
                         </div>
                       </div>
                     </div>

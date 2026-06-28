@@ -367,55 +367,37 @@ export default function CVsPage() {
         />
       )}
 
-      <div className="w-full space-y-4">
-        {/* Header with tab switcher */}
-        <div className="rounded-2xl border border-white/10 bg-[#14141f] p-4">
-          <div className="flex items-center justify-between gap-3 mb-4">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="h-9 w-9 rounded-lg bg-purple-500/20 flex items-center justify-center flex-shrink-0">
-                {activeTab === "cvs" ? (
-                  <svg className="h-4 w-4 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                ) : (
-                  <svg className="h-4 w-4 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                )}
-              </div>
-              <div className="min-w-0">
-                <h1 className="text-base font-bold text-white">CVs & Letters</h1>
-                <p className="mono text-xs text-zinc-500">{cvs.length} CVs uploaded</p>
-              </div>
+      <div className="w-full space-y-5">
+        {/* Header with pill tab switcher */}
+        <div className="animate-fade-up flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="text-2xl font-bold gradient-text">CVs &amp; Letters</h1>
+            <p className="text-sm text-zinc-400 mt-0.5">{cvs.length} CV{cvs.length !== 1 ? "s" : ""} uploaded</p>
+          </div>
+          <div className="flex items-center gap-3">
+            {/* Pill tabs */}
+            <div className="tab-pill-container">
+              {([
+                { key: "cvs" as const, label: "My CVs" },
+                { key: "cover-letter" as const, label: "Cover Letter" },
+              ]).map((t) => (
+                <button
+                  key={t.key}
+                  onClick={() => setActiveTab(t.key)}
+                  className={`tab-pill ${activeTab === t.key ? "tab-pill-active" : ""}`}
+                >
+                  {t.label}
+                </button>
+              ))}
             </div>
             {activeTab === "cvs" && (
               <button
                 onClick={() => setShowUpload(!showUpload)}
-                className="flex-shrink-0 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 transition-opacity"
+                className="agent-button-primary press-scale"
               >
                 {showUpload ? "Cancel" : "Upload CV"}
               </button>
             )}
-          </div>
-
-          {/* Tab switcher */}
-          <div className="flex border-b border-white/10 -mb-4 pb-0">
-            {([
-              { key: "cvs" as const, label: "My CVs" },
-              { key: "cover-letter" as const, label: "Cover Letter" },
-            ]).map((t) => (
-              <button
-                key={t.key}
-                onClick={() => setActiveTab(t.key)}
-                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors translate-y-px ${
-                  activeTab === t.key
-                    ? "border-purple-500 text-white"
-                    : "border-transparent text-zinc-500 hover:text-zinc-300"
-                }`}
-              >
-                {t.label}
-              </button>
-            ))}
           </div>
         </div>
 
@@ -423,7 +405,7 @@ export default function CVsPage() {
         {activeTab === "cvs" && (
           <>
             {showRoleSelector && (
-              <div className="rounded-2xl border border-purple-500/30 bg-gradient-to-b from-purple-500/5 to-transparent p-6 animate-fade-up">
+              <div className="animate-fade-up rounded-2xl border border-purple-500/30 bg-purple-500/5 p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <h2 className="text-lg font-bold text-white">Create Role-Specific Version</h2>
@@ -441,10 +423,10 @@ export default function CVsPage() {
                       key={role.id}
                       onClick={() => createRoleVersion(role.label)}
                       disabled={tailoringForJob}
-                      className="flex items-center gap-3 p-4 rounded-xl border border-white/10 bg-[#14141f] hover:border-purple-500/50 hover:bg-purple-500/5 transition-colors text-left disabled:opacity-50"
+                      className="flex items-center gap-3 p-4 rounded-xl border border-white/[0.08] bg-[#0d0d18] hover:border-purple-500/50 hover:bg-purple-500/5 transition-colors text-left disabled:opacity-50 press-scale"
                     >
-                      <div className="h-10 w-10 rounded-lg bg-purple-500/20 flex items-center justify-center flex-shrink-0">
-                        <svg className="h-5 w-5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <div className="h-9 w-9 rounded-lg bg-purple-500/20 flex items-center justify-center flex-shrink-0">
+                        <svg className="h-4.5 w-4.5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d={role.icon} />
                         </svg>
                       </div>
@@ -456,7 +438,7 @@ export default function CVsPage() {
             )}
 
             {showRegenerated && regeneratedCV && (
-              <div className="rounded-2xl border-2 border-purple-500/30 bg-gradient-to-b from-purple-500/5 to-transparent p-6 animate-fade-up">
+              <div className="animate-fade-up rounded-2xl border border-purple-500/30 bg-purple-500/5 p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
@@ -584,23 +566,23 @@ export default function CVsPage() {
             )}
 
             {showUpload && (
-              <div className="rounded-2xl border border-white/10 bg-[#14141f] p-6">
+              <div className="animate-fade-up rounded-2xl border border-white/[0.08] bg-[#0d0d18] p-6">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="h-8 w-8 rounded-lg bg-purple-500/20 flex items-center justify-center">
                     <svg className="h-4 w-4 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
                   </div>
-                  <h2 className="text-sm font-medium text-white">Upload CV</h2>
+                  <h2 className="text-sm font-semibold text-white">Upload CV</h2>
                 </div>
                 <CVUpload onUploadSuccess={handleUploadSuccess} onAnalysisStart={handleAnalysisStart} />
               </div>
             )}
 
             {loading ? (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {[1, 2].map((i) => (
-                  <div key={i} className="rounded-2xl border border-white/10 bg-[#14141f] p-6">
+                  <div key={i} className="rounded-2xl border border-white/[0.08] bg-[#0d0d18] p-6">
                     <div className="animate-pulse space-y-3">
                       <div className="h-5 w-1/3 rounded bg-white/5" />
                       <div className="h-4 w-1/4 rounded bg-white/5" />
@@ -609,114 +591,114 @@ export default function CVsPage() {
                 ))}
               </div>
             ) : cvs.length === 0 && !showUpload ? (
-              <div className="rounded-2xl border border-white/10 bg-[#14141f] p-12 text-center">
-                <div className="h-14 w-14 mx-auto rounded-xl bg-purple-500/10 flex items-center justify-center mb-4">
+              <div className="rounded-2xl border border-white/[0.08] bg-[#0d0d18] p-12 text-center">
+                <div className="empty-state-icon">
                   <svg className="h-7 w-7 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
                 </div>
-                <h3 className="text-lg font-medium text-white">No CVs</h3>
-                <p className="mono text-xs text-zinc-500 mt-2">Upload your CV to get started.</p>
+                <h3 className="text-lg font-semibold text-white">No CVs yet</h3>
+                <p className="mono text-xs text-zinc-500 mt-2 mb-4">Upload your CV to get started with AI-powered job matching.</p>
                 <button
                   onClick={() => setShowUpload(true)}
-                  className="rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 px-4 py-2 text-sm font-medium text-white mt-4 hover:opacity-90 transition-opacity"
+                  className="agent-button-primary press-scale"
                 >
                   Upload CV
                 </button>
               </div>
             ) : cvs.length > 0 ? (
-              <div className="grid gap-4 lg:grid-cols-[1fr_260px] lg:items-start">
+              <div className="grid gap-5 lg:grid-cols-[1fr_260px] lg:items-start">
                 <div className="space-y-4">
-                {Object.entries(groupedCVs).map(([role, roleCVs]) => (
-                  <div key={role}>
-                    {Object.keys(groupedCVs).length > 1 && (
-                    <div className="flex items-center gap-2 mb-3">
-                      <div className="h-px flex-1 bg-gradient-to-r from-transparent via-zinc-800 to-transparent" />
-                      <span className="mono text-[10px] text-zinc-600 uppercase tracking-wider px-2">
-                        {role === "general" ? "General" : getRoleLabel(role)}
-                      </span>
-                      <div className="h-px flex-1 bg-gradient-to-r from-transparent via-zinc-800 to-transparent" />
-                    </div>
-                    )}
-                    <div className="grid gap-2">
-                      {roleCVs.map((cv) => {
-                        const isSelected = selectedCV?.id === cv.id;
-                        const handleSelect = () => setSelectedCV(cv);
-                        const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-                          if (event.key === "Enter" || event.key === " ") {
-                            event.preventDefault();
-                            handleSelect();
-                          }
-                        };
-                        return (
-                          <div
-                            key={cv.id}
-                            onClick={handleSelect}
-                            onKeyDown={handleKeyDown}
-                            tabIndex={0}
-                            role="button"
-                            aria-pressed={isSelected}
-                            className={`rounded-xl border p-4 transition-all cursor-pointer ${
-                              isSelected
-                                ? "border-purple-500/50 bg-purple-500/5"
-                                : "border-white/10 bg-[#14141f] hover:border-white/20"
-                            }`}
-                          >
-                            <div className="flex items-center gap-3">
-                              <div className="h-8 w-8 rounded-lg bg-purple-500/20 flex items-center justify-center flex-shrink-0">
-                                <svg className="h-4 w-4 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                </svg>
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-1.5">
-                                  {cv.isPrimary && (
-                                    <span className="mono text-[10px] px-1.5 py-0.5 rounded border bg-purple-500/20 border-purple-500/30 text-purple-400 flex-shrink-0">
-                                      primary
-                                    </span>
-                                  )}
-                                  <span className="text-sm font-medium text-white truncate">{cv.originalName}</span>
+                  {Object.entries(groupedCVs).map(([role, roleCVs]) => (
+                    <div key={role}>
+                      {Object.keys(groupedCVs).length > 1 && (
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-zinc-800 to-transparent" />
+                          <span className="section-label px-2 mb-0">
+                            {role === "general" ? "General" : getRoleLabel(role)}
+                          </span>
+                          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-zinc-800 to-transparent" />
+                        </div>
+                      )}
+                      <div className="space-y-2">
+                        {roleCVs.map((cv) => {
+                          const isSelected = selectedCV?.id === cv.id;
+                          const handleSelect = () => setSelectedCV(cv);
+                          const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+                            if (event.key === "Enter" || event.key === " ") {
+                              event.preventDefault();
+                              handleSelect();
+                            }
+                          };
+                          return (
+                            <div
+                              key={cv.id}
+                              onClick={handleSelect}
+                              onKeyDown={handleKeyDown}
+                              tabIndex={0}
+                              role="button"
+                              aria-pressed={isSelected}
+                              className={`rounded-xl border p-4 transition-all cursor-pointer ${
+                                isSelected
+                                  ? "border-purple-500/50 bg-purple-500/5 accent-bar-purple"
+                                  : "border-white/[0.08] bg-[#0d0d18] hover:border-white/20"
+                              }`}
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className="h-8 w-8 rounded-lg bg-purple-500/20 flex items-center justify-center flex-shrink-0">
+                                  <svg className="h-4 w-4 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                  </svg>
                                 </div>
-                                <p className="mono text-xs text-zinc-500 mt-0.5">
-                                  {formatDate(cv.createdAt)} · {cv.skills.length} skills
-                                </p>
-                              </div>
-                              <div className="flex items-center gap-1 flex-shrink-0">
-                                {!cv.isPrimary && (
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-1.5">
+                                    {cv.isPrimary && (
+                                      <span className="mono text-[10px] px-1.5 py-0.5 rounded border bg-purple-500/20 border-purple-500/30 text-purple-400 flex-shrink-0">
+                                        primary
+                                      </span>
+                                    )}
+                                    <span className="text-sm font-medium text-white truncate">{cv.originalName}</span>
+                                  </div>
+                                  <p className="mono text-xs text-zinc-500 mt-0.5">
+                                    {formatDate(cv.createdAt)} · {cv.skills.length} skills
+                                  </p>
+                                </div>
+                                <div className="flex items-center gap-1 flex-shrink-0">
+                                  {!cv.isPrimary && (
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); setPrimary(cv.id); }}
+                                      className="mono text-[10px] px-2 py-1 rounded border border-white/20 bg-white/5 text-zinc-400 hover:border-purple-500/50 hover:text-purple-400 transition-colors"
+                                    >
+                                      Set Primary
+                                    </button>
+                                  )}
                                   <button
-                                    onClick={(e) => { e.stopPropagation(); setPrimary(cv.id); }}
-                                    className="mono text-[10px] px-2 py-1 rounded border border-white/20 bg-white/5 text-zinc-400 hover:border-purple-500/50 hover:text-purple-400 transition-colors"
+                                    onClick={(e) => { e.stopPropagation(); deleteCV(cv.id); }}
+                                    disabled={deleting === cv.id}
+                                    className="mono text-[10px] px-2 py-1 rounded border border-white/20 bg-white/5 text-zinc-400 hover:border-red-500/40 hover:text-red-400 hover:bg-red-500/5 transition-colors disabled:opacity-50"
                                   >
-                                    Set Primary
+                                    {deleting === cv.id ? "..." : "✕"}
                                   </button>
-                                )}
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); deleteCV(cv.id); }}
-                                  disabled={deleting === cv.id}
-                                  className="mono text-[10px] px-2 py-1 rounded border border-white/20 bg-white/5 text-zinc-400 hover:border-red-500/40 hover:text-red-400 hover:bg-red-500/5 transition-colors disabled:opacity-50"
-                                >
-                                  {deleting === cv.id ? "..." : "✕"}
-                                </button>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
                 </div>
 
-                {/* Right sidebar: analysis for selected CV */}
+                {/* Right sidebar: CV score + analysis */}
                 {selectedCV && (
-                  <div className="rounded-2xl border border-white/10 bg-[#14141f] p-4 space-y-4">
-                    {/* CV Score */}
-                    <div className="rounded-xl bg-white/5 border border-white/[0.08] p-3 text-center">
-                      <div className={`text-3xl font-bold mono ${cvScore >= 80 ? "text-green-400" : cvScore >= 60 ? "text-amber-400" : "text-red-400"}`}>
-                        {cvScore}<span className="text-base text-zinc-500">/100</span>
+                  <div className="rounded-2xl border border-white/[0.08] bg-[#0d0d18] p-4 space-y-4">
+                    {/* CV Score — prominent at top */}
+                    <div className="rounded-xl bg-[#131320] border border-white/[0.06] p-4 text-center">
+                      <div className="text-4xl font-bold text-white mono">
+                        {cvScore}<span className="text-lg text-zinc-500">/100</span>
                       </div>
-                      <div className="text-[10px] mono text-zinc-500 mt-0.5 uppercase tracking-widest">CV Score</div>
-                      <div className="mt-2 h-1 rounded-full bg-white/5 overflow-hidden">
+                      <div className="section-label mt-1 mb-2">CV Score</div>
+                      <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
                         <div
                           className={`h-full rounded-full transition-all duration-700 ${cvScore >= 80 ? "bg-green-500" : cvScore >= 60 ? "bg-amber-500" : "bg-red-500"}`}
                           style={{ width: `${cvScore}%` }}
@@ -726,28 +708,28 @@ export default function CVsPage() {
 
                     {/* Stats row */}
                     <div>
-                      <p className="text-[10px] text-zinc-400 uppercase tracking-wider font-semibold mb-2">CV Analysis</p>
-                      <div className="flex items-center gap-0">
-                        <div className="flex-1 text-center py-2">
+                      <p className="section-label">CV Analysis</p>
+                      <div className="flex items-center gap-0 rounded-xl border border-white/[0.06] bg-[#131320] overflow-hidden">
+                        <div className="flex-1 text-center py-3">
                           <div className="text-xl font-bold text-white">{selectedCV.skills.length}</div>
-                          <div className="text-[10px] text-zinc-500">skills</div>
+                          <div className="mono text-[10px] text-zinc-500">skills</div>
                         </div>
-                        <div className="w-px h-10 bg-white/5" />
-                        <div className="flex-1 text-center py-2">
+                        <div className="w-px h-10 bg-white/[0.06]" />
+                        <div className="flex-1 text-center py-3">
                           <div className="text-xl font-bold text-white">{selectedCV.experiences.length}</div>
-                          <div className="text-[10px] text-zinc-500">exp</div>
+                          <div className="mono text-[10px] text-zinc-500">exp</div>
                         </div>
-                        <div className="w-px h-10 bg-white/5" />
-                        <div className="flex-1 text-center py-2">
+                        <div className="w-px h-10 bg-white/[0.06]" />
+                        <div className="flex-1 text-center py-3">
                           <div className="text-xl font-bold text-white">{selectedCV.education.length}</div>
-                          <div className="text-[10px] text-zinc-500">edu</div>
+                          <div className="mono text-[10px] text-zinc-500">edu</div>
                         </div>
                       </div>
                     </div>
 
                     {/* Optimization tips */}
                     <div>
-                      <p className="text-[10px] text-zinc-400 uppercase tracking-wider font-semibold mb-2">Optimization Tips</p>
+                      <p className="section-label">Optimization Tips</p>
                       <div className="space-y-2">
                         {suggestions.map((item, index) => (
                           <div
@@ -770,15 +752,15 @@ export default function CVsPage() {
                               }`}>{item.priority}</span>
                               <p className="text-xs font-medium text-white leading-snug">{item.issue}</p>
                             </div>
-                            <p className="text-[10px] text-zinc-500 leading-snug">{item.suggestion}</p>
+                            <p className="mono text-[10px] text-zinc-500 leading-snug">{item.suggestion}</p>
                           </div>
                         ))}
                       </div>
                     </div>
 
                     {/* Best practices */}
-                    <div className="pt-3 border-t border-white/5">
-                      <p className="text-[10px] text-zinc-400 uppercase tracking-wider font-semibold mb-2">Best Practices</p>
+                    <div className="pt-3 border-t border-white/[0.05]">
+                      <p className="section-label">Best Practices</p>
                       <ul className="space-y-1.5">
                         {[
                           "Keep to 1–2 pages",
@@ -788,7 +770,7 @@ export default function CVsPage() {
                         ].map((item, i) => (
                           <li key={i} className="flex items-center gap-2">
                             <span className="text-green-400 text-xs">✓</span>
-                            <span className="text-[10px] text-zinc-500">{item}</span>
+                            <span className="mono text-[10px] text-zinc-500">{item}</span>
                           </li>
                         ))}
                       </ul>
@@ -796,10 +778,10 @@ export default function CVsPage() {
 
                     {/* Non-premium upsell */}
                     {!isPremium && (
-                      <div className="pt-3 border-t border-white/5">
+                      <div className="pt-3 border-t border-white/[0.05]">
                         <a
                           href="/pricing"
-                          className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-purple-500/10 border border-purple-500/20 text-xs text-purple-400 hover:bg-purple-500/20 transition-colors"
+                          className="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-purple-500/10 border border-purple-500/20 text-xs text-purple-400 hover:bg-purple-500/20 transition-colors"
                         >
                           <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -809,12 +791,12 @@ export default function CVsPage() {
                       </div>
                     )}
 
-                    {/* Premium actions inside panel */}
+                    {/* Premium actions */}
                     {isPremium && selectedCV.parsedText && (
-                      <div className="pt-3 border-t border-white/5 flex flex-col gap-1.5">
+                      <div className="pt-3 border-t border-white/[0.05] flex flex-col gap-1.5">
                         <button
                           onClick={() => setShowRoleSelector(true)}
-                          className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border border-white/20 bg-white/5 text-xs text-zinc-300 hover:border-purple-500/50 hover:text-purple-400 hover:bg-purple-500/5 transition-colors"
+                          className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border border-white/[0.08] bg-white/[0.03] text-xs text-zinc-300 hover:border-purple-500/50 hover:text-purple-400 hover:bg-purple-500/5 transition-colors"
                         >
                           <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
@@ -824,7 +806,7 @@ export default function CVsPage() {
                         <button
                           onClick={regenerateCV}
                           disabled={regenerating}
-                          className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border border-white/20 bg-white/5 text-xs text-zinc-300 hover:border-purple-500/50 hover:text-purple-400 hover:bg-purple-500/5 transition-colors disabled:opacity-40"
+                          className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border border-white/[0.08] bg-white/[0.03] text-xs text-zinc-300 hover:border-purple-500/50 hover:text-purple-400 hover:bg-purple-500/5 transition-colors disabled:opacity-40"
                         >
                           {regenerating ? (
                             <div className="h-3 w-3 rounded-full border-2 border-purple-500/30 border-t-purple-400 animate-spin" />
@@ -852,55 +834,55 @@ export default function CVsPage() {
                 <div className="h-5 w-5 rounded-full border-2 border-purple-500/30 border-t-purple-500 animate-spin" />
               </div>
             ) : (
-              <div className="grid gap-6 lg:grid-cols-2">
+              <div className="grid gap-5 lg:grid-cols-2">
                 <div className="space-y-4">
-                  <div className="agent-card p-5">
-                    <span className="text-sm font-medium text-zinc-400">Job Details</span>
-                    <div className="mt-4 space-y-4">
+                  <div className="rounded-2xl border border-white/[0.08] bg-[#0d0d18] p-5">
+                    <p className="section-label">Job Details</p>
+                    <div className="space-y-4">
                       <div>
-                        <label className="text-sm text-zinc-400 mb-1 block">Recipient Name</label>
+                        <label className="text-sm text-zinc-400 mb-1.5 block">Recipient Name</label>
                         <input
                           type="text"
                           placeholder="Hiring Manager"
                           value={coverForm.recipientName}
                           onChange={(e) => setCoverForm({ ...coverForm, recipientName: e.target.value })}
-                          className="agent-input w-full"
+                          className="agent-input"
                         />
                       </div>
                       <div>
-                        <label className="text-sm text-zinc-400 mb-1 block">Company Name *</label>
+                        <label className="text-sm text-zinc-400 mb-1.5 block">Company Name *</label>
                         <input
                           type="text"
                           placeholder="Acme Corporation"
                           value={coverForm.companyName}
                           onChange={(e) => setCoverForm({ ...coverForm, companyName: e.target.value })}
-                          className="agent-input w-full"
+                          className="agent-input"
                         />
                       </div>
                       <div>
-                        <label className="text-sm text-zinc-400 mb-1 block">Job Title *</label>
+                        <label className="text-sm text-zinc-400 mb-1.5 block">Job Title *</label>
                         <input
                           type="text"
                           placeholder="Software Engineer"
                           value={coverForm.jobTitle}
                           onChange={(e) => setCoverForm({ ...coverForm, jobTitle: e.target.value })}
-                          className="agent-input w-full"
+                          className="agent-input"
                         />
                       </div>
                       <div>
-                        <label className="text-sm text-zinc-400 mb-1 block">Job Description</label>
+                        <label className="text-sm text-zinc-400 mb-1.5 block">Job Description</label>
                         <textarea
                           rows={4}
                           placeholder="Paste job description for tailored letter..."
                           value={coverForm.jobDescription}
                           onChange={(e) => setCoverForm({ ...coverForm, jobDescription: e.target.value })}
-                          className="agent-input w-full resize-none"
+                          className="agent-input resize-none"
                         />
                       </div>
                       <button
                         onClick={generateCoverLetter}
                         disabled={generating}
-                        className="agent-button-primary w-full justify-center py-3"
+                        className="agent-button-primary w-full justify-center py-3 press-scale"
                       >
                         {generating ? (
                           <>
@@ -920,34 +902,32 @@ export default function CVsPage() {
                   </div>
 
                   {profile && (
-                    <div className="agent-card p-5">
-                      <span className="text-sm font-medium text-zinc-400">Your Profile</span>
-                      <div className="mt-3 space-y-2">
-                        <div className="flex justify-between">
-                          <span className="text-sm text-zinc-500">Name</span>
-                          <span className="text-sm text-zinc-400">{profile.fullName || "Not set"}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-sm text-zinc-500">Email</span>
-                          <span className="text-sm text-zinc-400">{profile.email || "Not set"}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-sm text-zinc-500">Headline</span>
-                          <span className="text-sm text-zinc-400 truncate max-w-[150px]">{profile.headline || profile.experience || "Not set"}</span>
-                        </div>
+                    <div className="rounded-2xl border border-white/[0.08] bg-[#0d0d18] p-5">
+                      <p className="section-label">Your Profile</p>
+                      <div className="space-y-2">
+                        {[
+                          { label: "Name", value: profile.fullName },
+                          { label: "Email", value: profile.email },
+                          { label: "Headline", value: profile.headline || profile.experience },
+                        ].map((item) => (
+                          <div key={item.label} className="flex justify-between gap-3">
+                            <span className="text-sm text-zinc-500 flex-shrink-0">{item.label}</span>
+                            <span className="text-sm text-zinc-300 truncate text-right">{item.value || "Not set"}</span>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   )}
                 </div>
 
                 <div className="space-y-4">
-                  <div className="agent-card p-5">
+                  <div className="rounded-2xl border border-white/[0.08] bg-[#0d0d18] p-5">
                     <div className="flex items-center justify-between mb-4">
-                      <span className="text-sm font-medium text-zinc-400">Generated Letter</span>
+                      <p className="section-label mb-0">Generated Letter</p>
                       {coverLetter && (
                         <button
                           onClick={copyToClipboard}
-                          className="flex items-center gap-1.5 rounded-lg border border-purple-500/30 bg-purple-500/10 px-3 py-1.5 text-xs font-medium text-purple-400 hover:bg-purple-500/20 transition-colors"
+                          className="flex items-center gap-1.5 rounded-lg border border-purple-500/30 bg-purple-500/10 px-3 py-1.5 text-xs font-medium text-purple-400 hover:bg-purple-500/20 transition-colors press-scale"
                         >
                           <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
@@ -957,7 +937,7 @@ export default function CVsPage() {
                       )}
                     </div>
                     {coverLetter ? (
-                      <div className="rounded-lg bg-white/[0.03] border border-zinc-800 p-5">
+                      <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-5">
                         {coverLetter.split("\n\n").map((paragraph, i) =>
                           paragraph.trim() ? (
                             <p key={i} className="text-sm text-zinc-200 leading-relaxed mb-4 last:mb-0 whitespace-pre-wrap">
@@ -967,15 +947,15 @@ export default function CVsPage() {
                         )}
                       </div>
                     ) : (
-                      <div className="flex items-center justify-center h-48 rounded-lg border-2 border-dashed border-zinc-800">
+                      <div className="flex items-center justify-center h-48 rounded-xl border-2 border-dashed border-white/[0.06]">
                         <p className="text-sm text-zinc-600">Fill in the details and click generate</p>
                       </div>
                     )}
                   </div>
 
-                  <div className="agent-card p-5">
-                    <span className="text-sm font-medium text-zinc-400">Tips</span>
-                    <ul className="mt-3 space-y-2">
+                  <div className="rounded-2xl border border-white/[0.08] bg-[#0d0d18] p-5">
+                    <p className="section-label">Tips</p>
+                    <ul className="space-y-2">
                       {[
                         "Address to a specific person when possible",
                         "Keep it to one page",
@@ -984,7 +964,7 @@ export default function CVsPage() {
                         "Show enthusiasm for the company",
                       ].map((item, i) => (
                         <li key={i} className="mono text-xs text-zinc-500 flex items-center gap-2">
-                          <span className="text-cyan-400">→</span> {item}
+                          <span className="text-cyan-400 flex-shrink-0">→</span> {item}
                         </li>
                       ))}
                     </ul>
