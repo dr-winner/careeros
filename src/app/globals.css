@@ -1,9 +1,16 @@
 @import "tailwindcss";
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&display=swap");
 @plugin "@tailwindcss/typography";
 
 @theme inline {
   --font-sans: "Inter", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", "Fira Code", monospace;
+  --font-display: "Space Grotesk", system-ui, sans-serif;
+}
+
+.font-display {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
 }
 
 * {
