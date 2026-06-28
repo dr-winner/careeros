@@ -50,7 +50,7 @@ export default function FeaturesSection() {
           <div className="inline-flex items-center gap-2 rounded-full bg-purple-500/10 border border-purple-500/20 px-4 py-2 mb-6">
             <span className="mono text-xs text-purple-300">What CareerOS does</span>
           </div>
-          <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
+          <h2 className="font-display text-3xl sm:text-4xl font-bold text-white mb-4">
             Everything you need to <span className="gradient-text">stand out</span>
           </h2>
           <p className="text-zinc-400 max-w-xl mx-auto">

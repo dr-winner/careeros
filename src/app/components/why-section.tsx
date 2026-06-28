@@ -18,7 +18,7 @@ export default function WhySection() {
           <span className="text-sm text-amber-300 font-medium">The reality</span>
         </div>
 
-        <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white leading-tight mb-6">
+        <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold text-white leading-tight mb-6">
           The African job market is tough.
           <br />
           <span className="gradient-text">We&apos;re changing that.</span>

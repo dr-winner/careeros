@@ -3,7 +3,7 @@ export default function HowItWorks() {
     {
       number: "01",
       title: "Upload your CV",
-      description: "Agent parses your skills, experience, and education automatically.",
+      description: "Drop a PDF. Agent extracts your skills and experience in seconds.",
       icon: (
         <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -12,8 +12,8 @@ export default function HowItWorks() {
     },
     {
       number: "02",
-      title: "Find a job",
-      description: "Browse roles or paste a link. Agent analyzes fit instantly.",
+      title: "Pick a role",
+      description: "Browse listings or paste any job link. Agent reads the requirements.",
       icon: (
         <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
@@ -22,8 +22,8 @@ export default function HowItWorks() {
     },
     {
       number: "03",
-      title: "Get analysis",
-      description: "Agent shows match score, gaps, and optimization tips.",
+      title: "See your score",
+      description: "Get a match percentage, the exact gaps, and what to do before applying.",
       icon: (
         <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
@@ -42,11 +42,11 @@ export default function HowItWorks() {
           <div className="inline-flex items-center gap-2 rounded-full bg-purple-500/10 border border-purple-500/20 px-4 py-2 mb-6">
             <span className="mono text-xs text-purple-300">{"//"} How it works</span>
           </div>
-          <h2 className="text-4xl font-bold tracking-tight text-white sm:text-5xl">
-            Three steps to <span className="gradient-text">confidence</span>
+          <h2 className="font-display text-4xl font-bold text-white sm:text-5xl">
+            Three steps to <span className="gradient-text">your score</span>
           </h2>
-          <p className="mx-auto mt-4 max-w-lg text-lg text-zinc-400">
-            Stop guessing. Let your career agent show you exactly where you stand.
+          <p className="mx-auto mt-4 max-w-lg text-zinc-400">
+            No guessing. No wasted applications. Just an honest number and a clear next step.
           </p>
         </div>
 
