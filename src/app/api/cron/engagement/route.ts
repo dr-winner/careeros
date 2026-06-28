@@ -41,6 +41,9 @@ export async function GET(request: NextRequest) {
             where: { savedAt: { gte: oneWeekAgo } },
             select: { id: true },
           },
+          savedSearches: {
+            select: { id: true },
+          },
         },
         orderBy: { id: "asc" },
       });
@@ -55,20 +58,22 @@ export async function GET(request: NextRequest) {
         const activeApplications = user.applications.filter(
           (a) => !["Rejected", "Withdrawn"].includes(a.status),
         ).length;
+        const hasAlerts = user.savedSearches.length > 0;
         const hasAnyActivity = totalApplications > 0 || user.savedJobs.length > 0;
 
         const daysSinceActive = Math.floor(
           (now.getTime() - user.updatedAt.getTime()) / (1000 * 60 * 60 * 24),
         );
 
+        // Re-engagement: only for users who have used the platform (applications or saved jobs)
         if (daysSinceActive >= RE_ENGAGEMENT_DAYS && dayOfWeek === RE_ENGAGEMENT_DAY && hasAnyActivity) {
           await sendReEngagementEmail(user.email, user.fullName, daysSinceActive);
           emailsSent.reEngagement++;
         }
 
-        // Only send digest to users with actual activity — avoids spamming empty accounts
-        if (dayOfWeek === DIGEST_DAY_OF_WEEK && hasAnyActivity) {
-          const newJobsMatched = user.savedJobs.length;
+        // Weekly digest: only for users who have opted in by setting up job alerts
+        if (dayOfWeek === DIGEST_DAY_OF_WEEK && hasAlerts) {
+          const newJobsMatched = user.savedSearches.length;
 
           await sendWeeklyDigestEmail(user.email, user.fullName, {
             totalApplications,
