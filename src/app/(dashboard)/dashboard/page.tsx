@@ -141,6 +141,23 @@ export default function DashboardPage() {
     setAnalysisCvId(null);
   };
 
+  const statusTextColors: Record<string, string> = {
+    Applied: "text-cyan-400 border-cyan-500/30 bg-cyan-500/10",
+    Screening: "text-amber-400 border-amber-500/30 bg-amber-500/10",
+    Interview: "text-purple-400 border-purple-500/30 bg-purple-500/10",
+    Offer: "text-green-400 border-green-500/30 bg-green-500/10",
+    Rejected: "text-red-400 border-red-500/30 bg-red-500/10",
+    Withdrawn: "text-zinc-400 border-zinc-500/30 bg-zinc-500/10",
+  };
+  const statusBarColors: Record<string, string> = {
+    Applied: "bg-cyan-500",
+    Screening: "bg-amber-500",
+    Interview: "bg-purple-500",
+    Offer: "bg-green-500",
+    Rejected: "bg-red-500",
+    Withdrawn: "bg-zinc-500",
+  };
+
   return (
     <>
       {showAnalysis && analysisCvId && (
@@ -151,46 +168,37 @@ export default function DashboardPage() {
         />
       )}
       <div className="max-w-5xl mx-auto space-y-6">
-        {/* Agent Header */}
-        <div className="rounded-2xl border border-white/10 bg-[#14141f] p-6">
-          <div className="flex items-center gap-4">
-            <div className="relative">
-              <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-purple-500/20">
-                <span className="text-xl font-bold text-white">
-                  {firstName.charAt(0).toUpperCase()}
-                </span>
-              </div>
-              <div className="absolute -bottom-1 -right-1 h-5 w-5 rounded-full bg-green-500 border-2 border-[#0a0a0f] shadow-sm shadow-green-500/50" />
-            </div>
-            <div className="flex-1">
-              <div className="flex items-center gap-3 flex-wrap">
-                <h1 className="text-xl font-bold text-white tracking-tight">
-                  Hey, {firstName}
-                </h1>
-                <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-green-500/10 border border-green-500/20">
-                  <div className="h-2 w-2 rounded-full bg-green-400 animate-pulse" />
-                  <span className="mono text-[10px] uppercase tracking-wider text-green-400">Agent Active</span>
-                </div>
-              </div>
-              <p className="mono text-xs text-zinc-500 mt-1">
-                Your career agent is ready to help you find opportunities
-              </p>
-            </div>
+
+        {/* Page header */}
+        <div className="animate-fade-up flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="text-2xl font-bold gradient-text">Dashboard</h1>
+            <p className="text-sm text-zinc-400 mt-0.5">
+              Hey {firstName} — your job search at a glance
+            </p>
           </div>
+          <button
+            onClick={() => setShowUpload(!showUpload)}
+            className="agent-button-primary press-scale"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Upload CV
+          </button>
         </div>
 
-        {/* AI Next Best Action Agent */}
-        <div className="agent-card border-purple-500/30 bg-purple-500/5 overflow-hidden relative">
-          <div className="absolute top-0 right-0 p-3">
-            <div className="px-2 py-0.5 rounded border border-purple-500/30 bg-purple-500/10 text-[8px] mono text-purple-400 uppercase tracking-widest">AI RECOMMENDATION</div>
+        {/* AI Next Best Action */}
+        <div className="animate-fade-up delay-100 agent-card border-l-4 border-l-purple-500/60 bg-purple-500/5 p-5">
+          <div className="absolute top-3 right-3">
+            <div className="px-2 py-0.5 rounded border border-purple-500/30 bg-purple-500/10 text-[8px] mono text-purple-400 uppercase tracking-widest">AI Recommendation</div>
           </div>
-
-          <div className="p-5 flex items-start gap-4">
-            <div className="h-12 w-12 rounded-xl bg-purple-500/20 flex items-center justify-center border border-purple-500/30 flex-shrink-0">
+          <div className="flex items-start gap-4 mt-1">
+            <div className="h-11 w-11 rounded-xl bg-purple-500/20 flex items-center justify-center border border-purple-500/30 flex-shrink-0">
               {isLoadingAction ? (
                 <div className="h-5 w-5 border-2 border-purple-500/30 border-t-purple-500 rounded-full animate-spin" />
               ) : (
-                <svg className="h-6 w-6 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="h-5 w-5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   {nextAction?.icon === "resume" ? (
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   ) : nextAction?.icon === "practice" ? (
@@ -203,35 +211,31 @@ export default function DashboardPage() {
                 </svg>
               )}
             </div>
-
             <div className="flex-1">
               {isLoadingAction ? (
                 <div className="space-y-2">
-                  <div className="h-5 w-32 bg-zinc-800 animate-pulse rounded" />
-                  <div className="h-4 w-64 bg-zinc-800 animate-pulse rounded" />
+                  <div className="h-5 w-40 bg-white/5 animate-pulse rounded" />
+                  <div className="h-4 w-72 bg-white/5 animate-pulse rounded" />
+                  <div className="h-4 w-52 bg-white/5 animate-pulse rounded" />
                 </div>
               ) : nextAction ? (
-                <div className="animate-fade-up">
-                  <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <div className="animate-fade-in">
+                  <h3 className="text-base font-bold text-white flex items-center gap-2">
                     {nextAction.action}
                     {nextAction.priority === "high" && (
-                      <span className="px-1.5 py-0.5 rounded bg-red-500/10 border border-red-500/20 text-[8px] font-mono text-red-400 uppercase">Priority</span>
+                      <span className="px-1.5 py-0.5 rounded bg-red-500/10 border border-red-500/20 text-[8px] mono text-red-400 uppercase">Priority</span>
                     )}
                   </h3>
-                  <p className="text-sm text-zinc-400 mt-1 max-w-xl">
-                    {nextAction.description}
-                  </p>
-                  <div className="mt-4">
-                    <Link
-                      href={nextAction.link}
-                      className="inline-flex items-center gap-2 text-xs font-bold text-purple-400 hover:text-purple-300 transition-colors group"
-                    >
-                      Take Action Now
-                      <svg className="h-4 w-4 transform group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                      </svg>
-                    </Link>
-                  </div>
+                  <p className="text-sm text-zinc-400 mt-1 max-w-xl leading-relaxed">{nextAction.description}</p>
+                  <Link
+                    href={nextAction.link}
+                    className="mt-3 inline-flex items-center gap-2 text-xs font-bold text-purple-400 hover:text-purple-300 transition-colors group"
+                  >
+                    Take Action Now
+                    <svg className="h-3.5 w-3.5 transform group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                    </svg>
+                  </Link>
                 </div>
               ) : (
                 <p className="text-sm text-zinc-500 italic">Analyzing your career path...</p>
@@ -240,59 +244,66 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid gap-4 sm:grid-cols-3">
+        {/* Stats row */}
+        <div className="animate-fade-up delay-200 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {[
             {
               label: "Applications",
               value: stats.applications,
               sublabel: "tracked",
-              color: "purple",
-              icon: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2",
+              cardClass: "stat-card stat-card-purple",
+              iconPath: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2",
+              iconClass: "text-purple-400",
+              iconBg: "bg-purple-500/20",
             },
             {
               label: "Saved Jobs",
               value: stats.savedJobs,
               sublabel: "bookmarked",
-              color: "cyan",
-              icon: "M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z",
+              cardClass: "stat-card stat-card-cyan",
+              iconPath: "M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z",
+              iconClass: "text-cyan-400",
+              iconBg: "bg-cyan-500/20",
             },
             {
               label: "Interviews",
               value: stats.interviews,
               sublabel: "scheduled",
-              color: "green",
-              icon: "M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z",
+              cardClass: "stat-card stat-card-green",
+              iconPath: "M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z",
+              iconClass: "text-green-400",
+              iconBg: "bg-green-500/20",
+            },
+            {
+              label: "Active Alerts",
+              value: analytics.alertCount,
+              sublabel: "monitoring",
+              cardClass: "stat-card stat-card-amber",
+              iconPath: "M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9",
+              iconClass: "text-amber-400",
+              iconBg: "bg-amber-500/20",
             },
           ].map((stat, i) => (
-            <div key={i} className="rounded-2xl border border-white/10 bg-[#14141f] p-5">
+            <div key={i} className={stat.cardClass}>
               <div className="flex items-center justify-between mb-3">
-                <span className="mono text-xs text-zinc-500 uppercase tracking-wider">
-                  {stat.label}
-                </span>
-                <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${stat.color === "purple" ? "bg-purple-500/20" :
-                  stat.color === "cyan" ? "bg-cyan-500/20" :
-                    "bg-green-500/20"
-                  }`}>
-                  <svg className={`h-4 w-4 ${stat.color === "purple" ? "text-purple-400" :
-                    stat.color === "cyan" ? "text-cyan-400" :
-                      "text-green-400"
-                    }`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d={stat.icon} />
+                <span className="section-label mb-0">{stat.label}</span>
+                <div className={`h-7 w-7 rounded-lg flex items-center justify-center ${stat.iconBg}`}>
+                  <svg className={`h-3.5 w-3.5 ${stat.iconClass}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d={stat.iconPath} />
                   </svg>
                 </div>
               </div>
               <div className="text-3xl font-bold text-white">{stat.value}</div>
-              <div className="mono text-xs text-zinc-600 mt-1">{stat.sublabel}</div>
+              <div className="mono text-xs text-zinc-600 mt-0.5">{stat.sublabel}</div>
             </div>
           ))}
         </div>
 
-        {/* Empty state — new user onboarding checklist */}
+        {/* Empty state for new users */}
         {!isLoadingAction && stats.applications === 0 && stats.savedJobs === 0 && stats.interviews === 0 && (
-          <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-6">
+          <div className="animate-fade-up delay-300 rounded-2xl border border-amber-500/20 bg-amber-500/5 p-6">
             <div className="flex items-start gap-4 mb-5">
-              <div className="h-10 w-10 rounded-lg bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+              <div className="empty-state-icon flex-shrink-0" style={{ width: 40, height: 40, borderRadius: 12, background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.25)', margin: 0 }}>
                 <svg className="h-5 w-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
@@ -302,7 +313,7 @@ export default function DashboardPage() {
                 <p className="mono text-xs text-zinc-500 mt-0.5">Your agent is ready — here&apos;s what to do first</p>
               </div>
             </div>
-            <div className="space-y-3">
+            <div className="space-y-2">
               {[
                 { step: "1", label: "Upload your CV", desc: "Lets AI extract your skills for matching", href: "/resumes" },
                 { step: "2", label: "Browse jobs", desc: "Find roles and see your fit score", href: "/jobs" },
@@ -311,7 +322,7 @@ export default function DashboardPage() {
                 <a
                   key={item.step}
                   href={item.href}
-                  className="flex items-center gap-4 rounded-xl border border-white/5 bg-white/[0.03] p-4 hover:border-white/10 hover:bg-white/[0.06] transition-all group"
+                  className="flex items-center gap-4 rounded-xl border border-white/[0.06] bg-white/[0.03] p-3.5 hover:border-amber-500/20 hover:bg-amber-500/5 transition-all group"
                 >
                   <div className="h-8 w-8 rounded-full border border-amber-500/30 bg-amber-500/10 flex items-center justify-center flex-shrink-0">
                     <span className="mono text-xs font-bold text-amber-400">{item.step}</span>
@@ -320,7 +331,7 @@ export default function DashboardPage() {
                     <div className="text-sm font-medium text-white">{item.label}</div>
                     <div className="mono text-xs text-zinc-500 mt-0.5">{item.desc}</div>
                   </div>
-                  <svg className="h-4 w-4 text-zinc-600 group-hover:text-zinc-400 group-hover:translate-x-0.5 transition-all" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="h-4 w-4 text-zinc-600 group-hover:text-amber-400/60 group-hover:translate-x-0.5 transition-all" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                   </svg>
                 </a>
@@ -329,45 +340,9 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Quick Actions */}
-        <div className="grid gap-4 md:grid-cols-2">
-          <button
-            onClick={() => setShowUpload(!showUpload)}
-            className="rounded-2xl border border-purple-500/20 bg-purple-500/5 p-5 text-left transition-all hover:border-purple-500/40 hover:bg-purple-500/10"
-          >
-            <div className="flex items-center gap-4">
-              <div className="h-12 w-12 rounded-xl bg-purple-500/20 flex items-center justify-center">
-                <svg className="h-6 w-6 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-              </div>
-              <div>
-                <div className="font-semibold text-white text-lg">Upload CV</div>
-                <div className="mono text-xs text-zinc-500 mt-1">Enable job matching</div>
-              </div>
-            </div>
-          </button>
-          <Link
-            href="/jobs"
-            className="rounded-2xl border border-cyan-500/20 bg-cyan-500/5 p-5 transition-all hover:border-cyan-500/40 hover:bg-cyan-500/10"
-          >
-            <div className="flex items-center gap-4">
-              <div className="h-12 w-12 rounded-xl bg-cyan-500/20 flex items-center justify-center">
-                <svg className="h-6 w-6 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-                </svg>
-              </div>
-              <div>
-                <div className="font-semibold text-white text-lg">Find Jobs</div>
-                <div className="mono text-xs text-zinc-500 mt-1">AI-matched opportunities</div>
-              </div>
-            </div>
-          </Link>
-        </div>
-
         {/* CV Upload Panel */}
         {showUpload && (
-          <div className="rounded-2xl border border-white/10 bg-[#14141f] p-6">
+          <div className="animate-fade-up agent-card p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
                 <div className="h-8 w-8 rounded-lg bg-purple-500/20 flex items-center justify-center">
@@ -375,13 +350,13 @@ export default function DashboardPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
                 </div>
-                <h2 className="text-lg font-semibold text-white">Upload Your CV</h2>
+                <h2 className="text-base font-semibold text-white">Upload Your CV</h2>
               </div>
               <button
                 onClick={() => setShowUpload(false)}
                 className="rounded-lg p-2 text-zinc-500 hover:text-white hover:bg-white/5 transition-colors"
               >
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
@@ -390,162 +365,118 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Quick Links */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {[
-            {
-              href: "/interview",
-              label: "Interview Prep",
-              icon: "M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z",
-              color: "purple",
-            },
-            {
-              href: "/resumes?tab=cover-letter",
-              label: "Cover Letter",
-              icon: "M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z",
-              color: "cyan",
-            },
-            {
-              href: "/applications",
-              label: "Applications",
-              icon: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2",
-              color: "amber",
-            },
-            {
-              href: "/referrals",
-              label: "Refer & Earn",
-              icon: "M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z",
-              color: "green",
-            },
-          ].map((action, i) => (
-            <Link
-              key={i}
-              href={action.href}
-              className="rounded-2xl border border-white/10 bg-[#14141f] p-5 transition-all hover:border-white/20 hover:bg-[#1a1a28]"
-            >
-              <div className={`h-10 w-10 rounded-lg mb-3 flex items-center justify-center ${action.color === "purple" ? "bg-purple-500/20" :
-                action.color === "cyan" ? "bg-cyan-500/20" :
-                  action.color === "amber" ? "bg-amber-500/20" :
-                    "bg-green-500/20"
-                }`}>
-                <svg
-                  className={`h-5 w-5 ${action.color === "purple" ? "text-purple-400" :
-                    action.color === "cyan" ? "text-cyan-400" :
-                      action.color === "amber" ? "text-amber-400" :
-                        "text-green-400"
-                    }`}
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d={action.icon} />
-                </svg>
+        {/* Two-column bottom section */}
+        <div className="animate-fade-up delay-300 grid gap-4 lg:grid-cols-[1fr_220px]">
+          {/* Recent Applications */}
+          <div className="rounded-2xl border border-white/[0.08] bg-[#0d0d18] p-5">
+            <p className="section-label">Recent Applications</p>
+            {analytics.recentApps.length > 0 ? (
+              <div className="space-y-2">
+                {analytics.recentApps.map((app) => (
+                  <div key={app.id} className="flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 hover:border-white/10 transition-colors">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-white truncate">{app.jobTitle || "Untitled Role"}</div>
+                      {app.companyName && <div className="mono text-xs text-zinc-500 mt-0.5 truncate">{app.companyName}</div>}
+                    </div>
+                    <span className={`mono text-[10px] px-2 py-0.5 rounded border flex-shrink-0 ${statusTextColors[app.status] || statusTextColors.Applied}`}>
+                      {app.status}
+                    </span>
+                  </div>
+                ))}
+                <Link href="/applications" className="mono text-xs text-purple-400 hover:text-purple-300 transition-colors block mt-3">
+                  View all applications →
+                </Link>
               </div>
-              <div className="font-medium text-white">{action.label}</div>
-              <div className="mono text-xs text-zinc-600 mt-1">→</div>
-            </Link>
-          ))}
+            ) : (
+              <div className="text-center py-8">
+                <div className="empty-state-icon mx-auto" style={{ width: 48, height: 48, borderRadius: 14 }}>
+                  <svg className="h-5 w-5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                  </svg>
+                </div>
+                <p className="text-sm text-zinc-500 mb-3">No applications yet</p>
+                <Link href="/jobs" className="mono text-xs text-purple-400 hover:text-purple-300">Browse jobs →</Link>
+              </div>
+            )}
+
+            {/* Status breakdown if data exists */}
+            {Object.keys(analytics.statusCounts).length > 0 && (
+              <div className="mt-4 pt-4 border-t border-white/[0.06] space-y-2">
+                {Object.entries(analytics.statusCounts).map(([status, count]) => {
+                  const total = stats.applications;
+                  const pct = Math.round((count / total) * 100);
+                  return (
+                    <div key={status} className="flex items-center gap-3">
+                      <span className={`mono text-[10px] px-1.5 py-0.5 rounded border flex-shrink-0 w-20 text-center ${statusTextColors[status] || statusTextColors.Applied}`}>
+                        {status}
+                      </span>
+                      <div className="flex-1 h-1 rounded-full bg-zinc-900 overflow-hidden">
+                        <div className={`h-full rounded-full ${statusBarColors[status] || statusBarColors.Applied}`} style={{ width: `${pct}%` }} />
+                      </div>
+                      <span className="mono text-[10px] text-zinc-600 w-5 text-right">{count}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Quick Links */}
+          <div className="rounded-2xl border border-white/[0.08] bg-[#0d0d18] p-5">
+            <p className="section-label">Quick Links</p>
+            <div className="grid grid-cols-2 lg:grid-cols-1 gap-2">
+              {[
+                { href: "/interview", label: "Interview Prep", icon: "M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z", color: "purple" },
+                { href: "/resumes?tab=cover-letter", label: "Cover Letter", icon: "M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z", color: "cyan" },
+                { href: "/applications", label: "Applications", icon: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2", color: "amber" },
+                { href: "/referrals", label: "Refer & Earn", icon: "M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z", color: "green" },
+              ].map((action, i) => (
+                <Link
+                  key={i}
+                  href={action.href}
+                  className="flex items-center gap-2.5 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 hover:border-purple-500/20 hover:bg-purple-500/5 transition-all group press-scale"
+                >
+                  <div className={`h-7 w-7 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                    action.color === "purple" ? "bg-purple-500/20" :
+                    action.color === "cyan" ? "bg-cyan-500/20" :
+                    action.color === "amber" ? "bg-amber-500/20" : "bg-green-500/20"
+                  }`}>
+                    <svg className={`h-3.5 w-3.5 ${
+                      action.color === "purple" ? "text-purple-400" :
+                      action.color === "cyan" ? "text-cyan-400" :
+                      action.color === "amber" ? "text-amber-400" : "text-green-400"
+                    }`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d={action.icon} />
+                    </svg>
+                  </div>
+                  <span className="text-xs font-medium text-zinc-300 group-hover:text-white transition-colors">{action.label}</span>
+                </Link>
+              ))}
+            </div>
+          </div>
         </div>
-        {/* Analytics section — only shown once user has activity */}
+
+        {/* Progress analytics — only shown once user has activity */}
         {stats.applications > 0 && (
-          <div className="space-y-4">
+          <div className="animate-fade-up delay-400 space-y-4">
             <div className="flex items-center gap-2">
               <div className="h-px flex-1 bg-gradient-to-r from-transparent via-zinc-800 to-transparent" />
-              <span className="mono text-[10px] text-zinc-600 uppercase tracking-widest px-2">Progress</span>
+              <span className="section-label px-2 mb-0">Progress</span>
               <div className="h-px flex-1 bg-gradient-to-r from-transparent via-zinc-800 to-transparent" />
             </div>
 
             <div className="grid gap-3 sm:grid-cols-3">
               {[
-                { label: "Response Rate", value: `${analytics.responseRate}%`, color: "cyan" },
-                { label: "CVs Uploaded", value: analytics.resumeCount, color: "purple" },
-                { label: "Active Alerts", value: analytics.alertCount, color: "amber" },
+                { label: "Response Rate", value: `${analytics.responseRate}%`, cardClass: "stat-card stat-card-cyan" },
+                { label: "CVs Uploaded", value: analytics.resumeCount, cardClass: "stat-card stat-card-purple" },
+                { label: "Active Alerts", value: analytics.alertCount, cardClass: "stat-card stat-card-amber" },
               ].map((item, i) => (
-                <div key={i} className="rounded-xl border border-white/10 bg-[#14141f] p-4">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="mono text-[10px] text-zinc-500 uppercase tracking-wider">{item.label}</span>
-                    <div className={`h-1.5 w-1.5 rounded-full ${item.color === "cyan" ? "bg-cyan-400" : item.color === "purple" ? "bg-purple-400" : "bg-amber-400"}`} />
-                  </div>
+                <div key={i} className={item.cardClass}>
+                  <div className="mono text-[10px] text-zinc-500 uppercase tracking-widest mb-1">{item.label}</div>
                   <div className="text-2xl font-bold text-white">{item.value}</div>
                 </div>
               ))}
             </div>
-
-            {Object.keys(analytics.statusCounts).length > 0 && (
-              <div className="rounded-xl border border-white/10 bg-[#14141f] p-5">
-                <span className="text-xs font-medium text-zinc-400">Application Status</span>
-                <div className="mt-3 space-y-2.5">
-                  {Object.entries(analytics.statusCounts).map(([status, count]) => {
-                    const total = stats.applications;
-                    const pct = Math.round((count / total) * 100);
-                    const colors: Record<string, string> = {
-                      Applied: "bg-cyan-500",
-                      Screening: "bg-amber-500",
-                      Interview: "bg-purple-500",
-                      Offer: "bg-green-500",
-                      Rejected: "bg-red-500",
-                      Withdrawn: "bg-zinc-500",
-                    };
-                    const textColors: Record<string, string> = {
-                      Applied: "text-cyan-400 border-cyan-500/30 bg-cyan-500/10",
-                      Screening: "text-amber-400 border-amber-500/30 bg-amber-500/10",
-                      Interview: "text-purple-400 border-purple-500/30 bg-purple-500/10",
-                      Offer: "text-green-400 border-green-500/30 bg-green-500/10",
-                      Rejected: "text-red-400 border-red-500/30 bg-red-500/10",
-                      Withdrawn: "text-zinc-400 border-zinc-500/30 bg-zinc-500/10",
-                    };
-                    return (
-                      <div key={status} className="flex items-center gap-3">
-                        <span className={`mono text-xs px-2 py-0.5 rounded border flex-shrink-0 ${textColors[status] || textColors.Applied}`}>
-                          {status}
-                        </span>
-                        <div className="flex-1 h-1.5 rounded-full bg-zinc-900 overflow-hidden">
-                          <div
-                            className={`h-full rounded-full ${colors[status] || colors.Applied}`}
-                            style={{ width: `${pct}%` }}
-                          />
-                        </div>
-                        <span className="mono text-xs text-zinc-500 w-6 text-right">{count}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {analytics.recentApps.length > 0 && (
-              <div className="rounded-xl border border-white/10 bg-[#14141f] p-5">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-xs font-medium text-zinc-400">Recent Applications</span>
-                  <a href="/applications" className="mono text-xs text-purple-400 hover:text-purple-300">View all →</a>
-                </div>
-                <div className="space-y-2">
-                  {analytics.recentApps.map((app) => {
-                    const textColors: Record<string, string> = {
-                      Applied: "text-cyan-400 border-cyan-500/30 bg-cyan-500/10",
-                      Screening: "text-amber-400 border-amber-500/30 bg-amber-500/10",
-                      Interview: "text-purple-400 border-purple-500/30 bg-purple-500/10",
-                      Offer: "text-green-400 border-green-500/30 bg-green-500/10",
-                      Rejected: "text-red-400 border-red-500/30 bg-red-500/10",
-                      Withdrawn: "text-zinc-400 border-zinc-500/30 bg-zinc-500/10",
-                    };
-                    return (
-                      <div key={app.id} className="flex items-center justify-between py-2 px-3 rounded-lg bg-zinc-900/30">
-                        <div className="flex-1 min-w-0">
-                          <span className="text-sm font-medium text-white truncate block">
-                            {app.jobTitle || "Untitled Role"}
-                          </span>
-                          {app.companyName && <span className="mono text-xs text-zinc-500">{app.companyName}</span>}
-                        </div>
-                        <span className={`mono text-xs px-1.5 py-0.5 rounded border flex-shrink-0 ml-3 ${textColors[app.status] || textColors.Applied}`}>
-                          {app.status}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
           </div>
         )}
       </div>
