@@ -384,8 +384,8 @@ export default function JobDetailPage() {
             { icon: "M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z", label: job.workMode },
             { icon: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z", label: job.seniorityLevel },
           ].map((item, i) => (
-            <div key={i} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-zinc-900/50 border border-zinc-800">
-              <svg className="h-4 w-4 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div key={i} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.06]">
+              <svg className="h-3.5 w-3.5 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d={item.icon} />
               </svg>
               <span className="mono text-xs text-zinc-400">{item.label}</span>
@@ -394,7 +394,7 @@ export default function JobDetailPage() {
         </div>
 
         <div className="mt-4 mono text-xs text-zinc-600">
-          {formatDate(job.postedAt)} • {job.employmentType}
+          {formatDate(job.postedAt)} · {job.employmentType}
         </div>
       </div>
 
@@ -590,7 +590,7 @@ export default function JobDetailPage() {
       )}
 
       <div className="agent-card p-6 animate-fade-up">
-        <div className="text-sm text-zinc-500 mb-3 font-medium">Job Description</div>
+        <p className="section-label">Job Description</p>
         <div className="text-sm text-zinc-300 whitespace-pre-wrap leading-relaxed">
           {stripHtml(job.description)}
         </div>
@@ -636,17 +636,18 @@ export default function JobDetailPage() {
       />
 
       {showOptimizeModal && cvOptimization && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/80 p-4 overflow-y-auto">
-          <div className="w-full max-w-2xl my-8">
-            <div className="agent-card">
-              <div className="p-4 border-b border-zinc-800 flex items-center justify-between">
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/70 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="w-full max-w-2xl my-8 animate-fade-up">
+            <div className="rounded-2xl border border-white/[0.08] bg-[#0d0d18] overflow-hidden">
+              <div className="h-px w-full bg-gradient-to-r from-transparent via-purple-500/40 to-transparent" />
+              <div className="p-5 border-b border-white/[0.06] flex items-center justify-between">
                 <div>
-                  <h2 className="text-lg font-bold text-white">CV Optimization</h2>
-                  <p className="mono text-xs text-zinc-500">for {job?.title}</p>
+                  <h2 className="text-base font-bold text-white">CV Optimization</h2>
+                  <p className="mono text-xs text-zinc-500 mt-0.5">tailored for {job?.title}</p>
                 </div>
                 <button
                   onClick={() => setShowOptimizeModal(false)}
-                  className="rounded-lg p-2 text-zinc-500 hover:text-white hover:bg-white/5"
+                  className="rounded-lg p-1.5 text-zinc-500 hover:text-white hover:bg-white/[0.06] transition-colors"
                 >
                   <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -654,15 +655,15 @@ export default function JobDetailPage() {
                 </button>
               </div>
 
-              <div className="p-4 space-y-4">
+              <div className="p-5 space-y-5">
                 {cvOptimization.content.length > 0 && (
                   <div>
-                    <div className="text-xs text-purple-400 mb-2 font-medium">Content Changes</div>
+                    <p className="section-label text-purple-400/70">Content Changes</p>
                     <ul className="space-y-2">
                       {cvOptimization.content.map((tip, i) => (
-                        <li key={i} className="flex items-start gap-2 p-2 rounded bg-zinc-900/50 border border-zinc-800">
-                          <span className="text-purple-400 mt-0.5">→</span>
-                          <span className="mono text-xs text-zinc-400">{tip}</span>
+                        <li key={i} className="flex items-start gap-2.5 p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                          <span className="text-purple-400 mt-0.5 flex-shrink-0">→</span>
+                          <span className="mono text-xs text-zinc-400 leading-relaxed">{tip}</span>
                         </li>
                       ))}
                     </ul>
@@ -671,10 +672,10 @@ export default function JobDetailPage() {
 
                 {cvOptimization.keywordsToAdd.length > 0 && (
                   <div>
-                    <div className="text-xs text-cyan-400 mb-2 font-medium">Keywords to Add</div>
+                    <p className="section-label text-cyan-400/70">Keywords to Add</p>
                     <div className="flex flex-wrap gap-1.5">
                       {cvOptimization.keywordsToAdd.map((keyword, i) => (
-                        <span key={i} className="px-2 py-1 rounded text-xs bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 mono">
+                        <span key={i} className="px-2.5 py-1 rounded-lg text-xs bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 mono">
                           {keyword}
                         </span>
                       ))}
@@ -684,10 +685,10 @@ export default function JobDetailPage() {
 
                 {cvOptimization.phrasesToUse.length > 0 && (
                   <div>
-                    <div className="text-xs text-amber-400 mb-2 font-medium">Power Phrases</div>
+                    <p className="section-label text-amber-400/70">Power Phrases</p>
                     <div className="space-y-2">
                       {cvOptimization.phrasesToUse.map((phrase, i) => (
-                        <div key={i} className="p-2 rounded bg-amber-500/10 border border-amber-500/30">
+                        <div key={i} className="p-3 rounded-xl bg-amber-500/5 border border-amber-500/20">
                           <span className="mono text-xs text-amber-300">&ldquo;{phrase}&rdquo;</span>
                         </div>
                       ))}
@@ -697,12 +698,12 @@ export default function JobDetailPage() {
 
                 {cvOptimization.format.length > 0 && (
                   <div>
-                    <div className="text-xs text-green-400 mb-2 font-medium">Format Tips</div>
+                    <p className="section-label text-green-400/70">Format Tips</p>
                     <ul className="space-y-2">
                       {cvOptimization.format.map((tip, i) => (
-                        <li key={i} className="flex items-start gap-2 p-2 rounded bg-zinc-900/50 border border-zinc-800">
-                          <span className="text-green-400 mt-0.5">→</span>
-                          <span className="mono text-xs text-zinc-400">{tip}</span>
+                        <li key={i} className="flex items-start gap-2.5 p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                          <span className="text-green-400 mt-0.5 flex-shrink-0">→</span>
+                          <span className="mono text-xs text-zinc-400 leading-relaxed">{tip}</span>
                         </li>
                       ))}
                     </ul>
@@ -711,12 +712,12 @@ export default function JobDetailPage() {
 
                 {cvOptimization.atsTips.length > 0 && (
                   <div>
-                    <div className="text-xs text-red-400 mb-2 font-medium">ATS Optimization</div>
+                    <p className="section-label text-red-400/70">ATS Optimisation</p>
                     <ul className="space-y-2">
                       {cvOptimization.atsTips.map((tip, i) => (
-                        <li key={i} className="flex items-start gap-2 p-2 rounded bg-zinc-900/50 border border-zinc-800">
-                          <span className="text-red-400 mt-0.5">!</span>
-                          <span className="mono text-xs text-zinc-400">{tip}</span>
+                        <li key={i} className="flex items-start gap-2.5 p-3 rounded-xl bg-red-500/5 border border-red-500/15">
+                          <span className="text-red-400 mt-0.5 flex-shrink-0">!</span>
+                          <span className="mono text-xs text-zinc-400 leading-relaxed">{tip}</span>
                         </li>
                       ))}
                     </ul>
@@ -724,16 +725,17 @@ export default function JobDetailPage() {
                 )}
               </div>
 
-              <div className="p-4 border-t border-zinc-800 flex gap-3">
-                <Link href="/resumes" onClick={() => setShowOptimizeModal(false)} className="flex-1 agent-button-primary text-center justify-center">
+              <div className="p-5 border-t border-white/[0.06] flex gap-3">
+                <Link
+                  href="/resumes"
+                  onClick={() => setShowOptimizeModal(false)}
+                  className="flex-1 agent-button-primary text-center justify-center press-scale"
+                >
                   Update My CV
                 </Link>
                 <button
-                  onClick={() => {
-                    setShowOptimizeModal(false);
-                    analyzeFit(job!);
-                  }}
-                  className="flex-1 agent-button text-center justify-center"
+                  onClick={() => { setShowOptimizeModal(false); analyzeFit(job!); }}
+                  className="flex-1 agent-button text-center justify-center press-scale"
                 >
                   Re-analyze
                 </button>
