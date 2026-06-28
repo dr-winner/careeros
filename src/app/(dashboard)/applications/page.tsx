@@ -77,10 +77,13 @@ export default function ApplicationsPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!isLoaded) return;
     if (userId) {
       fetchApplications();
+    } else {
+      setLoading(false);
     }
-  }, [userId]);
+  }, [isLoaded, userId]);
 
   const fetchApplications = async () => {
     try {

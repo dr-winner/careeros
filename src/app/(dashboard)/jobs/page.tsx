@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
+import { toast } from "sonner";
 
 function stripHtml(html: string): string {
   return html
@@ -205,11 +206,11 @@ export default function JobsPage() {
   const handleFilterChange = <K extends string>(
     setter: (v: K) => void,
     value: K,
+    field: "country" | "workMode" | "seniority" | "employmentType" | "datePosted",
   ) => {
     setter(value);
     setCursor(null);
-    // Apply filter immediately
-    setTimeout(() => fetchJobs(true), 0);
+    fetchJobs(true, { [field]: value });
   };
 
   const clearAllFilters = () => {
@@ -253,9 +254,11 @@ export default function JobsPage() {
         setJobs((prev) =>
           prev.map((j) => (j.id === jobId ? { ...j, isSaved: !j.isSaved } : j)),
         );
+      } else {
+        toast.error("Failed to save job. Please try again.");
       }
     } catch {
-      // ignore
+      toast.error("Failed to save job. Please try again.");
     }
   };
 
@@ -325,31 +328,31 @@ export default function JobsPage() {
       <div className="mb-5 flex flex-wrap items-center gap-2">
         <FilterSelect
           value={country}
-          onChange={(v) => handleFilterChange(setCountry, v)}
+          onChange={(v) => handleFilterChange(setCountry, v, "country")}
           options={COUNTRY_OPTIONS}
           active={!!country}
         />
         <FilterSelect
           value={workMode}
-          onChange={(v) => handleFilterChange(setWorkMode, v)}
+          onChange={(v) => handleFilterChange(setWorkMode, v, "workMode")}
           options={WORK_MODE_OPTIONS}
           active={!!workMode}
         />
         <FilterSelect
           value={seniority}
-          onChange={(v) => handleFilterChange(setSeniority, v)}
+          onChange={(v) => handleFilterChange(setSeniority, v, "seniority")}
           options={SENIORITY_OPTIONS}
           active={!!seniority}
         />
         <FilterSelect
           value={employmentType}
-          onChange={(v) => handleFilterChange(setEmploymentType, v)}
+          onChange={(v) => handleFilterChange(setEmploymentType, v, "employmentType")}
           options={EMPLOYMENT_OPTIONS}
           active={!!employmentType}
         />
         <FilterSelect
           value={datePosted}
-          onChange={(v) => handleFilterChange(setDatePosted, v)}
+          onChange={(v) => handleFilterChange(setDatePosted, v, "datePosted")}
           options={DATE_OPTIONS}
           active={!!datePosted}
         />

@@ -111,7 +111,7 @@ function BreathingNet() {
         for (let col = 0; col <= cols; col++) {
           const x = nodeX(col);
           const y = nodeY(col, row);
-          col === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+          if (col === 0) { ctx.moveTo(x, y); } else { ctx.lineTo(x, y); }
         }
         ctx.stroke();
       }
@@ -122,7 +122,7 @@ function BreathingNet() {
         for (let row = 0; row <= rows; row++) {
           const x = nodeX(col);
           const y = nodeY(col, row);
-          row === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+          if (row === 0) { ctx.moveTo(x, y); } else { ctx.lineTo(x, y); }
         }
         ctx.stroke();
       }

@@ -339,6 +339,12 @@ export default function CVsPage() {
   }, {} as Record<string, CV[]>);
 
   const suggestions = analyzeCV(selectedCV);
+  const cvScore = selectedCV
+    ? Math.max(0, 100
+        - suggestions.filter((s) => s.priority === "high").length * 20
+        - suggestions.filter((s) => s.priority === "medium").length * 10
+        - suggestions.filter((s) => s.priority === "low").length * 5)
+    : 0;
 
   if (!isLoaded) {
     return (
@@ -704,22 +710,36 @@ export default function CVsPage() {
                 {/* Right sidebar: analysis for selected CV */}
                 {selectedCV && (
                   <div className="rounded-2xl border border-white/10 bg-[#14141f] p-4 space-y-4">
+                    {/* CV Score */}
+                    <div className="rounded-xl bg-white/5 border border-white/[0.08] p-3 text-center">
+                      <div className={`text-3xl font-bold mono ${cvScore >= 80 ? "text-green-400" : cvScore >= 60 ? "text-amber-400" : "text-red-400"}`}>
+                        {cvScore}<span className="text-base text-zinc-500">/100</span>
+                      </div>
+                      <div className="text-[10px] mono text-zinc-500 mt-0.5 uppercase tracking-widest">CV Score</div>
+                      <div className="mt-2 h-1 rounded-full bg-white/5 overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-700 ${cvScore >= 80 ? "bg-green-500" : cvScore >= 60 ? "bg-amber-500" : "bg-red-500"}`}
+                          style={{ width: `${cvScore}%` }}
+                        />
+                      </div>
+                    </div>
+
                     {/* Stats row */}
                     <div>
                       <p className="text-[10px] text-zinc-400 uppercase tracking-wider font-semibold mb-2">CV Analysis</p>
                       <div className="flex items-center gap-0">
                         <div className="flex-1 text-center py-2">
-                          <div className="text-xl font-bold text-purple-400">{selectedCV.skills.length}</div>
+                          <div className="text-xl font-bold text-white">{selectedCV.skills.length}</div>
                           <div className="text-[10px] text-zinc-500">skills</div>
                         </div>
                         <div className="w-px h-10 bg-white/5" />
                         <div className="flex-1 text-center py-2">
-                          <div className="text-xl font-bold text-purple-300">{selectedCV.experiences.length}</div>
+                          <div className="text-xl font-bold text-white">{selectedCV.experiences.length}</div>
                           <div className="text-[10px] text-zinc-500">exp</div>
                         </div>
                         <div className="w-px h-10 bg-white/5" />
                         <div className="flex-1 text-center py-2">
-                          <div className="text-xl font-bold text-purple-200">{selectedCV.education.length}</div>
+                          <div className="text-xl font-bold text-white">{selectedCV.education.length}</div>
                           <div className="text-[10px] text-zinc-500">edu</div>
                         </div>
                       </div>
