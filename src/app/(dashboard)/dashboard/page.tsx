@@ -58,6 +58,7 @@ export default function DashboardPage() {
   }, [isLoaded, isUserLoaded, userId, router, user?.publicMetadata?.onboardingComplete]);
 
   useEffect(() => {
+    if (!isLoaded || !userId) return;
 
     fetch("/api/ai/next-action")
       .then(res => res.json())
@@ -68,7 +69,7 @@ export default function DashboardPage() {
       .finally(() => setIsLoadingAction(false));
 
     Promise.all([
-      fetch("/api/applications").then((res) => res.json()),
+      fetch("/api/applications").then((res) => res.ok ? res.json() : { applications: [] }),
       fetch("/api/saved-jobs").then((res) => res.json()),
       fetch("/api/user/resumes").then((res) => res.json()),
       fetch("/api/searches").then((res) => res.json()),
@@ -109,7 +110,7 @@ export default function DashboardPage() {
         });
       })
       .catch(console.error);
-  }, []);
+  }, [isLoaded, userId]);
 
   if (!isLoaded) {
     return (

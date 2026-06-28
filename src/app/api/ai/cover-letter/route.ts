@@ -149,6 +149,7 @@ Do NOT write generic cover letters that could apply to any job or person.`;
       {
         maxTokens: 600,
         temperature: 0.65,
+        json: false,
       },
     );
 

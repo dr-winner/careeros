@@ -10,12 +10,15 @@ export default function ReferralPage() {
   const [refereeEmail, setRefereeEmail] = useState("");
   const [sending, setSending] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [loadingUrl, setLoadingUrl] = useState(true);
 
   useEffect(() => {
     if (userId) {
       fetchReferral();
+    } else if (isLoaded) {
+      setLoadingUrl(false);
     }
-  }, [userId]);
+  }, [userId, isLoaded]);
 
   const fetchReferral = async () => {
     try {
@@ -26,6 +29,8 @@ export default function ReferralPage() {
       }
     } catch (error) {
       console.error("Error fetching referral:", error);
+    } finally {
+      setLoadingUrl(false);
     }
   };
 
@@ -95,13 +100,17 @@ export default function ReferralPage() {
             <span className="text-sm font-medium text-zinc-400">Your Referral Link</span>
           <div className="mt-4">
             <div className="flex gap-2">
-              <input
-                type="text"
-                value={referralUrl}
-                readOnly
-                className="agent-input flex-1 text-xs"
-              />
-              <button onClick={copyToClipboard} className={copied ? "agent-button" : "agent-button-primary"}>
+              {loadingUrl ? (
+                <div className="flex-1 h-10 rounded-xl bg-white/5 animate-pulse" />
+              ) : (
+                <input
+                  type="text"
+                  value={referralUrl}
+                  readOnly
+                  className="agent-input flex-1 text-xs"
+                />
+              )}
+              <button onClick={copyToClipboard} disabled={loadingUrl || !referralUrl} className={copied ? "agent-button" : "agent-button-primary"}>
                 {copied ? "Copied!" : "Copy"}
               </button>
             </div>

@@ -152,8 +152,17 @@ export default function InterviewPrepPage() {
   const getFeedback = async () => {
     if (messages.length < 2 || isLoading) return;
 
-    const lastUserMsg = [...messages].reverse().find(m => m.role === "user");
-    const lastAssistantMsg = [...messages].reverse().find(m => m.role === "assistant");
+    // Find the last user message, then find the assistant message immediately before it
+    let lastUserIdx = -1;
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === "user") { lastUserIdx = i; break; }
+    }
+    if (lastUserIdx < 0) return;
+    const lastUserMsg = messages[lastUserIdx];
+    let lastAssistantMsg: typeof messages[0] | undefined;
+    for (let i = lastUserIdx - 1; i >= 0; i--) {
+      if (messages[i].role === "assistant") { lastAssistantMsg = messages[i]; break; }
+    }
 
     if (!lastUserMsg || !lastAssistantMsg) return;
 
@@ -566,7 +575,7 @@ export default function InterviewPrepPage() {
                       type="text"
                       value={userInput}
                       onChange={(e) => setUserInput(e.target.value)}
-                      onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
+                      onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSendMessage()}
                       placeholder="Type your response..."
                       className="flex-1 agent-input py-3 text-sm"
                       disabled={isLoading}
@@ -800,7 +809,7 @@ export default function InterviewPrepPage() {
 
               <div className="grid grid-cols-2 gap-3 mb-4">
                 <a
-                  href={`/interview/room/${createdRoom.roomCode}`}
+                  href={`/interview/room/${createdRoom.roomCode}?role=interviewer`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="py-3 rounded-xl border border-purple-500/30 bg-purple-500/10 text-center text-sm text-purple-300 hover:bg-purple-500/20 transition-colors font-medium"
@@ -808,7 +817,7 @@ export default function InterviewPrepPage() {
                   Join as Interviewer
                 </a>
                 <a
-                  href={`/interview/room/${createdRoom.roomCode}`}
+                  href={`/interview/room/${createdRoom.roomCode}?role=candidate`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="py-3 rounded-xl border border-cyan-500/30 bg-cyan-500/10 text-center text-sm text-cyan-300 hover:bg-cyan-500/20 transition-colors font-medium"

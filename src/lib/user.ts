@@ -28,8 +28,6 @@ export async function syncClerkUserToDb(clerkUser: User) {
       });
     }
 
-    console.log(`[syncClerkUserToDb] Syncing user: ${clerkUser.id} (${email})`);
-    
     let user;
     if (existingUser) {
       user = await prisma.user.update({
@@ -65,8 +63,6 @@ export async function syncClerkUserToDb(clerkUser: User) {
         throw createError;
       }
     }
-    console.log(`[syncClerkUserToDb] Sync success: ${user.id}`);
-
     // Send welcome email only if this is a brand new user
     if (!existingUser) {
       // Use fire-and-forget or background task for email to not block sync
@@ -83,8 +79,3 @@ export async function syncClerkUserToDb(clerkUser: User) {
   }
 }
 
-export async function getDbUser(clerkId: string) {
-  return prisma.user.findUnique({
-    where: { clerkId },
-  });
-}

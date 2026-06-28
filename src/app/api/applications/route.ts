@@ -81,7 +81,7 @@ export async function GET() {
     const dbUser = await getDbUser();
 
     if (!dbUser) {
-      return NextResponse.json({ applications: [] });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const applications = await prisma.application.findMany({
