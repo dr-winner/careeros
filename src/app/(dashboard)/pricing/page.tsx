@@ -118,7 +118,11 @@ export default function PricingPage() {
     if (!userId) { toast.error("Please sign in first"); return; }
     setLoading(true);
     try {
-      const res = await fetch("/api/payment/create-link", { method: "POST" });
+      const res = await fetch("/api/payment/create-link", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan: annual ? "annual" : "monthly" }),
+      });
       const data = await res.json();
       if (!res.ok) { toast.error(data.error || "Could not start payment. Please try again."); return; }
       window.location.href = data.url;
