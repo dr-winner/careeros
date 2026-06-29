@@ -1,6 +1,7 @@
-const CACHE_NAME = 'careeros-v1';
-const STATIC_CACHE = 'careeros-static-v1';
-const API_CACHE = 'careeros-api-v1';
+const CACHE_NAME = 'careeros-v2';
+const STATIC_CACHE = 'careeros-static-v2';
+const API_CACHE = 'careeros-api-v2';
+const OFFLINE_URL = '/offline.html';
 
 const STATIC_ASSETS = [
   '/',
@@ -9,6 +10,7 @@ const STATIC_ASSETS = [
   '/saved-jobs',
   '/applications',
   '/resumes',
+  OFFLINE_URL,
 ];
 
 const CACHE_STRATEGIES = {
@@ -80,9 +82,21 @@ function getCacheStrategy(request) {
   return null;
 }
 
+async function offlineFallback(request) {
+  if (request.mode === 'navigate') {
+    const cached = await caches.match(OFFLINE_URL);
+    if (cached) return cached;
+  }
+  return new Response('Offline', { status: 503 });
+}
+
 async function handleFetch(request, strategy) {
   if (!strategy) {
-    return fetch(request);
+    try {
+      return await fetch(request);
+    } catch {
+      return offlineFallback(request);
+    }
   }
 
   const { strategy: mode, cache, maxAge } = strategy;
@@ -113,7 +127,7 @@ async function cacheFirst(request, cacheName, maxAge) {
     }
     return response;
   } catch {
-    return new Response('Offline', { status: 503 });
+    return offlineFallback(request);
   }
 }
 
@@ -130,7 +144,7 @@ async function networkFirst(request, cacheName, maxAge) {
     if (cached) {
       return cached;
     }
-    return new Response('Offline', { status: 503 });
+    return offlineFallback(request);
   }
 }
 
@@ -147,7 +161,7 @@ async function staleWhileRevalidate(request, cacheName, maxAge) {
     })
     .catch(() => null);
 
-  return cached || (await fetchPromise) || new Response('Offline', { status: 503 });
+  return cached || (await fetchPromise) || offlineFallback(request);
 }
 
 self.addEventListener('message', (event) => {
