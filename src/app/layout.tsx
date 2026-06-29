@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
 import ServiceWorkerRegistration from "@/components/service-worker-registration";
+import { PostHogProvider } from "@/components/posthog-provider";
 
 export const metadata: Metadata = {
   title: "CareerOS — Your AI Career Agent",
@@ -58,8 +59,10 @@ export default function RootLayout({
     <ClerkProvider>
       <html lang="en">
         <body>
-          <ServiceWorkerRegistration />
-          {children}
+          <PostHogProvider>
+            <ServiceWorkerRegistration />
+            {children}
+          </PostHogProvider>
         </body>
       </html>
     </ClerkProvider>

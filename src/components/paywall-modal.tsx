@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useAnalytics } from "@/lib/analytics";
 
 interface PaywallModalProps {
   isOpen: boolean;
@@ -16,10 +17,12 @@ export default function PaywallModal({
   feature,
 }: PaywallModalProps) {
   const router = useRouter();
+  const analytics = useAnalytics();
 
   if (!isOpen) return null;
 
   const handleUpgrade = () => {
+    analytics.upgradeClicked(feature);
     localStorage.setItem("pendingUpgrade", feature);
     router.push("/pricing");
   };

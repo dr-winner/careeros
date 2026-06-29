@@ -26,6 +26,12 @@ export default function Nav() {
           >
             Find Jobs
           </Link>
+          <Link
+            href="/employers"
+            className="rounded-lg px-4 py-2 text-sm font-medium text-cyan-400/70 transition-colors hover:text-cyan-300 hover:bg-cyan-500/5"
+          >
+            For Employers
+          </Link>
         </div>
 
         <div className="flex items-center gap-3">

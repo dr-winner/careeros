@@ -177,6 +177,9 @@ export async function POST(request: NextRequest) {
 
     const profileIncomplete = allUserSkills.length === 0 && !user?.headline && !user?.experience;
 
+    // Low confidence: CV has very few identifiable skills — score may not reflect true fit
+    const lowConfidence = allUserSkills.length < 3 && !profileIncomplete;
+
     if (hasAI && jobDescription && !profileIncomplete) {
       // AI narrative analysis for ALL users — brief summary of fit + AI-scored fitScore
       try {
@@ -296,6 +299,7 @@ Return ONLY this JSON (no markdown):
         isPremium,
         premiumRequired: !isPremium && missing.length > 0,
         profileIncomplete,
+        lowConfidence,
         quota: isPremium
           ? null
           : { remaining: quota.remaining - 1, limit: quota.limit, resetAt: quota.resetAt },
