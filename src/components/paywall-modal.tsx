@@ -58,10 +58,12 @@ export default function PaywallModal({
             </div>
 
             <h3 className="text-xl font-bold text-white mb-2">
-              Unlock Premium Features
+              {feature === "job_analysis" ? "You've used your 3 free analyses" : "Unlock Premium Features"}
             </h3>
             <p className="text-sm text-zinc-400 mb-6 max-w-xs mx-auto">
-              Get professional CV optimization, ATS tips, and personalized job fit analysis.
+              {feature === "job_analysis"
+                ? "Free plan includes 3 job analyses per month. Upgrade for unlimited — coffee money at GHS 25/month."
+                : "Get unlimited analyses, CV optimization, cover letters, and interview prep."}
             </p>
 
             <div className="rounded-xl border border-purple-500/20 bg-purple-500/5 p-4 mb-6 text-left">

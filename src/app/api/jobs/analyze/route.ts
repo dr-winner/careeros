@@ -6,6 +6,7 @@ import { hasAiProviderConfigured } from "@/lib/env";
 import { isUserPremium } from "@/lib/auth";
 import { checkRateLimit, getRateLimitHeaders, RATE_LIMITS } from "@/lib/ratelimit";
 import { ensureJobRecord } from "@/lib/jobs";
+import { checkQuota, consumeQuota } from "@/lib/quota";
 
 const SKILL_KEYWORDS: Record<string, string[]> = {
   JavaScript: ["javascript", "js", "ecmascript"],
@@ -83,6 +84,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const isPremiumEarly = await isUserPremium();
+    const quota = await checkQuota(userId, isPremiumEarly);
+
+    if (!quota.allowed) {
+      return NextResponse.json(
+        {
+          error: "quota_exceeded",
+          message: `Free plan includes ${quota.limit} analyses per month. Upgrade to Premium for unlimited.`,
+          remaining: 0,
+          resetAt: quota.resetAt,
+        },
+        { status: 402 },
+      );
+    }
+
     const { jobId, jobDescription: clientDescription, jobTitle, companyName } = await request.json();
     if (!jobId) {
       return NextResponse.json({ error: "Job ID required" }, { status: 400 });
@@ -147,7 +163,7 @@ export async function POST(request: NextRequest) {
     let verdict = getVerdict(score);
 
     const hasAI = hasAiProviderConfigured();
-    const isPremium = await isUserPremium();
+    const isPremium = isPremiumEarly;
 
     let cvAdvice = "";
     let cvOptimization: {
@@ -263,6 +279,8 @@ Return ONLY this JSON (no markdown):
       }
     }
 
+    await consumeQuota(userId, isPremium);
+
     return NextResponse.json({
       analysis: {
         fitScore: score,
@@ -278,6 +296,9 @@ Return ONLY this JSON (no markdown):
         isPremium,
         premiumRequired: !isPremium && missing.length > 0,
         profileIncomplete,
+        quota: isPremium
+          ? null
+          : { remaining: quota.remaining - 1, limit: quota.limit, resetAt: quota.resetAt },
       },
     });
   } catch (error) {

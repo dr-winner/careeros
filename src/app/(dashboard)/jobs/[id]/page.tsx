@@ -57,6 +57,7 @@ export default function JobDetailPage() {
   const [showOptimizeModal, setShowOptimizeModal] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
   const [isPremium, setIsPremium] = useState(false);
+  const [quotaRemaining, setQuotaRemaining] = useState<number | null>(null);
   const [cvOptimization, setCvOptimization] = useState<{
     content: string[];
     format: string[];
@@ -104,6 +105,10 @@ export default function JobDetailPage() {
             jobDescription: jobData.description,
           }),
         });
+        if (response.status === 402) {
+          setShowPaywall(true);
+          return;
+        }
         const data = await response.json();
         if (data.analysis) {
           setFitScore(data.analysis.fitScore);
@@ -116,6 +121,7 @@ export default function JobDetailPage() {
           setCvOptimization(data.analysis.cvOptimization || null);
           setAiNarrative(data.analysis.aiNarrative || null);
           if (data.analysis.isPremium !== undefined) setIsPremium(data.analysis.isPremium);
+          if (data.analysis.quota?.remaining !== undefined) setQuotaRemaining(data.analysis.quota.remaining);
         }
       } catch (error) {
         console.error("Error analyzing fit:", error);
@@ -523,6 +529,17 @@ export default function JobDetailPage() {
                   AI
                 </span>
               )}
+              {!isPremium && quotaRemaining !== null && (
+                <span className={`px-2 py-0.5 rounded mono text-xs border ${
+                  quotaRemaining === 0
+                    ? "bg-red-500/10 text-red-400 border-red-500/20"
+                    : quotaRemaining === 1
+                    ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                    : "bg-white/[0.04] text-zinc-500 border-white/[0.06]"
+                }`}>
+                  {quotaRemaining} left this month
+                </span>
+              )}
             </div>
             <button
               onClick={() => job && analyzeFit(job)}
@@ -631,8 +648,8 @@ export default function JobDetailPage() {
       <PaywallModal
         isOpen={showPaywall}
         onClose={() => setShowPaywall(false)}
-        feature="cv_optimization"
-        title="CV Optimization"
+        feature="job_analysis"
+        title="Monthly limit reached"
       />
 
       {showOptimizeModal && cvOptimization && (
