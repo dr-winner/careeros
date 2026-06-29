@@ -67,10 +67,11 @@ export default function PaywallModal({
             <div className="rounded-xl border border-purple-500/20 bg-purple-500/5 p-4 mb-6 text-left">
               <ul className="space-y-2">
                 {[
-                  "Professional CV regeneration",
-                  "ATS optimization tips",
-                  "Job fit analysis",
-                  "Cover letter generation",
+                  "Unlimited job analyses",
+                  "Full skill gap breakdown",
+                  "AI cover letters per job",
+                  "Interview prep questions",
+                  "CV optimization suggestions",
                 ].map((item, i) => (
                   <li key={i} className="flex items-center gap-2 text-sm text-zinc-300">
                     <svg className="h-4 w-4 text-purple-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -89,7 +90,7 @@ export default function PaywallModal({
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
-              Get Premium — GHS 99
+              Get Premium — GHS 25/month
             </button>
 
             <button

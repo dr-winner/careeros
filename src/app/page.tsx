@@ -5,6 +5,7 @@ import Hero from "./components/hero";
 import HowItWorks from "./components/how-it-works";
 import FeaturesSection from "./components/features-section";
 import WhySection from "./components/why-section";
+import PricingSection from "./components/pricing-section";
 import CTA from "./components/cta";
 import Logo from "./components/logo";
 import SocialLinks from "./components/social-links";
@@ -42,6 +43,7 @@ export default function Home() {
           <FeaturesSection />
           <HowItWorks />
           <WhySection />
+          <PricingSection />
           <CTA />
         </main>
       </AuthCheck>
