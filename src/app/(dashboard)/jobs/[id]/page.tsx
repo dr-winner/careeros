@@ -6,6 +6,7 @@ import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 import { toast } from "sonner";
 import PaywallModal from "@/components/paywall-modal";
+import { useAnalytics } from "@/lib/analytics";
 
 function decodeHtmlEntities(html: string): string {
   return html
@@ -42,6 +43,7 @@ interface Job {
 export default function JobDetailPage() {
   const params = useParams<{ id: string | string[] }>();
   const { userId } = useAuth();
+  const analytics = useAnalytics();
   const [job, setJob] = useState<Job | null>(null);
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState(false);
@@ -58,6 +60,8 @@ export default function JobDetailPage() {
   const [showPaywall, setShowPaywall] = useState(false);
   const [isPremium, setIsPremium] = useState(false);
   const [quotaRemaining, setQuotaRemaining] = useState<number | null>(null);
+  const [analysisFeedback, setAnalysisFeedback] = useState<"up" | "down" | null>(null);
+  const [lowConfidence, setLowConfidence] = useState(false);
   const [cvOptimization, setCvOptimization] = useState<{
     content: string[];
     format: string[];
@@ -95,6 +99,7 @@ export default function JobDetailPage() {
     async (jobData: Job) => {
       if (!userId) return;
       setAnalyzing(true);
+      setAnalysisFeedback(null);
       try {
         const response = await fetch("/api/jobs/analyze", {
           method: "POST",
@@ -107,6 +112,7 @@ export default function JobDetailPage() {
         });
         if (response.status === 402) {
           setShowPaywall(true);
+          analytics.paywallShown("job_analysis");
           return;
         }
         const data = await response.json();
@@ -122,6 +128,12 @@ export default function JobDetailPage() {
           setAiNarrative(data.analysis.aiNarrative || null);
           if (data.analysis.isPremium !== undefined) setIsPremium(data.analysis.isPremium);
           if (data.analysis.quota?.remaining !== undefined) setQuotaRemaining(data.analysis.quota.remaining);
+          setLowConfidence(!!data.analysis.lowConfidence);
+          analytics.jobAnalyzed({
+            score: data.analysis.fitScore,
+            jobTitle: jobData.title,
+            isPremium: data.analysis.isPremium ?? false,
+          });
         }
       } catch (error) {
         console.error("Error analyzing fit:", error);
@@ -129,7 +141,7 @@ export default function JobDetailPage() {
         setAnalyzing(false);
       }
     },
-    [userId],
+    [userId, analytics],
   );
 
   const checkApplication = useCallback(
@@ -492,6 +504,17 @@ export default function JobDetailPage() {
             <div className={`h-full rounded-full ${fitColor?.bar} transition-all duration-500`} style={{ width: `${fitScore}%` }} />
           </div>
 
+          {lowConfidence && (
+            <div className="mt-3 flex items-start gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2">
+              <svg className="h-4 w-4 text-amber-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <p className="text-xs text-amber-400/80">
+                <span className="font-semibold text-amber-400">Low confidence</span> — fewer than 3 skills detected in your CV. Add more detail to your profile or upload a fuller CV for a more accurate score.
+              </p>
+            </div>
+          )}
+
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             {matchedSkills.length > 0 && (
               <div>
@@ -550,6 +573,41 @@ export default function JobDetailPage() {
               </svg>
               Re-analyze
             </button>
+          </div>
+
+          {/* Feedback row */}
+          <div className="mt-3 pt-3 border-t border-zinc-800/30 flex items-center gap-3">
+            <span className="text-xs text-zinc-600">Was this helpful?</span>
+            {analysisFeedback ? (
+              <span className="text-xs text-zinc-500">Thanks for the feedback.</span>
+            ) : (
+              <>
+                <button
+                  onClick={() => {
+                    setAnalysisFeedback("up");
+                    analytics.feedbackGiven({ sentiment: "up", context: "job_analysis" });
+                  }}
+                  className="flex items-center gap-1 text-xs text-zinc-500 hover:text-green-400 transition-colors"
+                >
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
+                  </svg>
+                  Yes
+                </button>
+                <button
+                  onClick={() => {
+                    setAnalysisFeedback("down");
+                    analytics.feedbackGiven({ sentiment: "down", context: "job_analysis" });
+                  }}
+                  className="flex items-center gap-1 text-xs text-zinc-500 hover:text-red-400 transition-colors"
+                >
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018a2 2 0 01.485.06l3.76.94m-7 10v5a2 2 0 002 2h.096c.5 0 .905-.405.905-.904 0-.715.211-1.413.608-2.008L17 13V4m-7 10h2m5-10h2a2 2 0 012 2v6a2 2 0 01-2 2h-2.5" />
+                  </svg>
+                  No
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}

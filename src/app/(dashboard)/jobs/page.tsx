@@ -132,9 +132,13 @@ export default function JobsPage() {
   const [totalJobs, setTotalJobs] = useState(0);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
+  const LIST_CACHE_KEY = "careeros-jobs-list-v1";
+  const LIST_CACHE_TTL = 5 * 60 * 1000; // 5 min — matches server-side TTL
+
   const persistJobs = useCallback((jobList: Job[]) => {
     if (typeof window === "undefined" || jobList.length === 0) return;
     try {
+      // Per-job cache for detail navigation
       const existing = sessionStorage.getItem("dashboard-job-cache");
       const cache = existing ? JSON.parse(existing) : {};
       for (const job of jobList) {
@@ -146,14 +150,29 @@ export default function JobsPage() {
     }
   }, []);
 
+  const saveListCache = useCallback((jobList: Job[], total: number) => {
+    if (typeof window === "undefined" || jobList.length === 0) return;
+    try {
+      sessionStorage.setItem(LIST_CACHE_KEY, JSON.stringify({ jobs: jobList, total, ts: Date.now() }));
+    } catch { /* ignore */ }
+  }, [LIST_CACHE_KEY]);
+
+  const loadListCache = useCallback((): { jobs: Job[]; total: number } | null => {
+    if (typeof window === "undefined") return null;
+    try {
+      const raw = sessionStorage.getItem(LIST_CACHE_KEY);
+      if (!raw) return null;
+      const { jobs: j, total, ts } = JSON.parse(raw);
+      if (Date.now() - ts > LIST_CACHE_TTL) return null;
+      return { jobs: j, total };
+    } catch { return null; }
+  }, [LIST_CACHE_KEY, LIST_CACHE_TTL]);
+
   const fetchJobs = useCallback(
     async (isNewSearch = true, overrides?: Partial<{
       search: string; location: string; workMode: string; seniority: string;
       country: string; employmentType: string; datePosted: string; cursor: string | null;
     }>) => {
-      if (isNewSearch) setLoading(true);
-      else setLoadingMore(true);
-
       const s = overrides?.search ?? search;
       const l = overrides?.location ?? location;
       const wm = overrides?.workMode ?? workMode;
@@ -162,6 +181,22 @@ export default function JobsPage() {
       const et = overrides?.employmentType ?? employmentType;
       const dp = overrides?.datePosted ?? datePosted;
       const cur = isNewSearch ? null : (overrides?.cursor ?? cursor);
+
+      // Stale-while-revalidate: serve cached list immediately on initial default load
+      if (isNewSearch && !s && !l && !wm && !sr && !ct && !et && !dp) {
+        const cached = loadListCache();
+        if (cached) {
+          setJobs(cached.jobs);
+          setTotalJobs(cached.total);
+          setLoading(false); // show stale immediately, fetch quietly in background
+        } else {
+          setLoading(true);
+        }
+      } else if (isNewSearch) {
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
 
       try {
         const params = new URLSearchParams();
@@ -183,6 +218,9 @@ export default function JobsPage() {
         if (isNewSearch) {
           setJobs(nextJobs);
           persistJobs(nextJobs);
+          if (!s && !l && !wm && !sr && !ct && !et && !dp) {
+            saveListCache(nextJobs, data.pagination?.total || nextJobs.length);
+          }
         } else {
           setJobs((prev) => {
             const merged = [...prev, ...nextJobs];
@@ -201,7 +239,7 @@ export default function JobsPage() {
         setLoadingMore(false);
       }
     },
-    [search, location, workMode, seniority, country, employmentType, datePosted, cursor, persistJobs],
+    [search, location, workMode, seniority, country, employmentType, datePosted, cursor, persistJobs, loadListCache, saveListCache],
   );
 
   useEffect(() => {
