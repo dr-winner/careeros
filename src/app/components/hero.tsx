@@ -170,11 +170,11 @@ export default function Hero() {
           </div>
         </div>
 
-        {/* Stats — three concrete, comparable callouts */}
+        {/* Stats */}
         <div className="animate-fade-up delay-700 mt-14 grid grid-cols-3 gap-4 max-w-sm mx-auto">
           {[
             { value: "9+", label: "live job sources" },
-            { value: "GHS 99", label: "lifetime upgrade" },
+            { value: "Free", label: "to get started" },
             { value: "< 3 min", label: "to your first score" },
           ].map((stat) => (
             <div key={stat.value} className="text-center">
