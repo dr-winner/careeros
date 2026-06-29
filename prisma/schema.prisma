@@ -24,6 +24,7 @@ model User {
   currentPeriodEnd    DateTime?
   analysisCount       Int        @default(0)
   analysisResetAt     DateTime?  // when the monthly count resets
+  bonusAnalyses       Int        @default(0)  // extra analyses earned via referrals
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
   resumes        Resume[]
@@ -138,7 +139,7 @@ model FitAnalysis {
   user             User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   job              Job          @relation(fields: [jobId], references: [id], onDelete: Cascade)
 
-  @@index([userId, jobId])
+  @@unique([userId, jobId])
   @@index([userId, createdAt(sort: Desc)])
 }
 

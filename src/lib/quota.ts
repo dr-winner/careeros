@@ -37,7 +37,7 @@ export async function checkQuota(
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { analysisCount: true, analysisResetAt: true },
+    select: { analysisCount: true, analysisResetAt: true, bonusAnalyses: true },
   });
 
   if (!user) {
@@ -55,13 +55,14 @@ export async function checkQuota(
     });
   }
 
-  const allowed = currentCount < FREE_MONTHLY_LIMIT;
-  const remaining = Math.max(0, FREE_MONTHLY_LIMIT - currentCount);
+  const effectiveLimit = FREE_MONTHLY_LIMIT + (user.bonusAnalyses ?? 0);
+  const allowed = currentCount < effectiveLimit;
+  const remaining = Math.max(0, effectiveLimit - currentCount);
 
   return {
     allowed,
     used: currentCount,
-    limit: FREE_MONTHLY_LIMIT,
+    limit: effectiveLimit,
     remaining,
     resetAt: user.analysisResetAt && !needsReset ? user.analysisResetAt : resetAt,
   };

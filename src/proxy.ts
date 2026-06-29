@@ -1,4 +1,5 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
 
 const isPublicRoute = createRouteMatcher([
   "/",
@@ -8,15 +9,26 @@ const isPublicRoute = createRouteMatcher([
   "/terms",
   "/about",
   "/pricing(.*)",
+  "/employers(.*)",
   "/robots.txt",
   "/sitemap.xml",
   "/.well-known(.*)",
   "/monitoring(.*)",
   "/api/cron(.*)",
   "/api/webhooks(.*)",
+  "/api/employer-waitlist(.*)",
 ]);
 
+const isLandingPage = createRouteMatcher(["/"]);
+
 export const proxy = clerkMiddleware(async (auth, request) => {
+  const { userId } = await auth();
+
+  // Signed-in users hitting the landing page go straight to dashboard
+  if (isLandingPage(request) && userId) {
+    return NextResponse.redirect(new URL("/dashboard", request.url));
+  }
+
   if (!isPublicRoute(request)) {
     await auth.protect();
   }

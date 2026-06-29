@@ -284,6 +284,41 @@ Return ONLY this JSON (no markdown):
 
     await consumeQuota(userId, isPremium);
 
+    // Persist this analysis so the analytics page has real data
+    try {
+      const jobRecord = await prisma.job.findUnique({ where: { id: jobId }, select: { id: true } });
+      if (jobRecord) {
+        await prisma.fitAnalysis.upsert({
+          where: { userId_jobId: { userId, jobId } },
+          update: { fitScore: score, verdict },
+          create: { userId, jobId, fitScore: score, verdict },
+        });
+
+        // Referral reward: credit referrer on user's very first analysis
+        const totalAnalyses = await prisma.fitAnalysis.count({ where: { userId } });
+        if (totalAnalyses === 1) {
+          const referral = await prisma.referral.findFirst({
+            where: { refereeEmail: user?.email, status: "pending" },
+            select: { id: true, referrerId: true },
+          });
+          if (referral) {
+            await Promise.all([
+              prisma.user.update({
+                where: { id: referral.referrerId },
+                data: { bonusAnalyses: { increment: 1 } },
+              }),
+              prisma.referral.update({
+                where: { id: referral.id },
+                data: { status: "converted" },
+              }),
+            ]);
+          }
+        }
+      }
+    } catch (err) {
+      console.error("FitAnalysis persist/referral credit error:", err);
+    }
+
     return NextResponse.json({
       analysis: {
         fitScore: score,

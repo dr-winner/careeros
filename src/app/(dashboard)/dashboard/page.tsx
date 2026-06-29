@@ -41,6 +41,10 @@ export default function DashboardPage() {
     statusCounts: {},
     recentApps: [],
   });
+  const [profileCompletion, setProfileCompletion] = useState<{
+    pct: number;
+    missing: string[];
+  } | null>(null);
 
   useEffect(() => {
     if (isLoaded && isUserLoaded && userId) {
@@ -73,8 +77,9 @@ export default function DashboardPage() {
       fetch("/api/saved-jobs").then((res) => res.json()),
       fetch("/api/user/resumes").then((res) => res.json()),
       fetch("/api/searches").then((res) => res.json()),
+      fetch("/api/user/profile").then((res) => res.ok ? res.json() : null),
     ])
-      .then(([appsData, savedData, resumesData, alertsData]) => {
+      .then(([appsData, savedData, resumesData, alertsData, profileData]) => {
         const applications: { status?: string; jobTitle?: string | null; companyName?: string | null; id: string; appliedAt?: string | null }[] = appsData.applications || [];
         const interviews = applications.filter(
           (application) => ["Screening", "Interview"].includes(application.status || ""),
@@ -108,6 +113,19 @@ export default function DashboardPage() {
             appliedAt: a.appliedAt ?? null,
           })),
         });
+
+        // Profile completion
+        const p = profileData?.user;
+        const hasCV = (resumesData.resumes?.length || 0) > 0;
+        const checks = [
+          { label: "Upload a CV", done: hasCV },
+          { label: "Add headline", done: !!p?.headline },
+          { label: "Set experience level", done: !!p?.experience },
+          { label: "Set desired role", done: !!p?.desiredRole },
+        ];
+        const done = checks.filter((c) => c.done).length;
+        const missing = checks.filter((c) => !c.done).map((c) => c.label);
+        setProfileCompletion({ pct: Math.round((done / checks.length) * 100), missing });
       })
       .catch(console.error);
   }, [isLoaded, userId]);
@@ -243,6 +261,41 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
+
+        {/* Profile completion nudge — shown only when incomplete and user has finished onboarding */}
+        {profileCompletion && profileCompletion.pct < 100 && profileCompletion.missing.length > 0 && (
+          <div className="animate-fade-up agent-card border-cyan-500/20 p-4">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <svg className="h-4 w-4 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                <span className="text-sm font-medium text-white">Profile {profileCompletion.pct}% complete</span>
+              </div>
+              <span className="mono text-xs text-cyan-400">Better profile = better scores</span>
+            </div>
+            <div className="h-1.5 w-full rounded-full bg-zinc-800 mb-3 overflow-hidden">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-purple-500 transition-all duration-500"
+                style={{ width: `${profileCompletion.pct}%` }}
+              />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {profileCompletion.missing.map((item) => (
+                <a
+                  key={item}
+                  href={item === "Upload a CV" ? "/resumes" : "/profile"}
+                  className="flex items-center gap-1.5 rounded-lg border border-white/[0.06] bg-white/[0.03] px-3 py-1.5 text-xs text-zinc-400 hover:border-cyan-500/30 hover:text-cyan-400 transition-all"
+                >
+                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  {item}
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Stats row */}
         <div className="animate-fade-up delay-200 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
