@@ -17,8 +17,11 @@ model User {
   headline       String?
   experience     String?
   desiredRole    String?
-  isPremium      Boolean       @default(false)
-  premiumSince   DateTime?
+  isPremium           Boolean    @default(false)
+  premiumSince        DateTime?
+  subscriptionStatus  String?    // "active" | "cancelled" | "expired" | "lifetime"
+  billingCycle        String?    // "monthly" | "annual"
+  currentPeriodEnd    DateTime?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
   resumes        Resume[]

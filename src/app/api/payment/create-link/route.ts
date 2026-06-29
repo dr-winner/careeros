@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 
@@ -7,32 +7,47 @@ const MOOLRE_BASE =
     ? "https://sandbox.moolre.com"
     : "https://api.moolre.com";
 
-const PREMIUM_AMOUNT = process.env.MOOLRE_PREMIUM_AMOUNT || "99";
 const APP_URL = (process.env.NEXT_PUBLIC_APP_URL || "https://careeros.live").replace(/\/+$/, "");
 
-export async function POST() {
+// Plan amounts in GHS
+const AMOUNTS: Record<string, string> = {
+  monthly: process.env.MOOLRE_MONTHLY_AMOUNT || "25",
+  annual:  process.env.MOOLRE_ANNUAL_AMOUNT  || "199",
+};
+
+// Encoded in externalref as single char: m=monthly, a=annual
+const PLAN_CODE: Record<string, string> = {
+  monthly: "m",
+  annual:  "a",
+};
+
+export async function POST(request: NextRequest) {
   try {
     const { userId: clerkId } = await auth();
     if (!clerkId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const body = await request.json().catch(() => ({}));
+    const plan: "monthly" | "annual" = body.plan === "annual" ? "annual" : "monthly";
+
     const user = await prisma.user.findUnique({
       where: { clerkId },
-      select: { id: true, email: true, fullName: true, isPremium: true },
+      select: { id: true, email: true, fullName: true, isPremium: true, subscriptionStatus: true },
     });
 
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    if (user.isPremium) {
+    // Block if already on an active or lifetime plan
+    if (user.isPremium && (user.subscriptionStatus === "active" || !user.subscriptionStatus)) {
       return NextResponse.json({ error: "Already premium" }, { status: 400 });
     }
 
-    // externalref encodes the DB user ID so the webhook can look it up.
-    // Format: "co-{dbUserId}-{timestamp}" — dbUserId is a cuid (no hyphens).
-    const externalref = `co-${user.id}-${Date.now()}`;
+    // Format: co-{userId}-{planCode}-{timestamp}
+    // userId is a cuid (no hyphens), so split("-") is unambiguous
+    const externalref = `co-${user.id}-${PLAN_CODE[plan]}-${Date.now()}`;
 
     const res = await fetch(`${MOOLRE_BASE}/embed/link`, {
       method: "POST",
@@ -43,16 +58,15 @@ export async function POST() {
       },
       body: JSON.stringify({
         type: 1,
-        amount: PREMIUM_AMOUNT,
+        amount: AMOUNTS[plan],
         email: user.email,
         externalref,
         callback: `${APP_URL}/api/webhooks/moolre`,
-        // Include the ref in the redirect so the success page can trigger manual verification
         redirect: `${APP_URL}/pricing?success=true&ref=${encodeURIComponent(externalref)}`,
         reusable: 0,
         currency: "GHS",
         accountnumber: process.env.MOOLRE_ACCOUNT_NUMBER,
-        metadata: { userId: user.id, plan: "premium" },
+        metadata: { userId: user.id, plan },
       }),
     });
 
@@ -68,11 +82,14 @@ export async function POST() {
 
     const paymentUrl = data.data?.url || data.url || data.data?.link || data.link;
     if (!paymentUrl) {
-      console.error("Moolre returned POS09 but no URL in response:", JSON.stringify(data));
-      return NextResponse.json({ error: "Payment URL not returned. Please try again." }, { status: 502 });
+      console.error("Moolre returned POS09 but no URL:", JSON.stringify(data));
+      return NextResponse.json(
+        { error: "Payment URL not returned. Please try again." },
+        { status: 502 },
+      );
     }
 
-    return NextResponse.json({ url: paymentUrl });
+    return NextResponse.json({ url: paymentUrl, plan, amount: AMOUNTS[plan] });
   } catch (error) {
     console.error("Payment create-link error:", error);
     return NextResponse.json({ error: "Payment setup failed" }, { status: 500 });

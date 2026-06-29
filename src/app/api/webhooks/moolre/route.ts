@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { parseExternalRef, activateSubscription } from "@/lib/subscription";
 
 const MOOLRE_BASE =
   process.env.MOOLRE_SANDBOX === "true"
@@ -17,7 +18,7 @@ async function verifyTransaction(externalref: string): Promise<boolean> {
       },
       body: JSON.stringify({
         type: 1,
-        idtype: 1, // 1 = look up by externalref
+        idtype: 1, // look up by externalref
         id: externalref,
         accountnumber: process.env.MOOLRE_ACCOUNT_NUMBER,
       }),
@@ -30,15 +31,6 @@ async function verifyTransaction(externalref: string): Promise<boolean> {
     console.error("Moolre verify error:", err);
     return false;
   }
-}
-
-// Parse "co-{dbUserId}-{timestamp}" → userId (cuid has no hyphens)
-function parseExternalRef(externalref: string): string | null {
-  if (!externalref.startsWith("co-")) return null;
-  const parts = externalref.split("-");
-  // parts[0] = "co", parts[1] = userId, parts[2] = timestamp
-  if (parts.length < 3) return null;
-  return parts[1] || null;
 }
 
 export async function POST(request: NextRequest) {
@@ -56,7 +48,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ received: true });
     }
 
-    const userId = parseExternalRef(externalref);
+    const { userId, billingCycle } = parseExternalRef(externalref);
     if (!userId) {
       console.error("Moolre webhook: could not parse userId from ref:", externalref);
       return NextResponse.json({ received: true });
@@ -64,41 +56,34 @@ export async function POST(request: NextRequest) {
 
     const existing = await prisma.user.findUnique({
       where: { id: userId },
-      select: { isPremium: true },
+      select: { isPremium: true, subscriptionStatus: true },
     });
 
     if (!existing) {
-      console.error("Moolre webhook: user not found for userId:", userId);
+      console.error("Moolre webhook: user not found:", userId);
       return NextResponse.json({ received: true });
     }
 
-    if (existing.isPremium) {
-      // Already upgraded — idempotent, nothing to do
+    // Idempotent: already on active lifetime plan, skip
+    if (existing.subscriptionStatus === "lifetime") {
       return NextResponse.json({ received: true });
     }
 
-    // Independently verify the transaction with Moolre.
-    // If verification fails (network, API issue), we still activate premium
-    // because the externalref format is unguessable (CUID) and the webhook
-    // code SS01 is only sent for successful payments. We log unverified upgrades
-    // for manual audit.
     const verified = await verifyTransaction(externalref);
 
-    await prisma.user.update({
-      where: { id: userId },
-      data: { isPremium: true, premiumSince: new Date() },
-    });
+    await activateSubscription(userId, billingCycle);
 
+    const logSuffix = `user ${userId} plan=${billingCycle} ref=${externalref}`;
     if (verified) {
-      console.log(`Moolre: premium activated (verified) for user ${userId} via ref ${externalref}`);
+      console.log(`Moolre: subscription activated (verified) — ${logSuffix}`);
     } else {
-      console.warn(`Moolre: premium activated (UNVERIFIED) for user ${userId} via ref ${externalref} — manual review recommended`);
+      console.warn(`Moolre: subscription activated (UNVERIFIED) — ${logSuffix} — manual review recommended`);
     }
 
     return NextResponse.json({ received: true });
   } catch (error) {
     console.error("Moolre webhook error:", error);
-    // Always return 200 so Moolre doesn't retry endlessly
+    // Always 200 so Moolre doesn't retry forever
     return NextResponse.json({ received: true });
   }
 }

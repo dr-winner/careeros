@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
+import { parseExternalRef, activateSubscription } from "@/lib/subscription";
 
 const MOOLRE_BASE =
   process.env.MOOLRE_SANDBOX === "true"
@@ -19,26 +20,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid payment reference" }, { status: 400 });
     }
 
-    // Validate that the ref's userId matches the authenticated user
-    const parts = (ref as string).split("-");
-    const refUserId = parts[1];
+    const { userId: refUserId, billingCycle } = parseExternalRef(ref as string);
 
     const user = await prisma.user.findUnique({
       where: { clerkId },
-      select: { id: true, isPremium: true },
+      select: { id: true, isPremium: true, subscriptionStatus: true },
     });
 
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    if (user.isPremium) {
+    if (user.isPremium && user.subscriptionStatus === "active") {
       return NextResponse.json({ isPremium: true, message: "Already premium" });
     }
 
     // Ensure the ref belongs to this user
     if (refUserId !== user.id) {
-      return NextResponse.json({ error: "Payment reference does not match account" }, { status: 403 });
+      return NextResponse.json(
+        { error: "Payment reference does not match account" },
+        { status: 403 },
+      );
     }
 
     // Verify transaction with Moolre
@@ -67,12 +69,9 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { isPremium: true, premiumSince: new Date() },
-    });
+    await activateSubscription(user.id, billingCycle);
 
-    console.log(`Moolre: premium manually verified and activated for user ${user.id} via ref ${ref}`);
+    console.log(`Moolre: subscription manually verified — user ${user.id} plan=${billingCycle} ref=${ref}`);
 
     return NextResponse.json({ isPremium: true, message: "Premium activated successfully" });
   } catch (error) {
