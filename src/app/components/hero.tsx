@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
+import Logo from "./logo";
 
 const AGENT_LINES = [
   "parsing CV…",
@@ -88,11 +89,11 @@ export default function Hero() {
 
         {/* CTA Buttons */}
         <div className="animate-fade-up delay-400 mt-10 flex items-center justify-center gap-4 flex-wrap">
-          <Link href="/sign-up" className="agent-button agent-button-primary press-scale">
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
+          <Link href="/sign-up" className="agent-button agent-button-primary press-scale group">
             Get started free
+            <svg className="h-4 w-4 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+            </svg>
           </Link>
           <Link
             href="/sign-in"
@@ -111,12 +112,8 @@ export default function Hero() {
           <div className="agent-card max-w-lg mx-auto p-6">
             <div className="flex items-center gap-3 mb-5">
               <div className="relative flex-shrink-0">
-                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center">
-                  <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                  </svg>
-                </div>
-                <div className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-green-500 border-2 border-[#0d0d18]" />
+                <Logo size="sm" variant="mark" />
+                <div className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-green-500" />
               </div>
               <div className="text-left">
                 <div className="text-sm font-semibold text-white">CareerOS Agent</div>
@@ -164,7 +161,7 @@ export default function Hero() {
                 <div className="h-full w-[87%] rounded-full bg-gradient-to-r from-purple-500 to-cyan-500 animate-gradient" />
               </div>
               <p className="mono text-xs text-zinc-600 mt-3 leading-relaxed">
-                Apply. Highlight TypeScript depth. Consider AWS cert.
+                Action plan: Highlight TypeScript depth. Add AWS Cloud cert. Customize profile.
               </p>
             </div>
           </div>

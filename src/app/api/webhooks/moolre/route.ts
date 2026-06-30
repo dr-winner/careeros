@@ -71,15 +71,15 @@ export async function POST(request: NextRequest) {
     }
 
     const verified = await verifyTransaction(externalref);
+    if (!verified) {
+      console.error(`Moolre webhook: transaction verification failed for ref=${externalref}. Aborting subscription activation.`);
+      return NextResponse.json({ error: "Transaction verification failed" }, { status: 400 });
+    }
 
     await activateSubscription(userId, billingCycle);
 
     const logSuffix = `user ${userId} plan=${billingCycle} ref=${externalref}`;
-    if (verified) {
-      console.log(`Moolre: subscription activated (verified) — ${logSuffix}`);
-    } else {
-      console.warn(`Moolre: subscription activated (UNVERIFIED) — ${logSuffix} — manual review recommended`);
-    }
+    console.log(`Moolre: subscription activated (verified) — ${logSuffix}`);
 
     const posthog = getPostHogClient();
     posthog.capture({

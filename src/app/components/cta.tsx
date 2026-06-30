@@ -27,24 +27,23 @@ export default function CTA() {
         </div>
 
         <h2 className="text-4xl font-bold text-white sm:text-5xl md:text-6xl leading-tight">
-          Your career agent is{" "}
-          <span className="gradient-text">ready</span>
+          Ready to optimize <br />
+          <span className="gradient-text">your job search?</span>
         </h2>
 
         <p className="mx-auto mt-6 max-w-xl text-lg text-zinc-400 leading-relaxed">
-          Create your free account. CareerOS analyses your CV, scores your fit,
-          and tells you exactly where to focus — before you apply.
+          Create a free account in seconds. Get an instant match analysis of your CV against any job requirements, identify skill gaps, and apply with confidence.
         </p>
 
         <div className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-4">
           <Link
             href="/sign-up"
-            className="agent-button agent-button-primary !px-8 !py-4 !text-base press-scale"
+            className="agent-button agent-button-primary !px-8 !py-4 !text-base press-scale group"
           >
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
             Launch for free
+            <svg className="h-5 w-5 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+            </svg>
           </Link>
           <Link
             href="/sign-in"
@@ -58,8 +57,8 @@ export default function CTA() {
         <div className="mt-12 flex flex-wrap items-center justify-center gap-6">
           {[
             { icon: "M4.5 12.75l6 6 9-13.5", label: "Free to start" },
-            { icon: "M4.5 12.75l6 6 9-13.5", label: "AI-powered insights" },
-            { icon: "M4.5 12.75l6 6 9-13.5", label: "GHS 99 lifetime upgrade" },
+            { icon: "M4.5 12.75l6 6 9-13.5", label: "Detailed fit analysis" },
+            { icon: "M4.5 12.75l6 6 9-13.5", label: "Local MoMo & Card payments" },
           ].map((item) => (
             <span key={item.label} className="flex items-center gap-2 mono text-sm text-zinc-500">
               <svg className="h-4 w-4 text-purple-400" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">

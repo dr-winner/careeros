@@ -8,18 +8,18 @@ interface LogoProps {
     theme?: "light" | "dark";
 }
 
-const IMAGE_SIZES = {
-    sm: { width: 36, height: 36 },
-    md: { width: 48, height: 48 },
-    lg: { width: 64, height: 64 },
-    xl: { width: 80, height: 80 },
+const FULL_SIZES = {
+    sm: { width: 85, height: 24 },
+    md: { width: 113, height: 32 },
+    lg: { width: 141, height: 40 },
+    xl: { width: 170, height: 48 },
 };
 
-const TEXT_SIZES = {
-    sm: "14px",
-    md: "16px",
-    lg: "20px",
-    xl: "24px",
+const MARK_SIZES = {
+    sm: { width: 24, height: 24 },
+    md: { width: 32, height: 32 },
+    lg: { width: 48, height: 48 },
+    xl: { width: 64, height: 64 },
 };
 
 export default function Logo({
@@ -28,31 +28,27 @@ export default function Logo({
     className = "",
     theme = "dark",
 }: LogoProps) {
-    const imageDimensions = IMAGE_SIZES[size];
-    const textSize = TEXT_SIZES[size];
-    const textColor = theme === "light" ? "text-white" : "text-emerald-900";
-
-    const iconComponent = (
-        <Image
-            src="/logo.svg"
-            alt="CareerOS Logo"
-            width={imageDimensions.width}
-            height={imageDimensions.height}
-            className="flex-shrink-0"
-            priority
-        />
-    );
-
-    if (variant === "icon-only" || variant === "mark") {
-        return <div className={className}>{iconComponent}</div>;
+    const isFull = variant === "full";
+    const dimensions = isFull ? FULL_SIZES[size] : MARK_SIZES[size];
+    
+    let src = "";
+    if (isFull) {
+        src = theme === "light" ? "/svg/careeros-logo-light.svg" : "/svg/careeros-logo-dark.svg";
+    } else {
+        // For mark / icon-only, use the beautiful color gradient mark
+        src = "/svg/careeros-mark.svg";
     }
 
     return (
-        <div className={`flex items-center gap-2 ${className}`}>
-            {iconComponent}
-            <span className={`font-bold tracking-tight ${textColor}`} style={{ fontSize: textSize, lineHeight: 1 }}>
-                CareerOS
-            </span>
+        <div className={`flex items-center flex-shrink-0 ${className}`}>
+            <Image
+                src={src}
+                alt="CareerOS Logo"
+                width={dimensions.width}
+                height={dimensions.height}
+                className="h-auto object-contain flex-shrink-0"
+                priority
+            />
         </div>
     );
 }

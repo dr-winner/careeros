@@ -1,7 +1,9 @@
 "use client";
 
+// Force cache invalidation reload
 import { useState } from "react";
 import Link from "next/link";
+import Logo from "@/app/components/logo";
 
 const PERKS = [
   {
@@ -27,21 +29,33 @@ const PERKS = [
 ];
 
 export default function EmployersPage() {
-  const [form, setForm] = useState({ company: "", name: "", email: "", role: "", hiringFor: "" });
-  const [status, setStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
+  const [jobForm, setJobForm] = useState({
+    title: "",
+    companyName: "",
+    location: "Accra, Ghana",
+    workMode: "Hybrid",
+    seniorityLevel: "Mid-Level",
+    employmentType: "Full-time",
+    applicationUrl: "",
+    description: "",
+    skills: "",
+    employerName: "",
+    employerEmail: "",
+  });
+  const [jobStatus, setJobStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleJobSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setStatus("loading");
+    setJobStatus("loading");
     try {
-      const res = await fetch("/api/employer-waitlist", {
+      const res = await fetch("/api/jobs/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify(jobForm),
       });
-      setStatus(res.ok ? "done" : "error");
+      setJobStatus(res.ok ? "done" : "error");
     } catch {
-      setStatus("error");
+      setJobStatus("error");
     }
   };
 
@@ -50,12 +64,7 @@ export default function EmployersPage() {
       {/* Nav */}
       <nav className="border-b border-white/[0.06] px-6 py-4 flex items-center justify-between max-w-6xl mx-auto">
         <Link href="/" className="flex items-center gap-2">
-          <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center">
-            <svg className="h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
-          </div>
-          <span className="font-bold text-white">CareerOS</span>
+          <Logo size="sm" variant="full" />
           <span className="text-xs text-zinc-500 ml-1">for Employers</span>
         </Link>
         <Link href="/dashboard" className="agent-button text-sm px-4 py-2">
@@ -68,7 +77,7 @@ export default function EmployersPage() {
         <div className="text-center mb-16">
           <div className="inline-flex items-center gap-2 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-4 py-1.5 mb-6">
             <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse" />
-            <span className="text-xs text-cyan-400 font-medium mono">Early access · Limited spots</span>
+            <span className="text-xs text-cyan-400 font-medium mono">Early access · Pilot live</span>
           </div>
           <h1 className="text-4xl sm:text-5xl font-bold font-display mb-4 leading-tight">
             Hire smarter.<br />
@@ -76,7 +85,7 @@ export default function EmployersPage() {
           </h1>
           <p className="text-lg text-zinc-400 max-w-2xl mx-auto">
             CareerOS candidates have already self-screened against your job requirements.
-            You get a ranked shortlist of people who know they fit — not just hopeful applicants.
+            Post a listing directly to let candidates auto-analyze their CV fit and apply.
           </p>
         </div>
 
@@ -85,8 +94,8 @@ export default function EmployersPage() {
           <div className="space-y-6">
             {PERKS.map((p) => (
               <div key={p.title} className="flex gap-4">
-                <div className="h-10 w-10 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center flex-shrink-0">
-                  <svg className="h-5 w-5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div className="h-10 w-10 rounded-lg bg-[#8b5cf6]/10 border border-[#8b5cf6]/20 flex items-center justify-center flex-shrink-0">
+                  <svg className="h-5 w-5 text-[#8b5cf6]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d={p.icon} />
                   </svg>
                 </div>
@@ -100,108 +109,200 @@ export default function EmployersPage() {
             <div className="agent-card p-5 border-cyan-500/20 mt-8">
               <p className="text-sm text-zinc-400 leading-relaxed">
                 <span className="text-cyan-400 font-semibold">Pilot pricing:</span> GHS 500 per job listing,
-                or contact us for a team plan. First 10 employers on the waitlist get their first listing free.
+                or contact us for a team plan. First 10 employers get their first listing completely free.
               </p>
             </div>
           </div>
 
-          {/* Waitlist form */}
+          {/* Form Card */}
           <div className="agent-card p-6">
-            {status === "done" ? (
+            {jobStatus === "done" ? (
               <div className="text-center py-8">
                 <div className="h-14 w-14 rounded-2xl bg-green-500/10 border border-green-500/20 flex items-center justify-center mx-auto mb-4">
                   <svg className="h-7 w-7 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
-                <h3 className="text-lg font-bold text-white mb-2">You&apos;re on the list.</h3>
-                <p className="text-sm text-zinc-400">
-                  We&apos;ll reach out personally when your employer dashboard is ready.
-                  Expect early access within 2–4 weeks.
+                <h3 className="text-lg font-bold text-white mb-2">Job Published Live! 🚀</h3>
+                <p className="text-sm text-zinc-400 mb-6">
+                  Your job opening is now active on CareerOS. Job seekers can search for it, perform resume fit-matching analyses, and apply directly.
                 </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setJobForm({
+                      title: "",
+                      companyName: "",
+                      location: "Accra, Ghana",
+                      workMode: "Hybrid",
+                      seniorityLevel: "Mid-Level",
+                      employmentType: "Full-time",
+                      applicationUrl: "",
+                      description: "",
+                      skills: "",
+                      employerName: "",
+                      employerEmail: "",
+                    });
+                    setJobStatus("idle");
+                  }}
+                  className="agent-button px-4 py-2 text-sm text-zinc-300 hover:text-white"
+                >
+                  Post another job
+                </button>
               </div>
             ) : (
               <>
-                <h2 className="text-lg font-bold text-white mb-1">Join the employer waitlist</h2>
-                <p className="text-sm text-zinc-500 mb-6">We&apos;ll contact you personally when access opens.</p>
+                <h2 className="text-lg font-bold text-white mb-1">List an active opening</h2>
+                <p className="text-sm text-zinc-500 mb-6">Publish a role directly to the CareerOS network.</p>
 
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form onSubmit={handleJobSubmit} className="space-y-4">
                   <div className="grid sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs text-zinc-400 mb-1.5">Your name *</label>
+                      <label className="block text-xs text-zinc-400 mb-1.5">Job Title *</label>
                       <input
                         required
                         className="agent-input w-full"
-                        placeholder="Kwame Mensah"
-                        value={form.name}
-                        onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                        placeholder="Senior Software Engineer"
+                        value={jobForm.title}
+                        onChange={(e) => setJobForm((f) => ({ ...f, title: e.target.value }))}
                       />
                     </div>
                     <div>
-                      <label className="block text-xs text-zinc-400 mb-1.5">Company *</label>
+                      <label className="block text-xs text-zinc-400 mb-1.5">Company Name *</label>
                       <input
                         required
                         className="agent-input w-full"
-                        placeholder="Acme Ghana Ltd"
-                        value={form.company}
-                        onChange={(e) => setForm((f) => ({ ...f, company: e.target.value }))}
+                        placeholder="Acme West Africa"
+                        value={jobForm.companyName}
+                        onChange={(e) => setJobForm((f) => ({ ...f, companyName: e.target.value }))}
                       />
                     </div>
                   </div>
 
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs text-zinc-400 mb-1.5">Location *</label>
+                      <input
+                        required
+                        className="agent-input w-full"
+                        placeholder="Accra, Ghana"
+                        value={jobForm.location}
+                        onChange={(e) => setJobForm((f) => ({ ...f, location: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-zinc-400 mb-1.5">Work Mode *</label>
+                      <select
+                        className="agent-input w-full bg-[#0a0a0f] border-white/10"
+                        value={jobForm.workMode}
+                        onChange={(e) => setJobForm((f) => ({ ...f, workMode: e.target.value }))}
+                      >
+                        <option value="Hybrid">Hybrid</option>
+                        <option value="Remote">Remote</option>
+                        <option value="On-site">On-site</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs text-zinc-400 mb-1.5">Seniority Level *</label>
+                      <select
+                        className="agent-input w-full bg-[#0a0a0f] border-white/10"
+                        value={jobForm.seniorityLevel}
+                        onChange={(e) => setJobForm((f) => ({ ...f, seniorityLevel: e.target.value }))}
+                      >
+                        <option value="Mid-Level">Mid-Level</option>
+                        <option value="Entry-Level">Entry-Level</option>
+                        <option value="Senior">Senior</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-zinc-400 mb-1.5">Employment Type *</label>
+                      <select
+                        className="agent-input w-full bg-[#0a0a0f] border-white/10"
+                        value={jobForm.employmentType}
+                        onChange={(e) => setJobForm((f) => ({ ...f, employmentType: e.target.value }))}
+                      >
+                        <option value="Full-time">Full-time</option>
+                        <option value="Part-time">Part-time</option>
+                        <option value="Contract">Contract</option>
+                        <option value="Internship">Internship</option>
+                      </select>
+                    </div>
+                  </div>
+
                   <div>
-                    <label className="block text-xs text-zinc-400 mb-1.5">Work email *</label>
+                    <label className="block text-xs text-zinc-400 mb-1.5">Application Link (URL) *</label>
                     <input
                       required
-                      type="email"
+                      type="url"
                       className="agent-input w-full"
-                      placeholder="you@company.com"
-                      value={form.email}
-                      onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                      placeholder="https://careers.acme.com/jobs/apply"
+                      value={jobForm.applicationUrl}
+                      onChange={(e) => setJobForm((f) => ({ ...f, applicationUrl: e.target.value }))}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs text-zinc-400 mb-1.5">Your role</label>
+                    <label className="block text-xs text-zinc-400 mb-1.5">Key Skills (comma-separated)</label>
                     <input
                       className="agent-input w-full"
-                      placeholder="Head of Talent, Founder, HR Manager…"
-                      value={form.role}
-                      onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}
+                      placeholder="React, TypeScript, Node.js, REST APIs"
+                      value={jobForm.skills}
+                      onChange={(e) => setJobForm((f) => ({ ...f, skills: e.target.value }))}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs text-zinc-400 mb-1.5">What roles are you hiring for?</label>
+                    <label className="block text-xs text-zinc-400 mb-1.5">Job Description *</label>
                     <textarea
-                      rows={2}
+                      required
+                      rows={4}
                       className="agent-input w-full resize-none"
-                      placeholder="e.g. Software engineers, product managers, data analysts…"
-                      value={form.hiringFor}
-                      onChange={(e) => setForm((f) => ({ ...f, hiringFor: e.target.value }))}
+                      placeholder="Describe the responsibilities, qualifications, and benefits..."
+                      value={jobForm.description}
+                      onChange={(e) => setJobForm((f) => ({ ...f, description: e.target.value }))}
                     />
                   </div>
 
-                  {status === "error" && (
-                    <p className="text-xs text-red-400">Something went wrong. Email us at employers@careeros.live</p>
+                  <div className="border-t border-white/5 pt-4 mt-2">
+                    <p className="text-xs text-zinc-400 font-semibold mb-3 mono">YOUR CONTACT INFO (INTERNAL USE)</p>
+                    <div className="grid sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs text-zinc-500 mb-1.5">Your Name *</label>
+                        <input
+                          required
+                          className="agent-input w-full"
+                          placeholder="John Doe"
+                          value={jobForm.employerName}
+                          onChange={(e) => setJobForm((f) => ({ ...f, employerName: e.target.value }))}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-zinc-500 mb-1.5">Work Email *</label>
+                        <input
+                          required
+                          type="email"
+                          className="agent-input w-full"
+                          placeholder="john@acme.com"
+                          value={jobForm.employerEmail}
+                          onChange={(e) => setJobForm((f) => ({ ...f, employerEmail: e.target.value }))}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {jobStatus === "error" && (
+                    <p className="text-xs text-red-400">Failed to submit. Please check that the application link is valid.</p>
                   )}
 
                   <button
                     type="submit"
-                    disabled={status === "loading"}
+                    disabled={jobStatus === "loading"}
                     className="w-full agent-button-primary py-3"
                   >
-                    {status === "loading" ? (
-                      <span className="flex items-center justify-center gap-2">
-                        <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                        </svg>
-                        Submitting…
-                      </span>
-                    ) : (
-                      "Request early access"
-                    )}
+                    {jobStatus === "loading" ? "Publishing listing..." : "Publish Job Listing"}
                   </button>
                 </form>
               </>

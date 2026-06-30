@@ -55,32 +55,33 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No CV text provided" }, { status: 400 });
     }
 
-    const prompt = `Rewrite this CV to be ATS-optimised with strong action verbs and quantified achievements. Tailor it for ${role || "general job applications"}.
+    const prompt = `Rewrite the following CV text. Tailor the content and skills selection specifically for the target role: "${role || "general job applications"}".
+Ensure the resulting experience bullets are robust, professional, and completely free of AI-style writing templates.
 
 CV TEXT:
 ${cvText}
 
-Return ONLY valid JSON — no markdown, no explanation:
+Return ONLY valid JSON using this format:
 {
   "name": "Full Name",
   "email": "email@example.com",
   "phone": "+XX XXX XXX XXXX",
   "location": "City, Country",
-  "summary": "2-3 sentence compelling professional summary with specific expertise and value proposition",
+  "summary": "A 2-3 sentence grounded, professional summary highlighting specific technical/domain expertise and key value proposition. Avoid generic buzzwords.",
   "experience": [
     {
-      "title": "Job Title",
+      "title": "Exact Job Title",
       "company": "Company Name",
-      "duration": "Month Year – Month Year",
+      "duration": "Month Year – Month Year (or Present)",
       "bullets": [
-        "Achieved X by doing Y, resulting in Z% improvement",
-        "Led initiative that delivered specific measurable outcome"
+        "First professional achievement/responsibility bullet using strong action verb and naming specific tech/tools used.",
+        "Second professional achievement/responsibility bullet."
       ]
     }
   ],
   "education": [
     {
-      "degree": "Degree Name",
+      "degree": "Degree Name (e.g., BSc in Computer Science)",
       "institution": "Institution Name",
       "year": "YYYY"
     }
@@ -89,9 +90,21 @@ Return ONLY valid JSON — no markdown, no explanation:
   "certifications": ["Certification Name (Year)"]
 }`;
 
+    const systemPrompt = `You are a world-class professional CV writer and elite resume coach. Your goal is to rewrite the candidate's CV text into a polished, high-fidelity, industry-approved professional CV format.
+
+CRITICAL INSTRUCTIONS FOR PROFESSIONAL COPYWRITING:
+1. NO AI CLICHÉS OR BUZZWORDS: Strictly avoid generic, robotic, or hyperbolic phrases such as "results-driven visionary," "proven track record of success," "passionate developer," "seamless orchestration," "leveraged cutting-edge paradigms," "fostered synergy," or "spearheaded transformation." 
+2. BE CONCISE AND DIRECT: Write in a grounded, professional, and action-oriented tone. Describe work objectively. Start bullet points with strong, precise, and active verbs (e.g., "Developed," "Designed," "Built," "Managed," "Led," "Created," "Analyzed," "Optimized," "Reduced," "Negotiated").
+3. DO NOT FABRICATE METRICS: Only quantify achievements if the candidate's input text provides numbers, percentages, or concrete metrics. If there are no numbers in the source text, do NOT make up fake percentages (e.g., do not write "improved efficiency by 35%" if the user did not say so). Instead, write clear statements of what was accomplished, the technologies or methodologies used, and the direct business or technical outcomes.
+4. ACTION-CONTEXT-RESULT STRUCTURE: Write work experience bullet points using the ACR (Action-Context-Result) format: tell exactly what the candidate did, what context or tools they used (e.g., specific libraries, frameworks, or databases), and the direct outcome.
+5. TECH STACKS IN CONTEXT: Naturally include tools, frameworks, and methodologies inside the bullet points of each role (e.g., "...using React, TypeScript, and AWS to ensure stable deployments").
+6. ACCURATE PARSING: Maintain the user's name, email, phone, location, education history, and certifications exactly as provided, but clean up formatting.
+
+Return ONLY valid JSON corresponding to the schema — no markdown wrapper, no conversational text, and no commentary.`;
+
     const { text } = await generatePremium(
       prompt,
-      "You are an expert CV writer for the African job market. Rewrite CVs to be ATS-friendly with strong action verbs and quantified achievements. Return ONLY valid JSON — no markdown, no commentary.",
+      systemPrompt,
       { maxTokens: 2048, temperature: 0.4, json: true },
     );
 
