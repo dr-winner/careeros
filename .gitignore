@@ -72,6 +72,12 @@ uploads/
 # Sentry Config File
 .env.sentry-build-plugin
 
+# PostHog wizard output
+posthog-setup-report.md
+
+# Claude Code agent skills (local dev only)
+.claude/skills/
+
 # Playwright
 test-results/
 playwright-report/
