@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { INTERVIEW_QUESTIONS, QUESTION_CATEGORIES, ROLE_TYPES, ROLE_SPECIFIC_QUESTIONS } from "@/lib/interview-questions";
 import { toast } from "sonner";
+import { usePostHog } from "posthog-js/react";
 
 const ALL_QUESTIONS = [...INTERVIEW_QUESTIONS, ...ROLE_SPECIFIC_QUESTIONS];
 
@@ -30,6 +31,7 @@ interface PastSession {
 }
 
 export default function InterviewPrepPage() {
+  const posthog = usePostHog();
   const [activeTab, setActiveTab] = useState<"bank" | "mock" | "live">("bank");
   const [category, setCategory] = useState("all");
   const [roleType, setRoleType] = useState("all");
@@ -115,6 +117,10 @@ export default function InterviewPrepPage() {
       if (data.error) throw new Error(data.error);
 
       setMessages([{ role: "assistant", content: data.text }]);
+      posthog?.capture("interview_started", {
+        role: selectedRole,
+        experience_level: experienceLevel,
+      });
     } catch {
       toast.error("Failed to start interview");
       setIsInterviewing(false);
@@ -181,6 +187,11 @@ export default function InterviewPrepPage() {
       const data = await response.json();
       if (data.error) throw new Error(data.error);
 
+      posthog?.capture("interview_feedback_received", {
+        role: selectedRole,
+        score: data.score,
+        message_count: messages.length,
+      });
       setFeedback(data);
     } catch {
       toast.error("Failed to get feedback");
@@ -209,6 +220,12 @@ export default function InterviewPrepPage() {
           score: feedback?.score,
         }),
       });
+      posthog?.capture("interview_session_ended", {
+        role: selectedRole,
+        experience_level: experienceLevel,
+        message_count: messages.length,
+        score: feedback?.score,
+      });
       await fetchSessions();
       toast.success("Session saved");
     } catch {
@@ -231,6 +248,11 @@ export default function InterviewPrepPage() {
       });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
+      posthog?.capture("live_room_created", {
+        role: liveRole,
+        experience_level: liveExperience,
+        room_code: data.room?.roomCode,
+      });
       setCreatedRoom(data.room);
     } catch {
       toast.error("Failed to create room");

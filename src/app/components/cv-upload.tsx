@@ -2,6 +2,7 @@
 
 import { useCallback, useRef, useState } from "react";
 import { toast } from "sonner";
+import { usePostHog } from "posthog-js/react";
 
 interface CVUploadProps {
   onUploadSuccess?: () => void;
@@ -52,6 +53,7 @@ export default function CVUpload({ onUploadSuccess, onAnalysisStart }: CVUploadP
   const [selectedFileName, setSelectedFileName] = useState("");
   const [selectedFileSize, setSelectedFileSize] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const posthog = usePostHog();
 
   const resetFileInput = useCallback(() => {
     if (fileInputRef.current) {
@@ -107,6 +109,10 @@ export default function CVUpload({ onUploadSuccess, onAnalysisStart }: CVUploadP
           return;
         }
 
+        posthog?.capture("cv_uploaded", {
+          file_type: selectedFile.type || selectedFile.name.split(".").pop(),
+          file_size_bytes: selectedFile.size,
+        });
         toast.success("CV uploaded successfully!");
         clearSelectedFile();
         if (data.id && onAnalysisStart) {
@@ -122,7 +128,7 @@ export default function CVUpload({ onUploadSuccess, onAnalysisStart }: CVUploadP
         setUploading(false);
       }
     },
-    [clearSelectedFile, onUploadSuccess, onAnalysisStart],
+    [clearSelectedFile, onUploadSuccess, onAnalysisStart, posthog],
   );
 
   const handleDrop = useCallback(
