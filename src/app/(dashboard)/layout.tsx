@@ -73,6 +73,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return null;
   }
 
+  const isOnboarding = pathname === "/guided-onboarding";
+
+  if (isOnboarding) {
+    return (
+      <>
+        <Toaster position="top-center" />
+        {children}
+      </>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#0a0a0f] overflow-x-hidden">
       <Toaster position="top-center" />
