@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { useState, useEffect, useRef, use } from "react";
+import Script from "next/script";
 import Link from "next/link";
 
 interface RoomInfo {
@@ -21,6 +22,10 @@ export default function InterviewRoomPage({ params }: { params: Promise<{ code: 
   const [role, setRole] = useState<"interviewer" | "candidate">("candidate");
   const [joined, setJoined] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [apiReady, setApiReady] = useState(false);
+  const jitsiContainerRef = useRef<HTMLDivElement>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const jitsiApiRef = useRef<any>(null);
 
   useEffect(() => {
     fetch(`/api/interview-rooms/${roomCode}`)
@@ -33,6 +38,39 @@ export default function InterviewRoomPage({ params }: { params: Promise<{ code: 
       .finally(() => setLoading(false));
   }, [roomCode]);
 
+  // Initialize Jitsi External API once joined and script is ready
+  useEffect(() => {
+    if (!joined || !apiReady || !jitsiContainerRef.current) return;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const JitsiMeetExternalAPI = (window as any).JitsiMeetExternalAPI;
+    if (!JitsiMeetExternalAPI) return;
+
+    jitsiApiRef.current = new JitsiMeetExternalAPI("meet.jit.si", {
+      roomName: `careeros-${roomCode}`,
+      parentNode: jitsiContainerRef.current,
+      width: "100%",
+      height: "100%",
+      userInfo: { displayName: displayName || "Guest" },
+      configOverwrite: {
+        startWithAudioMuted: true,
+        startWithVideoMuted: false,
+        prejoinPageEnabled: false,
+        disableDeepLinking: true,
+        disableInviteFunctions: true,
+      },
+      interfaceConfigOverwrite: {
+        SHOW_JITSI_WATERMARK: false,
+        SHOW_WATERMARK_FOR_GUESTS: false,
+        TOOLBAR_ALWAYS_VISIBLE: false,
+      },
+    });
+
+    return () => {
+      jitsiApiRef.current?.dispose();
+      jitsiApiRef.current = null;
+    };
+  }, [joined, apiReady, roomCode, displayName]);
+
   const joinRoom = () => {
     if (!displayName.trim()) return;
     setJoined(true);
@@ -43,15 +81,6 @@ export default function InterviewRoomPage({ params }: { params: Promise<{ code: 
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
-
-  const jitsiSrc = [
-    `https://meet.jit.si/careeros-${roomCode}`,
-    `#config.startWithAudioMuted=true`,
-    `&config.startWithVideoMuted=false`,
-    `&config.prejoinPageEnabled=false`,
-    `&config.disableDeepLinking=true`,
-    `&userInfo.displayName=${encodeURIComponent(displayName || "Guest")}`,
-  ].join("");
 
   if (loading) {
     return (
@@ -91,58 +120,67 @@ export default function InterviewRoomPage({ params }: { params: Promise<{ code: 
 
   if (joined) {
     return (
-      <div className="min-h-screen bg-[#0a0a0f] flex flex-col">
-        {/* Live header */}
-        <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/[0.06] bg-[#0a0a0f]/95 backdrop-blur-xl flex-shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center">
-              <svg className="h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
+      <>
+        <Script
+          src="https://meet.jit.si/external_api.js"
+          onLoad={() => setApiReady(true)}
+          strategy="afterInteractive"
+        />
+        <div className="min-h-screen bg-[#0a0a0f] flex flex-col">
+          {/* Live header */}
+          <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/[0.06] bg-[#0a0a0f]/95 backdrop-blur-xl flex-shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center">
+                <svg className="h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </div>
+              <span className="text-sm font-semibold text-white hidden sm:block">CareerOS</span>
+              <span className="text-white/20 hidden sm:block">·</span>
+              <span className="text-sm text-zinc-400">{room?.role}</span>
+              {room?.experienceLevel && (
+                <span className="mono text-xs text-zinc-600">· {room.experienceLevel}</span>
+              )}
             </div>
-            <span className="text-sm font-semibold text-white hidden sm:block">CareerOS</span>
-            <span className="text-white/20 hidden sm:block">·</span>
-            <span className="text-sm text-zinc-400">{room?.role}</span>
-            {room?.experienceLevel && (
-              <span className="mono text-xs text-zinc-600">· {room.experienceLevel}</span>
+
+            <div className="flex items-center gap-2 sm:gap-3">
+              <span className="mono text-xs font-bold text-purple-300 px-2 py-0.5 rounded-lg bg-purple-500/10 border border-purple-500/20">
+                {roomCode}
+              </span>
+              <button onClick={copyLink} className="mono text-xs text-zinc-500 hover:text-zinc-300 transition-colors hidden sm:block">
+                {copied ? "Copied!" : "Copy link"}
+              </button>
+              <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-green-500/10 border border-green-500/20">
+                <div className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
+                <span className="mono text-[10px] text-green-400">Live</span>
+              </div>
+              <span className={`mono text-[10px] px-2 py-0.5 rounded-lg border ${
+                role === "interviewer"
+                  ? "bg-purple-500/10 border-purple-500/20 text-purple-400"
+                  : "bg-cyan-500/10 border-cyan-500/20 text-cyan-400"
+              }`}>
+                {role === "interviewer" ? "Interviewer" : "Candidate"}
+              </span>
+            </div>
+          </div>
+
+          {/* Jitsi External API container */}
+          <div className="flex-1 relative">
+            {!apiReady && (
+              <div className="absolute inset-0 flex items-center justify-center bg-[#0a0a0f]">
+                <div className="flex items-center gap-3">
+                  <div className="h-5 w-5 rounded-full border-2 border-purple-500/30 border-t-purple-500 animate-spin" />
+                  <span className="mono text-sm text-zinc-400">Connecting…</span>
+                </div>
+              </div>
             )}
-          </div>
-
-          <div className="flex items-center gap-2 sm:gap-3">
-            <span className="mono text-xs font-bold text-purple-300 px-2 py-0.5 rounded-lg bg-purple-500/10 border border-purple-500/20">
-              {roomCode}
-            </span>
-            <button
-              onClick={copyLink}
-              className="mono text-xs text-zinc-500 hover:text-zinc-300 transition-colors hidden sm:block"
-            >
-              {copied ? "Copied!" : "Copy link"}
-            </button>
-            <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-green-500/10 border border-green-500/20">
-              <div className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
-              <span className="mono text-[10px] text-green-400">Live</span>
-            </div>
-            <span className={`mono text-[10px] px-2 py-0.5 rounded-lg border ${
-              role === "interviewer"
-                ? "bg-purple-500/10 border-purple-500/20 text-purple-400"
-                : "bg-cyan-500/10 border-cyan-500/20 text-cyan-400"
-            }`}>
-              {role === "interviewer" ? "Interviewer" : "Candidate"}
-            </span>
+            <div
+              ref={jitsiContainerRef}
+              style={{ height: "calc(100vh - 46px)", width: "100%" }}
+            />
           </div>
         </div>
-
-        {/* Jitsi iframe */}
-        <div className="flex-1">
-          <iframe
-            src={jitsiSrc}
-            className="w-full"
-            style={{ height: "calc(100vh - 46px)", border: "none" }}
-            allow="camera; microphone; fullscreen; display-capture; autoplay"
-            title="CareerOS Live Interview"
-          />
-        </div>
-      </div>
+      </>
     );
   }
 
