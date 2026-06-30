@@ -55,8 +55,8 @@ export default function PaywallModal({
 
           <div className="p-6 text-center">
             <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-purple-500/20 to-cyan-500/20 mx-auto flex items-center justify-center mb-4">
-              <svg className="h-8 w-8 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              <svg className="h-8 w-8 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5l3.5 5.5 5.5-2.5-3 10H6L3 7.5l5.5 2.5L12 4.5z M6 17.5h12" />
               </svg>
             </div>
 
@@ -90,12 +90,12 @@ export default function PaywallModal({
 
             <button
               onClick={handleUpgrade}
-              className="w-full agent-button-primary py-3 mb-3"
+              className="w-full agent-button-primary py-3 mb-3 flex items-center justify-center gap-2 group"
             >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
               Get Premium — GHS 25/month
+              <svg className="h-4 w-4 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+              </svg>
             </button>
 
             <button

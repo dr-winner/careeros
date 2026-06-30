@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Logo from "@/app/components/logo";
 
 export default function CTA() {
   return (
@@ -20,10 +21,8 @@ export default function CTA() {
 
       <div className="relative mx-auto max-w-3xl text-center animate-fade-up">
         {/* Icon */}
-        <div className="inline-flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-600 shadow-2xl shadow-purple-500/25 mb-8">
-          <svg className="h-10 w-10 text-white" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-          </svg>
+        <div className="inline-flex h-20 w-20 items-center justify-center rounded-2xl bg-white/[0.03] border border-white/10 shadow-2xl mb-8">
+          <Logo variant="mark" size="lg" />
         </div>
 
         <h2 className="text-4xl font-bold text-white sm:text-5xl md:text-6xl leading-tight">

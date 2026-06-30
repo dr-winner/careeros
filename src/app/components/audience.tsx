@@ -4,28 +4,24 @@ const audiences = [
     title: "Students & Graduates",
     description: "Turn limited experience into credible applications. Find internship and entry-level roles that actually fit your skills.",
     gradient: "from-emerald-500/20 to-cyan-500/20",
-    icon: "M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222",
   },
   {
     emoji: "💼",
     title: "Early-career Professionals",
     description: "Move up faster. Understand what each role needs and how to position yourself for the next level.",
     gradient: "from-blue-500/20 to-purple-500/20",
-    icon: "M13 10V3L4 14h7v7l9-11h-7z",
   },
   {
     emoji: "🔄",
     title: "Career Switchers",
     description: "Understand if your shift is realistic. Find the bridge between where you are and where you want to be.",
     gradient: "from-purple-500/20 to-pink-500/20",
-    icon: "M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15",
   },
   {
     emoji: "🚀",
     title: "The Ambitious",
     description: "Apply to roles that match your actual potential. Stop wasting time on jobs you will never get.",
     gradient: "from-amber-500/20 to-orange-500/20",
-    icon: "M13 7h8m0 0v8m0-8l-8 8-4-4-6 6",
   },
 ];
 
