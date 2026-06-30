@@ -495,6 +495,71 @@ export async function sendWeeklyDigestEmail(
   }
 }
 
+export async function sendReferralConvertedEmail(
+  to: string,
+  firstName: string | null,
+  refereeName: string | null
+): Promise<{ success: boolean; error?: Error }> {
+  if (!isConfigured()) {
+    return { success: false, error: new Error("Email not configured") };
+  }
+
+  const name = firstName?.trim();
+  const greeting = name ? "Hey " + name : "Hey there";
+  const referee = refereeName?.trim() || "Someone you referred";
+
+  const content = [
+    '<div class="container">',
+    '<div class="header">',
+    '<span class="logo">CareerOS</span>',
+    '</div>',
+    '<div class="card" style="background: linear-gradient(135deg, rgba(34, 197, 94, 0.12), rgba(6, 182, 212, 0.08)); border-color: rgba(34, 197, 94, 0.3);">',
+    '<p class="greeting">' + greeting + ' 🎉</p>',
+    '<p class="body-text">',
+    "<span class=\"highlight\">" + referee + "</span> just joined CareerOS and ran their first job analysis.",
+    '</p>',
+    '<p class="body-text">',
+    "Because of that, you've earned <span class=\"highlight\">1 bonus analysis</span> on top of your monthly limit. It's already in your account.",
+    '</p>',
+    '<div class="tip-box">',
+    '<p class="tip-title">💡 What\'s a bonus analysis?</p>',
+    '<p class="tip-text">',
+    "Every time you refer someone and they actively use CareerOS, you get an extra job fit analysis — on top of your free monthly quota. There's no cap on how many you can earn.",
+    '</p>',
+    '</div>',
+    '<p class="body-text">',
+    "Keep sharing — every person you bring in earns you another one.",
+    '</p>',
+    '<p class="body-text" style="margin-bottom: 0;">',
+    "— <span class=\"highlight\">Winner</span>",
+    '</p>',
+    '</div>',
+    '<div style="text-align: center;">',
+    '<a href="' + APP_URL + '/referrals" class="cta-button">Share More · Earn More</a>',
+    '</div>',
+    '<div class="footer">',
+    '<p class="footer-text">',
+    '<a href="' + APP_URL + '/dashboard" class="footer-link">Back to CareerOS</a> · ',
+    '<a href="' + APP_URL + '/unsubscribe" class="footer-link">Unsubscribe</a>',
+    '</p>',
+    '</div>',
+    '</div>',
+  ].join("\n");
+
+  try {
+    await resend!.emails.send({
+      from: FROM,
+      to,
+      subject: "Your referral just joined — you earned a bonus analysis 🎉",
+      html: wrapHtml(content),
+    });
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to send referral converted email:", error);
+    return { success: false, error: error as Error };
+  }
+}
+
 export async function sendReferralReceivedEmail(
   to: string,
   firstName: string | null,

@@ -7,6 +7,7 @@ import { isUserPremium } from "@/lib/auth";
 import { checkRateLimit, getRateLimitHeaders, RATE_LIMITS } from "@/lib/ratelimit";
 import { ensureJobRecord } from "@/lib/jobs";
 import { checkQuota, consumeQuota } from "@/lib/quota";
+import { sendReferralConvertedEmail } from "@/lib/transactional-emails";
 
 const SKILL_KEYWORDS: Record<string, string[]> = {
   JavaScript: ["javascript", "js", "ecmascript"],
@@ -302,16 +303,22 @@ Return ONLY this JSON (no markdown):
             select: { id: true, referrerId: true },
           });
           if (referral) {
-            await Promise.all([
+            const [referrer] = await Promise.all([
               prisma.user.update({
                 where: { id: referral.referrerId },
                 data: { bonusAnalyses: { increment: 1 } },
+                select: { email: true, fullName: true },
               }),
               prisma.referral.update({
                 where: { id: referral.id },
                 data: { status: "converted" },
               }),
             ]);
+            sendReferralConvertedEmail(
+              referrer.email,
+              referrer.fullName,
+              user?.fullName ?? null
+            ).catch(() => {});
           }
         }
       }
