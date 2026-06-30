@@ -1,11 +1,12 @@
 "use client";
 
-import { useAuth, UserButton } from "@clerk/nextjs";
+import { useAuth, UserButton, useClerk } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Toaster } from "sonner";
+import Logo from "@/app/components/logo";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6", color: "purple" },
@@ -32,6 +33,7 @@ function isNavActive(href: string, pathname: string) {
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { userId, isLoaded } = useAuth();
+  const { signOut } = useClerk();
   const router = useRouter();
   const pathname = usePathname();
   const [synced, setSynced] = useState(false);
@@ -55,10 +57,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#0a0a0f]">
         <div className="flex flex-col items-center gap-4">
-          <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center">
-            <svg className="h-6 w-6 text-white animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
+          <div className="animate-pulse">
+            <Logo size="lg" variant="mark" />
           </div>
           <div className="flex items-center gap-3">
             <div className="h-4 w-4 rounded-full border-2 border-purple-500/30 border-t-purple-400 animate-spin" />
@@ -92,12 +92,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <aside className="hidden lg:flex fixed left-0 top-0 bottom-0 z-40 flex-col w-56 border-r border-white/5 bg-[#0a0a0f]/95 backdrop-blur-xl">
         <div className="flex h-14 items-center border-b border-white/5 px-4">
           <Link href="/dashboard" className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500 to-indigo-600">
-              <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-            </div>
-            <span className="text-base font-bold text-white">CareerOS</span>
+            <Logo size="sm" variant="full" />
           </Link>
         </div>
 
@@ -127,22 +122,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="p-3 border-t border-white/5 space-y-1">
           <div className="flex items-center gap-3 px-3 py-2">
             <UserButton />
-            <span className="text-xs text-zinc-500">Account</span>
+            <span className="text-xs text-zinc-500 font-medium">Account</span>
           </div>
-          <Link
-            href="/admin"
-            className={`group flex items-center gap-3 rounded-lg px-3 py-2 transition-all ${
-              isNavActive("/admin", pathname) ? "bg-amber-500/10 text-amber-400" : "text-zinc-600 hover:bg-white/5 hover:text-zinc-400"
-            }`}
+          <button
+            onClick={() => signOut({ redirectUrl: "/" })}
+            className="w-full group flex items-center gap-3 rounded-lg px-3 py-2 transition-all text-zinc-600 hover:bg-white/5 hover:text-zinc-400 cursor-pointer text-left"
           >
-            <div className="h-6 w-6 rounded flex items-center justify-center bg-white/5">
-              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            <div className="h-6 w-6 rounded flex items-center justify-center bg-white/5 group-hover:bg-white/10">
+              <svg className="h-3.5 w-3.5 text-zinc-500 group-hover:text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
               </svg>
             </div>
-            <span className="text-xs font-medium">Admin</span>
-          </Link>
+            <span className="text-xs font-medium">Logout</span>
+          </button>
         </div>
       </aside>
 
@@ -150,12 +142,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <header className="lg:hidden fixed top-0 left-0 right-0 z-50 border-b border-white/5 bg-[#0a0a0f]/95 backdrop-blur-xl">
         <div className="flex h-14 items-center justify-between px-4">
           <Link href="/dashboard" className="flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500 to-indigo-600">
-              <svg className="h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-            </div>
-            <span className="text-sm font-bold text-white">CareerOS</span>
+            <Logo size="sm" variant="full" />
           </Link>
 
           <div className="flex items-center gap-2">
@@ -212,6 +199,27 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 );
               })}
             </nav>
+
+            <div className="p-3 border-t border-white/5 space-y-1 mt-auto">
+              <div className="flex items-center gap-3 px-3 py-2">
+                <UserButton />
+                <span className="text-xs text-zinc-500 font-medium">Account</span>
+              </div>
+              <button
+                onClick={() => {
+                  setSidebarOpen(false);
+                  signOut({ redirectUrl: "/" });
+                }}
+                className="w-full group flex items-center gap-3 rounded-lg px-3 py-2.5 transition-all text-zinc-500 hover:bg-white/5 hover:text-zinc-300 cursor-pointer text-left"
+              >
+                <div className="h-8 w-8 rounded-lg flex items-center justify-center bg-white/5 group-hover:bg-white/10">
+                  <svg className="h-4 w-4 text-zinc-500 group-hover:text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  </svg>
+                </div>
+                <span className="text-sm font-medium">Logout</span>
+              </button>
+            </div>
           </aside>
         </div>
       )}

@@ -281,15 +281,16 @@ export default function PricingPage() {
         </div>
 
         {/* Premium */}
-        <div className="rounded-2xl border border-purple-500/30 bg-[#0d0d18] overflow-hidden relative">
-          <div className="h-px w-full bg-gradient-to-r from-transparent via-purple-500/60 to-transparent" />
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2">
+        <div className="relative flex flex-col">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
             <span className="px-3 py-0.5 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 mono text-[10px] font-bold text-white uppercase tracking-wider">
               Recommended
             </span>
           </div>
-          <div className="p-7 pt-9">
-            <p className="section-label">Premium</p>
+          <div className="rounded-2xl border border-purple-500/30 bg-[#0d0d18] overflow-hidden flex flex-col flex-1 relative">
+            <div className="h-px w-full bg-gradient-to-r from-transparent via-purple-500/60 to-transparent" />
+            <div className="p-7 pt-9">
+              <p className="section-label">Premium</p>
             <div className="flex items-baseline gap-1.5 mb-1">
               <span className="text-4xl font-bold gradient-text">
                 GHS {annual ? "199" : "25"}
@@ -303,6 +304,14 @@ export default function PricingPage() {
             )}
 
             <ul className="space-y-3 mb-8">
+              <li className="flex items-start gap-3">
+                <div className="h-4 w-4 rounded-full bg-zinc-700/60 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <svg className="h-2.5 w-2.5 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <span className="text-sm text-zinc-400">Everything in Free</span>
+              </li>
               {PREMIUM_FEATURES.map((f, i) => (
                 <li key={i} className="flex items-start gap-3">
                   <div className="h-4 w-4 rounded-full bg-purple-500/20 border border-purple-500/30 flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -360,6 +369,7 @@ export default function PricingPage() {
             )}
           </div>
         </div>
+      </div>
       </div>
 
       {/* Employer CTA */}

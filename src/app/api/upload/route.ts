@@ -210,6 +210,34 @@ Rules: each skill is 1-5 words, proper casing (React not react), no duplicates, 
   }
 }
 
+function isLikelyCVText(text: string): { isValid: boolean; reason?: string } {
+  const clean = text.toLowerCase();
+  const words = clean.split(/\s+/).filter(Boolean);
+
+  if (words.length < 30) {
+    return {
+      isValid: false,
+      reason: "Document is too short. A standard CV should contain details about your career and background (at least 30 words)."
+    };
+  }
+
+  const hasEmail = /[\w.-]+@[\w.-]+\.\w+/.test(clean);
+  const hasWorkKeywords = /experience|employment|work|history|career|role|position|responsibility|achieved|project/i.test(clean);
+  const hasEduKeywords = /education|university|degree|school|college|bsc|ba|msc|mba|diploma|certificate/i.test(clean);
+  const hasSkillsKeywords = /skills|expertise|competencies|technologies|tools|languages/i.test(clean);
+
+  const score = (hasEmail ? 1 : 0) + (hasWorkKeywords ? 1 : 0) + (hasEduKeywords ? 1 : 0) + (hasSkillsKeywords ? 1 : 0);
+
+  if (score < 2) {
+    return {
+      isValid: false,
+      reason: "This file does not appear to be a CV. A valid CV must contain recognizable sections (like Work Experience, Education, or Skills) and contact information."
+    };
+  }
+
+  return { isValid: true };
+}
+
 async function extractTextFromDOCX(buffer: Buffer): Promise<string> {
   try {
     const mammoth = await import("mammoth");
@@ -333,6 +361,21 @@ export async function POST(request: NextRequest) {
       }
     } catch (parseError) {
       console.error("CV parsing error:", parseError);
+    }
+
+    if (!parsedText || !parsedText.trim()) {
+      return NextResponse.json(
+        { error: "We could not extract any text from this document. Please ensure it is a text-based PDF or Word document (not a scanned image or empty file)." },
+        { status: 400 }
+      );
+    }
+
+    const cvValidation = isLikelyCVText(parsedText);
+    if (!cvValidation.isValid) {
+      return NextResponse.json(
+        { error: cvValidation.reason || "The uploaded document does not look like a valid CV." },
+        { status: 400 }
+      );
     }
 
     const resume = await prisma.resume.create({

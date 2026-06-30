@@ -1,11 +1,12 @@
 "use client";
 
 import { usePostHog } from "posthog-js/react";
+import { useMemo } from "react";
 
 export function useAnalytics() {
   const ph = usePostHog();
 
-  return {
+  return useMemo(() => ({
     track: (event: string, props?: Record<string, unknown>) => {
       ph?.capture(event, props);
     },
@@ -20,5 +21,5 @@ export function useAnalytics() {
     interviewStarted: () => ph?.capture("interview_started"),
     feedbackGiven: (props: { sentiment: "up" | "down"; context: string }) =>
       ph?.capture("feedback_given", props),
-  };
+  }), [ph]);
 }

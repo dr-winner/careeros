@@ -98,20 +98,29 @@ export default function HowItWorks() {
               </p>
               <ul className="space-y-3">
                 {[
-                  { text: "Match score calculated from your skills", color: "green" },
-                  { text: "Specific gaps identified", color: "amber" },
-                  { text: "CV optimization tips", color: "purple" },
-                  { text: "Interview questions matched to role", color: "cyan" },
-                ].map((item) => (
-                  <li key={item.text} className="flex items-center gap-3">
-                    <div className={`h-5 w-5 rounded-full bg-${item.color}-500/20 flex items-center justify-center`}>
-                      <svg className={`h-3 w-3 text-${item.color}-400`} fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                    </div>
-                    <span className="text-zinc-300 text-sm">{item.text}</span>
-                  </li>
-                ))}
+                  { text: "Match score calculated from your skills", color: "green" as const },
+                  { text: "Specific gaps identified", color: "amber" as const },
+                  { text: "CV optimization tips", color: "purple" as const },
+                  { text: "Interview questions matched to role", color: "cyan" as const },
+                ].map((item) => {
+                  const colorMap = {
+                    green: { bg: "bg-green-500/20", text: "text-green-400" },
+                    amber: { bg: "bg-amber-500/20", text: "text-amber-400" },
+                    purple: { bg: "bg-purple-500/20", text: "text-purple-400" },
+                    cyan: { bg: "bg-cyan-500/20", text: "text-cyan-400" },
+                  };
+                  const classes = colorMap[item.color];
+                  return (
+                    <li key={item.text} className="flex items-center gap-3">
+                      <div className={`h-5 w-5 rounded-full ${classes.bg} flex items-center justify-center`}>
+                        <svg className={`h-3 w-3 ${classes.text}`} fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <span className="text-zinc-300 text-sm">{item.text}</span>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
 
@@ -136,23 +145,23 @@ export default function HowItWorks() {
 
                 <div className="pt-2 border-t border-white/5 space-y-2">
                   <div className="flex items-center gap-2 text-xs">
-                    <span className="text-green-400">+</span>
+                    <span className="text-green-400">✓</span>
                     <span className="text-zinc-400">React, TypeScript, Node.js</span>
                   </div>
                   <div className="flex items-center gap-2 text-xs">
                     <span className="text-amber-400">~</span>
-                    <span className="text-zinc-400">AWS: learning</span>
+                    <span className="text-zinc-400">AWS: learning curve</span>
                   </div>
                   <div className="flex items-center gap-2 text-xs">
-                    <span className="text-red-400">-</span>
-                    <span className="text-zinc-400">No fintech exp.</span>
+                    <span className="text-red-400">✗</span>
+                    <span className="text-zinc-400">No fintech experience</span>
                   </div>
                 </div>
 
                 <div className="pt-3 border-t border-white/5">
-                  <div className="text-xs text-purple-400 mb-1">$ recommendation</div>
+                  <div className="text-xs text-purple-400 mb-1">action_plan</div>
                   <p className="text-xs text-zinc-500 leading-relaxed">
-                    Apply. Add AWS cert. Highlight TypeScript depth in cover letter.
+                    Highlight TypeScript depth. Consider AWS cert. Customize resume.
                   </p>
                 </div>
               </div>

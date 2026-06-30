@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useRef, use } from "react";
-import Script from "next/script";
 import Link from "next/link";
 
 interface RoomInfo {
@@ -22,10 +21,26 @@ export default function InterviewRoomPage({ params }: { params: Promise<{ code: 
   const [role, setRole] = useState<"interviewer" | "candidate">("candidate");
   const [joined, setJoined] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [apiReady, setApiReady] = useState(false);
+  const [apiReady, setApiReady] = useState(() => {
+    return typeof window !== "undefined" && typeof (window as unknown as { JitsiMeetExternalAPI?: unknown }).JitsiMeetExternalAPI !== "undefined";
+  });
   const jitsiContainerRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const jitsiApiRef = useRef<any>(null);
+
+  // Load Jitsi script immediately on mount
+  useEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if ((window as any).JitsiMeetExternalAPI) {
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = "https://meet.jit.si/external_api.js";
+    script.async = true;
+    script.onload = () => setApiReady(true);
+    document.body.appendChild(script);
+  }, []);
 
   useEffect(() => {
     fetch(`/api/interview-rooms/${roomCode}`)
@@ -120,13 +135,7 @@ export default function InterviewRoomPage({ params }: { params: Promise<{ code: 
 
   if (joined) {
     return (
-      <>
-        <Script
-          src="https://meet.jit.si/external_api.js"
-          onLoad={() => setApiReady(true)}
-          strategy="afterInteractive"
-        />
-        <div className="min-h-screen bg-[#0a0a0f] flex flex-col">
+      <div className="min-h-screen bg-[#0a0a0f] flex flex-col">
           {/* Live header */}
           <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/[0.06] bg-[#0a0a0f]/95 backdrop-blur-xl flex-shrink-0">
             <div className="flex items-center gap-3">
@@ -180,7 +189,6 @@ export default function InterviewRoomPage({ params }: { params: Promise<{ code: 
             />
           </div>
         </div>
-      </>
     );
   }
 

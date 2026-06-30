@@ -15,7 +15,7 @@ const PREMIUM_FEATURES = [
   "Unlimited job analyses",
   "Full skill gap breakdown",
   "AI cover letters per job",
-  "Interview prep questions",
+  "Interview prep questions per role",
   "CV optimization suggestions",
   "Priority job alerts",
   "Early access to new features",
@@ -33,7 +33,7 @@ export default function PricingSection() {
   const [annual, setAnnual] = useState(false);
 
   return (
-    <section className="relative py-32 px-6 overflow-hidden">
+    <section className="relative pt-32 pb-40 px-6 overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-b from-[#0a0a0f] via-[#0d0d18] to-[#0a0a0f]" />
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-purple-500/5 blur-[120px] rounded-full pointer-events-none" />
 
@@ -44,10 +44,10 @@ export default function PricingSection() {
             <span className="mono text-xs text-purple-300">Pricing</span>
           </div>
           <h2 className="font-display text-4xl font-bold text-white sm:text-5xl mb-4">
-            Start free. <span className="gradient-text">Scale when it works.</span>
+            Simple plans. <span className="gradient-text">No contracts.</span>
           </h2>
           <p className="text-zinc-400 max-w-lg mx-auto mb-8">
-            Free gets you in the door. Premium makes you competitive. Employers close the loop.
+            Get started for free to test your fit. Upgrade to Premium for unlimited analyses, gap fixes, and interview prep.
           </p>
 
           {/* Billing toggle */}
@@ -115,15 +115,16 @@ export default function PricingSection() {
           </div>
 
           {/* Premium — highlighted */}
-          <div className="rounded-2xl border border-purple-500/30 bg-[#0d0d18] overflow-hidden flex flex-col relative">
-            <div className="h-px w-full bg-gradient-to-r from-transparent via-purple-500/60 to-transparent" />
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2">
+          <div className="relative flex flex-col">
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
               <span className="px-3 py-0.5 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 mono text-[10px] font-bold text-white uppercase tracking-wider">
                 Most popular
               </span>
             </div>
-            <div className="p-7 pt-9 flex flex-col flex-1">
-              <p className="section-label">Premium</p>
+            <div className="rounded-2xl border border-purple-500/30 bg-[#0d0d18] overflow-hidden flex flex-col flex-1 relative">
+              <div className="h-px w-full bg-gradient-to-r from-transparent via-purple-500/60 to-transparent" />
+              <div className="p-7 pt-9 flex flex-col flex-1">
+                <p className="section-label">Premium</p>
               <div className="flex items-baseline gap-1.5 mb-1">
                 <span className="font-display text-4xl font-bold gradient-text">
                   GHS {annual ? "199" : "25"}
@@ -179,6 +180,7 @@ export default function PricingSection() {
               </div>
             </div>
           </div>
+        </div>
 
           {/* Employer */}
           <div className="rounded-2xl border border-cyan-500/20 bg-[#0d0d18] overflow-hidden flex flex-col">

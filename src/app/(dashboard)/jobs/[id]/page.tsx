@@ -211,7 +211,8 @@ export default function JobDetailPage() {
     }
 
     fetchJobFromAPI();
-  }, [analyzeFit, checkApplication, fetchJobFromAPI, jobId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jobId]);
 
   const handleApply = async () => {
     if (!userId || !job) return;

@@ -78,7 +78,7 @@ type SavedJobRecord = Awaited<
   ReturnType<typeof prisma.savedJob.findMany>
 >[number];
 
-type JobSourceName = "adzuna" | "remotive" | "arbeitnow" | "rise" | "jooble" | "remoteok" | "themuse" | "jobicy" | "greenhouse" | "ashby" | "workable" | "smartrecruiters";
+type JobSourceName = "adzuna" | "remotive" | "arbeitnow" | "rise" | "jooble" | "remoteok" | "themuse" | "jobicy" | "greenhouse" | "ashby" | "workable" | "smartrecruiters" | "jobberman" | "employer";
 
 type CachedJobsPayload = {
   jobs: Job[];
@@ -534,10 +534,14 @@ interface GreenhouseJob {
 }
 
 const GREENHOUSE_BOARDS = [
-  { slug: "paystack",    company: "Paystack"   },
-  { slug: "moniepoint", company: "Moniepoint" },
-  { slug: "jumia",      company: "Jumia"      },
-  { slug: "wavemm1",    company: "Wave"       }, // Wave Mobile Money — confirmed 55 jobs, strong Ghana presence
+  { slug: "paystack",     company: "Paystack"   },
+  { slug: "moniepoint",   company: "Moniepoint" },
+  { slug: "jumia",        company: "Jumia"      },
+  { slug: "wavemm1",      company: "Wave"       }, // Wave Mobile Money — confirmed 55 jobs, strong Ghana presence
+  { slug: "zipline",      company: "Zipline"    }, // Zipline Drones — massive Ghana logistics & engineering operations
+  { slug: "alxafrica",    company: "ALX Africa" }, // ALX Africa — tech education operations in Accra
+  { slug: "chipper-cash", company: "Chipper Cash" }, // Chipper Cash — pan-African fintech hq in Ghana
+  { slug: "turing",       company: "Turing"     }, // Turing — remote global tech contracts open to Ghana
 ] as const;
 
 async function fetchFromGreenhouse(savedJobIds: string[]): Promise<Job[]> {
@@ -755,51 +759,58 @@ async function fetchFromWorkable(query: string, savedJobIds: string[]): Promise<
     }
   }
 
-  // Kuda per-company (Nigerian neobank, confirmed 15 jobs)
-  try {
-    const data = (await fetchJsonWithTimeout(
-      "https://apply.workable.com/api/v1/widget/accounts/kuda",
-      { headers: { "User-Agent": "CareerOS/1.0 (careeros.live)" } },
-    )) as {
-      job_openings?: Array<{
-        shortcode?: string;
-        title?: string;
-        department?: string;
-        type?: string;
-        remote?: boolean;
-        location?: { location_str?: string; country_code?: string };
-        url?: string;
-        application_url?: string;
-        created_at?: string;
-        created?: string;
-      }>;
-    };
+  // Company-specific workable boards
+  const workableCompanies: Array<{ slug: string; name: string; defaultCountry: "NG" | "GH" }> = [
+    { slug: "kuda", name: "Kuda", defaultCountry: "NG" },
+    { slug: "fairmoney", name: "FairMoney", defaultCountry: "NG" },
+  ];
 
-    if (Array.isArray(data.job_openings)) {
-      for (const job of data.job_openings) {
-        const id = `workable-kuda-${job.shortcode || job.title?.slice(0, 20)}`;
-        const location = job.location?.location_str || "Nigeria";
-        const cc = job.location?.country_code?.toUpperCase() || getCountry("workable", location);
-        jobs.push({
-          id,
-          title: job.title || "Position",
-          companyName: "Kuda",
-          location,
-          country: cc === "GLOBAL" ? "NG" : cc,
-          workMode: job.remote ? "Remote" : "On-site",
-          seniorityLevel: detectSeniority(job.title || ""),
-          employmentType: job.type || "Full-time",
-          description: "",
-          requirements: job.department || "See job posting for details",
-          postedAt: job.created_at || job.created || new Date().toISOString(),
-          isSaved: savedJobIds.includes(id),
-          applicationUrl: job.application_url || job.url || "#",
-          source: "workable",
-        });
+  for (const comp of workableCompanies) {
+    try {
+      const data = (await fetchJsonWithTimeout(
+        `https://apply.workable.com/api/v1/widget/accounts/${comp.slug}`,
+        { headers: { "User-Agent": "CareerOS/1.0 (careeros.live)" } },
+      )) as {
+        job_openings?: Array<{
+          shortcode?: string;
+          title?: string;
+          department?: string;
+          type?: string;
+          remote?: boolean;
+          location?: { location_str?: string; country_code?: string };
+          url?: string;
+          application_url?: string;
+          created_at?: string;
+          created?: string;
+        }>;
+      };
+
+      if (Array.isArray(data.job_openings)) {
+        for (const job of data.job_openings) {
+          const id = `workable-${comp.slug}-${job.shortcode || job.title?.slice(0, 20)}`;
+          const location = job.location?.location_str || (comp.defaultCountry === "GH" ? "Ghana" : "Nigeria");
+          const cc = job.location?.country_code?.toUpperCase() || getCountry("workable", location);
+          jobs.push({
+            id,
+            title: job.title || "Position",
+            companyName: comp.name,
+            location,
+            country: cc === "GLOBAL" ? comp.defaultCountry : cc,
+            workMode: job.remote ? "Remote" : "On-site",
+            seniorityLevel: detectSeniority(job.title || ""),
+            employmentType: job.type || "Full-time",
+            description: "",
+            requirements: job.department || "See job posting for details",
+            postedAt: job.created_at || job.created || new Date().toISOString(),
+            isSaved: savedJobIds.includes(id),
+            applicationUrl: job.application_url || job.url || "#",
+            source: "workable",
+          });
+        }
       }
+    } catch (err) {
+      console.error(`${comp.name} Workable error:`, err);
     }
-  } catch (err) {
-    console.error("Kuda Workable error:", err);
   }
 
   return jobs;
@@ -870,6 +881,87 @@ async function fetchFromSmartRecruiters(savedJobIds: string[]): Promise<Job[]> {
   return results.flatMap((r) => (r.status === "fulfilled" ? r.value : []));
 }
 
+interface JobbermanItem {
+  item_id: number | string;
+  item_name: string;
+  affiliation?: string;
+  location_id?: string;
+  item_category?: string;
+  item_category2?: string;
+  item_category3?: string;
+  item_category4?: string;
+}
+
+async function fetchFromJobberman(savedJobIds: string[]): Promise<Job[]> {
+  try {
+    const url = "https://www.jobberman.com.gh/jobs";
+    const response = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9",
+      },
+    });
+
+    if (!response.ok) return [];
+    const html = await response.text();
+
+    const gtmMatch = html.match(/const __gtmDataLayer = (\[.*?\]);/);
+    if (!gtmMatch) return [];
+
+    const parsedGtm = JSON.parse(gtmMatch[1]);
+    const items = (parsedGtm[0]?.ecommerce?.items || []) as JobbermanItem[];
+
+    const listingLinks: string[] = [];
+    const linkRegex = /href="(https:\/\/www\.jobberman\.com\.gh\/listings\/[a-zA-Z0-9-]+)"/g;
+    let match;
+    while ((match = linkRegex.exec(html)) !== null) {
+      const linkUrl = match[1];
+      if (!listingLinks.includes(linkUrl)) {
+        listingLinks.push(linkUrl);
+      }
+    }
+
+    const jobs: Job[] = [];
+    items.forEach((item, index: number) => {
+      const itemId = item.item_id;
+      const matchingLink = listingLinks[index] || "https://www.jobberman.com.gh/jobs";
+      const id = `jobberman-${itemId}`;
+      
+      const seniorityMap: Record<string, string> = {
+        "entry level": "Entry-Level",
+        "mid level": "Mid-Level",
+        "senior level": "Senior",
+        "executive level": "Senior",
+      };
+      const rawLevel = (item.item_category4 || "").toLowerCase();
+      const seniorityLevel = seniorityMap[rawLevel] || detectSeniority(item.item_name);
+
+      jobs.push({
+        id,
+        title: item.item_name,
+        companyName: item.affiliation === "Anonymous Employer" ? "Confidential Company" : item.affiliation || "Unknown Company",
+        location: item.location_id || "Ghana",
+        country: "GH",
+        workMode: item.item_category3 || "Full-time",
+        seniorityLevel,
+        employmentType: item.item_category3 || "Full-time",
+        description: `Legit local listing on Jobberman Ghana. Category: ${item.item_category} / ${item.item_category2}.`,
+        requirements: `Functional Area: ${item.item_category}`,
+        postedAt: new Date().toISOString(),
+        isSaved: savedJobIds.includes(id),
+        applicationUrl: matchingLink,
+        source: "jobberman",
+      });
+    });
+
+    return jobs;
+  } catch (error) {
+    console.error("Jobberman scraping error:", error);
+    return [];
+  }
+}
+
 function buildSavedJobMap(
   savedJobs: SavedJobRecord[],
 ): Record<string, SavedJobRecord> {
@@ -902,6 +994,42 @@ async function fetchSearchResults(
   query: string,
   savedJobIds: string[],
 ): Promise<CachedJobsPayload> {
+  // Fetch employer-posted jobs from the database
+  let employerJobs: Job[] = [];
+  try {
+    const dbJobs = await prisma.job.findMany({
+      where: {
+        externalSource: "employer",
+        status: "active",
+      },
+      include: {
+        jobSkills: true,
+      },
+      orderBy: {
+        postedAt: "desc",
+      },
+    });
+
+    employerJobs = dbJobs.map((dbJob) => ({
+      id: dbJob.id,
+      title: dbJob.title,
+      companyName: dbJob.companyName || "Unknown Company",
+      location: dbJob.location || "Ghana",
+      country: dbJob.country || "GH",
+      workMode: dbJob.workMode || "Remote",
+      seniorityLevel: dbJob.seniorityLevel || "Mid-Level",
+      employmentType: dbJob.employmentType || "Full-time",
+      description: dbJob.description || "",
+      requirements: dbJob.jobSkills.map((s) => s.skillName).join(", ") || "See details",
+      postedAt: dbJob.postedAt?.toISOString() || new Date().toISOString(),
+      isSaved: savedJobIds.includes(dbJob.id),
+      applicationUrl: dbJob.applicationUrl || "#",
+      source: "employer",
+    })) as Job[];
+  } catch (error) {
+    console.error("Error fetching employer jobs:", error);
+  }
+
   const providers: Array<{
     source: JobSourceName;
     run: () => Promise<Job[]>;
@@ -918,6 +1046,7 @@ async function fetchSearchResults(
     { source: "ashby",           run: () => fetchFromAshby(savedJobIds) },
     { source: "workable",        run: () => fetchFromWorkable(query, savedJobIds) },
     { source: "smartrecruiters", run: () => fetchFromSmartRecruiters(savedJobIds) },
+    { source: "jobberman",       run: () => fetchFromJobberman(savedJobIds) },
   ];
 
   const results = await Promise.allSettled(
@@ -927,7 +1056,7 @@ async function fetchSearchResults(
     })),
   );
 
-  const allJobs: Job[] = [];
+  const allJobs: Job[] = [...employerJobs];
   const sourcesBreakdown: Record<JobSourceName, number> = {
     adzuna: 0,
     remotive: 0,
@@ -941,6 +1070,8 @@ async function fetchSearchResults(
     ashby: 0,
     workable: 0,
     smartrecruiters: 0,
+    jobberman: 0,
+    employer: employerJobs.length,
   };
   const warnings: string[] = [];
   let partialFailure = false;

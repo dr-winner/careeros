@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const paymentUrl = data.data?.url || data.url || data.data?.link || data.link;
+    const paymentUrl = data.data?.authorization_url || data.data?.url || data.url || data.data?.link || data.link;
     if (!paymentUrl) {
       console.error("Moolre returned POS09 but no URL:", JSON.stringify(data));
       return NextResponse.json(

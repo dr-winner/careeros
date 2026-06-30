@@ -57,8 +57,7 @@ export default function Home() {
         <div className="relative mx-auto max-w-5xl px-6">
           <div className="flex flex-col md:flex-row items-center justify-between gap-8">
             <div className="flex items-center gap-3">
-              <Logo size="sm" variant="icon-only" />
-              <span className="text-base font-semibold text-white">CareerOS</span>
+              <Logo size="md" variant="full" />
               <div className="agent-status rounded-full border border-purple-500/20 bg-purple-500/10 px-3 py-1 ml-4">
                 <div className="status-dot" />
                 <span className="mono text-xs text-purple-300">Agent Online</span>
