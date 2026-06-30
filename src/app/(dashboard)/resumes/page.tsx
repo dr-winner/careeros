@@ -46,42 +46,46 @@ interface UserProfile {
   desiredRole: string | null;
 }
 
-function ScoreRing({ score }: { score: number }) {
-  const r = 52;
+function ScoreRing({ score, size = 128 }: { score: number; size?: number }) {
+  const cx = size / 2;
+  const cy = size / 2;
+  const r = cx - 10;
   const circ = 2 * Math.PI * r;
   const fill = (score / 100) * circ;
   const color = score >= 80 ? "#22c55e" : score >= 60 ? "#8b5cf6" : score >= 40 ? "#f59e0b" : "#ef4444";
   const label = score >= 80 ? "Excellent" : score >= 60 ? "Good" : score >= 40 ? "Fair" : "Needs Work";
+  const sw = size > 140 ? 10 : 8;
+  const scoreFontSize = size > 140 ? 38 : 28;
   return (
-    <div className="flex flex-col items-center gap-2">
-      <svg width="128" height="128" className="rotate-[-90deg]">
-        <circle cx="64" cy="64" r={r} fill="none" stroke="#27272a" strokeWidth="8" />
+    <div className="flex flex-col items-center gap-3">
+      <svg width={size} height={size} className="rotate-[-90deg]">
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke="#27272a" strokeWidth={sw} />
         <circle
-          cx="64" cy="64" r={r} fill="none"
-          stroke={color} strokeWidth="8"
+          cx={cx} cy={cy} r={r} fill="none"
+          stroke={color} strokeWidth={sw}
           strokeDasharray={circ}
           strokeDashoffset={circ - fill}
           strokeLinecap="round"
           style={{ transition: "stroke-dashoffset 0.8s cubic-bezier(.4,0,.2,1)" }}
         />
         <text
-          x="64" y="58"
+          x={cx} y={cy - 10}
           textAnchor="middle" dominantBaseline="middle"
-          fill="#ffffff" fontSize="28" fontWeight="800"
-          style={{ transform: "rotate(90deg)", transformOrigin: "64px 64px" }}
+          fill="#ffffff" fontSize={scoreFontSize} fontWeight="800"
+          style={{ transform: `rotate(90deg)`, transformOrigin: `${cx}px ${cy}px` }}
         >
           {score}
         </text>
         <text
-          x="64" y="80"
+          x={cx} y={cy + 16}
           textAnchor="middle" dominantBaseline="middle"
-          fill="#71717a" fontSize="11"
-          style={{ transform: "rotate(90deg)", transformOrigin: "64px 64px" }}
+          fill="#71717a" fontSize="12"
+          style={{ transform: `rotate(90deg)`, transformOrigin: `${cx}px ${cy}px` }}
         >
           /100
         </text>
       </svg>
-      <span className="text-xs font-semibold mono" style={{ color }}>{label}</span>
+      <span className="text-sm font-bold mono" style={{ color }}>{label}</span>
     </div>
   );
 }
@@ -430,192 +434,190 @@ export default function CVsPage() {
                 </button>
               </div>
             ) : (
-              /* ── Main layout: score hero top, list + tips below ── */
-              <div className="space-y-4">
+              /* ── Centered single-column layout ── */
+              <div className="max-w-2xl mx-auto space-y-5">
 
-                {/* ── SCORE HERO — full width, front and center ── */}
+                {/* ══ SCORE HERO — centered, dominant ══ */}
                 {selectedCV && (
-                  <div className="agent-card p-6 animate-fade-up">
-                    <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
-                      {/* Ring */}
-                      <div className="flex-shrink-0">
-                        <ScoreRing score={cvScore} />
+                  <div className="agent-card p-8 animate-fade-up">
+                    {/* Centered ring */}
+                    <div className="flex flex-col items-center mb-7">
+                      <div className="relative mb-2">
+                        <div className="absolute inset-0 rounded-full blur-2xl opacity-20" style={{ background: cvScore >= 80 ? "#22c55e" : cvScore >= 60 ? "#8b5cf6" : cvScore >= 40 ? "#f59e0b" : "#ef4444" }} />
+                        <ScoreRing score={cvScore} size={168} />
                       </div>
+                      <h2 className="text-base font-semibold text-white mt-2">{selectedCV.originalName}</h2>
+                      <p className="mono text-xs text-zinc-500 mt-0.5">{formatDate(selectedCV.createdAt)} · CV Analysis</p>
+                    </div>
 
-                      {/* Right of ring */}
-                      <div className="flex-1 w-full min-w-0">
-                        <div className="flex items-start justify-between gap-3 flex-wrap mb-4">
-                          <div>
-                            <h2 className="text-lg font-bold text-white">{selectedCV.originalName}</h2>
-                            <p className="mono text-xs text-zinc-500 mt-0.5">{formatDate(selectedCV.createdAt)}</p>
+                    {/* Stat blocks */}
+                    <div className="grid grid-cols-3 gap-3 mb-5">
+                      {[
+                        { label: "Skills", value: selectedCV.skills.length, max: 20, color: "bg-purple-500" },
+                        { label: "Experience", value: selectedCV.experiences.length, max: 5, color: "bg-cyan-500" },
+                        { label: "Education", value: selectedCV.education.length, max: 3, color: "bg-green-500" },
+                      ].map((stat) => (
+                        <div key={stat.label} className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-3 text-center">
+                          <span className="text-2xl font-black text-white">{stat.value}</span>
+                          <div className="mt-1.5 mb-2">
+                            <MiniBar value={stat.value} max={stat.max} color={stat.color} />
                           </div>
-                          <div className="flex items-center gap-2">
-                            {isPremium && selectedCV.parsedText ? (
-                              <>
-                                <button
-                                  onClick={() => setShowRoleSelector(true)}
-                                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-purple-500/30 bg-purple-500/10 text-xs font-medium text-purple-300 hover:bg-purple-500/20 transition-colors"
-                                >
-                                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
-                                  Role Version
-                                </button>
-                                <button
-                                  onClick={regenerateCV}
-                                  disabled={regenerating}
-                                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-cyan-500/30 bg-cyan-500/10 text-xs font-medium text-cyan-300 hover:bg-cyan-500/20 transition-colors disabled:opacity-40"
-                                >
-                                  {regenerating
-                                    ? <div className="h-3.5 w-3.5 rounded-full border-2 border-cyan-500/30 border-t-cyan-400 animate-spin" />
-                                    : <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                                  }
-                                  {regenerating ? "Regenerating…" : "Regenerate CV"}
-                                </button>
-                              </>
-                            ) : !isPremium ? (
-                              <a href="/pricing" className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-purple-500/20 bg-purple-500/8 text-xs text-purple-400 hover:bg-purple-500/15 transition-colors">
-                                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                                Unlock AI Tools
-                              </a>
-                            ) : null}
-                          </div>
+                          <span className="mono text-[10px] text-zinc-500 uppercase tracking-wide">{stat.label}</span>
                         </div>
+                      ))}
+                    </div>
 
-                        {/* Stat bars */}
-                        <div className="grid grid-cols-3 gap-4 mb-4">
-                          {[
-                            { label: "Skills", value: selectedCV.skills.length, max: 20, color: "bg-purple-500" },
-                            { label: "Experience", value: selectedCV.experiences.length, max: 5, color: "bg-cyan-500" },
-                            { label: "Education", value: selectedCV.education.length, max: 3, color: "bg-green-500" },
-                          ].map((stat) => (
-                            <div key={stat.label} className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-3">
-                              <div className="flex items-baseline justify-between mb-2">
-                                <span className="mono text-[10px] text-zinc-500 uppercase tracking-wide">{stat.label}</span>
-                                <span className="text-sm font-bold text-white">{stat.value}</span>
-                              </div>
-                              <MiniBar value={stat.value} max={stat.max} color={stat.color} />
-                            </div>
-                          ))}
-                        </div>
-
-                        {/* Skill chips */}
-                        {selectedCV.skills.length > 0 && (
-                          <div className="flex flex-wrap gap-1.5">
-                            {selectedCV.skills.slice(0, 10).map((s) => (
-                              <span key={s.skillName} className="px-2.5 py-1 rounded-lg text-xs bg-purple-500/10 text-purple-300 border border-purple-500/20">{s.skillName}</span>
-                            ))}
-                            {selectedCV.skills.length > 10 && (
-                              <span className="px-2.5 py-1 rounded-lg text-xs text-zinc-600 border border-white/[0.06]">+{selectedCV.skills.length - 10} more</span>
-                            )}
-                          </div>
+                    {/* Skill chips */}
+                    {selectedCV.skills.length > 0 && (
+                      <div className="flex flex-wrap justify-center gap-1.5 mb-6">
+                        {selectedCV.skills.slice(0, 12).map((s) => (
+                          <span key={s.skillName} className="px-2.5 py-1 rounded-lg text-xs bg-purple-500/10 text-purple-300 border border-purple-500/20">{s.skillName}</span>
+                        ))}
+                        {selectedCV.skills.length > 12 && (
+                          <span className="px-2.5 py-1 rounded-lg text-xs text-zinc-600 border border-white/[0.06]">+{selectedCV.skills.length - 12} more</span>
                         )}
                       </div>
+                    )}
+
+                    {/* Action buttons */}
+                    <div className="flex items-center justify-center gap-3 flex-wrap">
+                      {isPremium && selectedCV.parsedText ? (
+                        <>
+                          <button
+                            onClick={() => setShowRoleSelector(true)}
+                            className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-purple-500/30 bg-purple-500/10 text-sm font-medium text-purple-300 hover:bg-purple-500/20 transition-colors"
+                          >
+                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+                            Role Version
+                          </button>
+                          <button
+                            onClick={regenerateCV}
+                            disabled={regenerating}
+                            className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-cyan-500/30 bg-cyan-500/10 text-sm font-medium text-cyan-300 hover:bg-cyan-500/20 transition-colors disabled:opacity-40"
+                          >
+                            {regenerating
+                              ? <div className="h-4 w-4 rounded-full border-2 border-cyan-500/30 border-t-cyan-400 animate-spin" />
+                              : <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                            }
+                            {regenerating ? "Regenerating…" : "Regenerate CV"}
+                          </button>
+                        </>
+                      ) : !isPremium ? (
+                        <a href="/pricing" className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-purple-500/20 bg-purple-500/8 text-sm text-purple-400 hover:bg-purple-500/15 transition-colors">
+                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                          Unlock AI Tools
+                        </a>
+                      ) : null}
                     </div>
                   </div>
                 )}
 
-                {/* ── CV list + tips side by side ── */}
-                <div className="grid gap-4 lg:grid-cols-[1fr_320px] lg:items-start">
-
-                  {/* CV cards */}
-                  <div className="space-y-3">
-                    {cvs.map((cv) => {
-                      const isSelected = selectedCV?.id === cv.id;
-                      const handleSelect = () => setSelectedCV(cv);
-                      const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
-                        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleSelect(); }
-                      };
-                      return (
-                        <div
-                          key={cv.id}
-                          onClick={handleSelect}
-                          onKeyDown={handleKeyDown}
-                          tabIndex={0}
-                          role="button"
-                          aria-pressed={isSelected}
-                          className={`group rounded-2xl border p-4 transition-all cursor-pointer ${
-                            isSelected
-                              ? "border-purple-500/40 bg-purple-500/[0.06]"
-                              : "border-white/[0.07] bg-[#0d0d18] hover:border-white/[0.14] hover:bg-white/[0.02]"
-                          }`}
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className={`h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${isSelected ? "bg-purple-500/20" : "bg-white/[0.04]"}`}>
-                              <svg className={`h-5 w-5 transition-colors ${isSelected ? "text-purple-400" : "text-zinc-500"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                              </svg>
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                {cv.isPrimary && (
-                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-purple-500/20 border border-purple-500/30 text-purple-400">
-                                    <span className="h-1 w-1 rounded-full bg-purple-400" />Primary
-                                  </span>
-                                )}
-                                <span className="text-sm font-medium text-white truncate">{cv.originalName}</span>
-                              </div>
-                              <p className="mono text-xs text-zinc-600 mt-0.5">{formatDate(cv.createdAt)} · {cv.skills.length} skills</p>
-                            </div>
-                            <div className="flex items-center gap-1.5 flex-shrink-0">
-                              {!cv.isPrimary && (
-                                <button onClick={(e) => { e.stopPropagation(); setPrimary(cv.id); }} className="text-[10px] mono px-2 py-1 rounded-lg border border-white/[0.08] text-zinc-500 hover:border-purple-500/40 hover:text-purple-400 transition-colors">
-                                  Set Primary
-                                </button>
+                {/* ══ CV list ══ */}
+                <div className="space-y-3">
+                  <p className="mono text-[10px] text-zinc-600 uppercase tracking-widest px-1">My CVs ({cvs.length})</p>
+                  {cvs.map((cv) => {
+                    const isSelected = selectedCV?.id === cv.id;
+                    const handleSelect = () => setSelectedCV(cv);
+                    const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+                      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleSelect(); }
+                    };
+                    return (
+                      <div
+                        key={cv.id}
+                        onClick={handleSelect}
+                        onKeyDown={handleKeyDown}
+                        tabIndex={0}
+                        role="button"
+                        aria-pressed={isSelected}
+                        className={`group rounded-2xl border p-4 transition-all cursor-pointer ${
+                          isSelected
+                            ? "border-purple-500/40 bg-purple-500/[0.06]"
+                            : "border-white/[0.07] bg-[#0d0d18] hover:border-white/[0.14] hover:bg-white/[0.02]"
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${isSelected ? "bg-purple-500/20" : "bg-white/[0.04]"}`}>
+                            <svg className={`h-5 w-5 transition-colors ${isSelected ? "text-purple-400" : "text-zinc-500"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              {cv.isPrimary && (
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-purple-500/20 border border-purple-500/30 text-purple-400">
+                                  <span className="h-1 w-1 rounded-full bg-purple-400" />Primary
+                                </span>
                               )}
-                              <button onClick={(e) => { e.stopPropagation(); deleteCV(cv.id); }} disabled={deleting === cv.id} className="text-[10px] mono px-2 py-1 rounded-lg border border-white/[0.08] text-zinc-500 hover:border-red-500/40 hover:text-red-400 transition-colors disabled:opacity-40">
-                                {deleting === cv.id ? "…" : "Delete"}
-                              </button>
+                              <span className="text-sm font-medium text-white truncate">{cv.originalName}</span>
                             </div>
+                            <p className="mono text-xs text-zinc-600 mt-0.5">{formatDate(cv.createdAt)} · {cv.skills.length} skills</p>
+                          </div>
+                          <div className="flex items-center gap-1.5 flex-shrink-0">
+                            {!cv.isPrimary && (
+                              <button onClick={(e) => { e.stopPropagation(); setPrimary(cv.id); }} className="text-[10px] mono px-2 py-1 rounded-lg border border-white/[0.08] text-zinc-500 hover:border-purple-500/40 hover:text-purple-400 transition-colors">
+                                Set Primary
+                              </button>
+                            )}
+                            <button onClick={(e) => { e.stopPropagation(); deleteCV(cv.id); }} disabled={deleting === cv.id} className="text-[10px] mono px-2 py-1 rounded-lg border border-white/[0.08] text-zinc-500 hover:border-red-500/40 hover:text-red-400 transition-colors disabled:opacity-40">
+                              {deleting === cv.id ? "…" : "Delete"}
+                            </button>
                           </div>
                         </div>
-                      );
-                    })}
-
-                    {!showUpload && (
-                      <button onClick={() => setShowUpload(true)} className="w-full rounded-2xl border border-dashed border-white/[0.08] p-4 text-sm text-zinc-600 hover:border-purple-500/30 hover:text-zinc-400 transition-colors flex items-center justify-center gap-2">
-                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4v16m8-8H4" /></svg>
-                        Add another CV version
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Optimization tips + best practices */}
-                  {selectedCV && (
-                    <div className="space-y-3">
-                      <div className="agent-card p-5">
-                        <p className="text-xs font-semibold text-zinc-400 uppercase tracking-widest mono mb-3">Optimization Tips</p>
-                        <div className="space-y-3">
-                          {suggestions.map((item, i) => (
-                            <div key={i} className="flex items-start gap-3">
-                              <div className={`h-5 w-5 rounded flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                                item.priority === "high" ? "bg-red-500/15" : item.priority === "medium" ? "bg-amber-500/15" : "bg-green-500/15"
-                              }`}>
-                                <span className={`text-[9px] font-black ${
-                                  item.priority === "high" ? "text-red-400" : item.priority === "medium" ? "text-amber-400" : "text-green-400"
-                                }`}>{item.priority === "high" ? "!" : item.priority === "medium" ? "~" : "✓"}</span>
-                              </div>
-                              <div className="min-w-0">
-                                <p className="text-xs font-medium text-white leading-snug">{item.issue}</p>
-                                <p className="mono text-[10px] text-zinc-500 mt-0.5 leading-relaxed">{item.suggestion}</p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
                       </div>
+                    );
+                  })}
 
-                      <div className="agent-card p-5">
-                        <p className="text-xs font-semibold text-zinc-400 uppercase tracking-widest mono mb-3">Best Practices</p>
-                        <ul className="space-y-2">
-                          {["Keep to 1–2 pages", "Use job posting keywords", "Quantify achievements", "Start bullets with action verbs", "Proofread carefully"].map((item) => (
-                            <li key={item} className="flex items-start gap-2.5">
-                              <svg className="h-3.5 w-3.5 text-green-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
-                              <span className="mono text-xs text-zinc-500">{item}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    </div>
+                  {!showUpload && (
+                    <button onClick={() => setShowUpload(true)} className="w-full rounded-2xl border border-dashed border-white/[0.08] p-4 text-sm text-zinc-600 hover:border-purple-500/30 hover:text-zinc-400 transition-colors flex items-center justify-center gap-2">
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4v16m8-8H4" /></svg>
+                      Add another CV version
+                    </button>
                   )}
                 </div>
+
+                {/* ══ Optimization Tips ══ */}
+                {selectedCV && (
+                  <div className="agent-card p-5">
+                    <p className="text-xs font-semibold text-zinc-400 uppercase tracking-widest mono mb-4">Optimization Tips</p>
+                    <div className="space-y-4">
+                      {suggestions.map((item, i) => (
+                        <div key={i} className="flex items-start gap-3">
+                          <div className={`h-6 w-6 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                            item.priority === "high" ? "bg-red-500/15" : item.priority === "medium" ? "bg-amber-500/15" : "bg-green-500/15"
+                          }`}>
+                            <span className={`text-[10px] font-black ${
+                              item.priority === "high" ? "text-red-400" : item.priority === "medium" ? "text-amber-400" : "text-green-400"
+                            }`}>{item.priority === "high" ? "!" : item.priority === "medium" ? "~" : "✓"}</span>
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 mb-0.5">
+                              <span className={`mono text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${
+                                item.priority === "high" ? "bg-red-500/10 text-red-400" : item.priority === "medium" ? "bg-amber-500/10 text-amber-400" : "bg-green-500/10 text-green-400"
+                              }`}>{item.priority}</span>
+                              <p className="text-sm font-medium text-white">{item.issue}</p>
+                            </div>
+                            <p className="mono text-xs text-zinc-500 leading-relaxed">{item.suggestion}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* ══ Best Practices ══ */}
+                {selectedCV && (
+                  <div className="agent-card p-5">
+                    <p className="text-xs font-semibold text-zinc-400 uppercase tracking-widest mono mb-4">Best Practices</p>
+                    <ul className="space-y-3">
+                      {["Keep to 1–2 pages", "Use job posting keywords", "Quantify achievements", "Start bullets with action verbs", "Proofread carefully"].map((item) => (
+                        <li key={item} className="flex items-start gap-3">
+                          <svg className="h-4 w-4 text-green-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+                          <span className="mono text-sm text-zinc-400">{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             )}
 
