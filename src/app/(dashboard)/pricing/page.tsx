@@ -5,6 +5,7 @@ import { useAuth } from "@clerk/nextjs";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
+import { usePostHog } from "posthog-js/react";
 
 const FREE_FEATURES = [
   "3 job match analyses per month",
@@ -53,6 +54,7 @@ const FAQS = [
 
 export default function PricingPage() {
   const { userId, isLoaded } = useAuth();
+  const posthog = usePostHog();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
@@ -84,12 +86,12 @@ export default function PricingPage() {
       const res = await fetch("/api/user/premium").catch(() => null);
       if (res?.ok) {
         const d = await res.json();
-        if (d.isPremium) { setIsPremium(true); clearInterval(interval); }
+        if (d.isPremium) { posthog?.capture("premium_activated", { method: "auto_poll" }); setIsPremium(true); clearInterval(interval); }
       }
       if (attempts >= 8) clearInterval(interval);
     }, 2000);
     return () => clearInterval(interval);
-  }, [isSuccess]);
+  }, [isSuccess, posthog]);
 
   const handleManualVerify = async () => {
     if (!paymentRef) return;
@@ -102,6 +104,7 @@ export default function PricingPage() {
       });
       const d = await res.json();
       if (d.isPremium) {
+        posthog?.capture("premium_activated", { method: "manual_verify" });
         setIsPremium(true);
         toast.success("Premium activated!");
       } else {
@@ -125,6 +128,10 @@ export default function PricingPage() {
       });
       const data = await res.json();
       if (!res.ok) { toast.error(data.error || "Could not start payment. Please try again."); return; }
+      posthog?.capture("upgrade_initiated", {
+        plan: annual ? "annual" : "monthly",
+        amount_ghs: annual ? 199 : 25,
+      });
       window.location.href = data.url;
     } catch {
       toast.error("Something went wrong. Please try again.");

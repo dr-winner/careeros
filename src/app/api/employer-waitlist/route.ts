@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/ratelimit";
+import { getPostHogClient } from "@/lib/posthog-server";
 
 const schema = z.object({
   company: z.string().min(1).max(200),
@@ -41,6 +42,17 @@ export async function POST(request: NextRequest) {
 
   // Log to console so it shows in Vercel logs even before we build a proper employer DB table
   console.log("[employer-waitlist]", { company, name, email, role, hiringFor, code });
+
+  const posthog = getPostHogClient();
+  posthog.capture({
+    distinctId: email,
+    event: "employer_waitlist_joined",
+    properties: {
+      company,
+      role: role || null,
+      hiring_for: hiringFor || null,
+    },
+  });
 
   return NextResponse.json({ success: true });
 }

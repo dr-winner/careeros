@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { toast } from "sonner";
+import { usePostHog } from "posthog-js/react";
 
 interface UserProfile {
   fullName: string | null;
@@ -15,6 +16,7 @@ interface UserProfile {
 
 export default function CoverLetterPage() {
   const { userId, isLoaded } = useAuth();
+  const posthog = usePostHog();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
@@ -73,6 +75,12 @@ export default function CoverLetterPage() {
 
       if (response.ok && data.coverLetter) {
         setCoverLetter(data.coverLetter);
+        posthog?.capture("cover_letter_generated", {
+          job_title: formData.jobTitle,
+          company_name: formData.companyName,
+          has_job_description: !!formData.jobDescription,
+          method: "ai",
+        });
         toast.success("Cover letter generated!");
       } else if (data.error === "AI not configured") {
         toast.error("AI not configured. Using template.");
@@ -114,11 +122,21 @@ Thank you for considering my application. I look forward to hearing from you soo
 Sincerely,
 ${name}`;
 
+    posthog?.capture("cover_letter_generated", {
+      job_title: formData.jobTitle,
+      company_name: formData.companyName,
+      has_job_description: !!formData.jobDescription,
+      method: "template",
+    });
     setCoverLetter(letter);
   };
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(coverLetter);
+    posthog?.capture("cover_letter_copied", {
+      job_title: formData.jobTitle,
+      company_name: formData.companyName,
+    });
     setCopied(true);
     toast.success("Copied to clipboard!");
     setTimeout(() => setCopied(false), 2000);

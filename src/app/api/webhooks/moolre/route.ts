@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { parseExternalRef, activateSubscription } from "@/lib/subscription";
+import { getPostHogClient } from "@/lib/posthog-server";
 
 const MOOLRE_BASE =
   process.env.MOOLRE_SANDBOX === "true"
@@ -79,6 +80,17 @@ export async function POST(request: NextRequest) {
     } else {
       console.warn(`Moolre: subscription activated (UNVERIFIED) — ${logSuffix} — manual review recommended`);
     }
+
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: userId,
+      event: "subscription_activated",
+      properties: {
+        billing_cycle: billingCycle,
+        verified,
+        source: "webhook",
+      },
+    });
 
     return NextResponse.json({ received: true });
   } catch (error) {

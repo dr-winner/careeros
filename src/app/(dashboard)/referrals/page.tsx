@@ -3,9 +3,11 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { toast } from "sonner";
+import { usePostHog } from "posthog-js/react";
 
 export default function ReferralPage() {
   const { userId, isLoaded } = useAuth();
+  const posthog = usePostHog();
   const [referralUrl, setReferralUrl] = useState("");
   const [refereeEmail, setRefereeEmail] = useState("");
   const [sending, setSending] = useState(false);
@@ -36,6 +38,7 @@ export default function ReferralPage() {
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(referralUrl);
+    posthog?.capture("referral_link_copied");
     setCopied(true);
     toast.success("Copied!");
     setTimeout(() => setCopied(false), 2000);
@@ -56,6 +59,7 @@ export default function ReferralPage() {
       });
 
       if (response.ok) {
+        posthog?.capture("referral_invite_sent");
         toast.success("Invitation sent!");
         setRefereeEmail("");
       } else {
