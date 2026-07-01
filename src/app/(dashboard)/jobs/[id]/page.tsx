@@ -219,7 +219,10 @@ export default function JobDetailPage() {
 
     // Open company site immediately — don't make the user wait for the DB write
     if (job.applicationUrl) {
-      window.open(job.applicationUrl, "_blank", "noopener,noreferrer");
+      const url = job.applicationUrl.startsWith("http://") || job.applicationUrl.startsWith("https://") || job.applicationUrl.startsWith("mailto:")
+        ? job.applicationUrl
+        : `https://${job.applicationUrl}`;
+      window.open(url, "_blank", "noopener,noreferrer");
     }
 
     if (hasApplied) return; // already tracked, just open the URL

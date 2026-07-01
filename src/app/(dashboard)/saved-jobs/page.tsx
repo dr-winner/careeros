@@ -286,7 +286,11 @@ export default function SavedPage() {
                       <div className="flex items-center gap-2 flex-shrink-0">
                         {job.applicationUrl && (
                           <a
-                            href={job.applicationUrl}
+                            href={
+                              job.applicationUrl.startsWith("http://") || job.applicationUrl.startsWith("https://") || job.applicationUrl.startsWith("mailto:")
+                                ? job.applicationUrl
+                                : `https://${job.applicationUrl}`
+                            }
                             target="_blank"
                             rel="noopener noreferrer"
                             className="agent-button-primary text-xs px-3 py-1.5 press-scale"

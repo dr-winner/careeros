@@ -4,6 +4,7 @@ import Nav from "./components/nav";
 import Hero from "./components/hero";
 import HowItWorks from "./components/how-it-works";
 import FeaturesSection from "./components/features-section";
+import LeadMagnet from "./components/lead-magnet";
 import WhySection from "./components/why-section";
 import PricingSection from "./components/pricing-section";
 import CTA from "./components/cta";
@@ -41,6 +42,7 @@ export default function Home() {
         <main>
           <Hero />
           <FeaturesSection />
+          <LeadMagnet />
           <HowItWorks />
           <WhySection />
           <PricingSection />
