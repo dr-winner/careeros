@@ -2,7 +2,7 @@ export default function WhySection() {
   const stats = [
     { value: "73%", label: "of applications never get a response" },
     { value: "9+", label: "live job sources aggregated" },
-    { value: "GHS 99", label: "one-time — lifetime access" },
+    { value: "Free", label: "to get started" },
   ];
 
   return (
