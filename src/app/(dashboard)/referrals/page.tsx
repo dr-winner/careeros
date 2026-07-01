@@ -140,6 +140,42 @@ export default function ReferralPage() {
               )}
             </button>
           </div>
+
+          {referralUrl && (
+            <div className="mt-5 pt-5 border-t border-white/[0.06] flex items-center justify-between gap-3 flex-wrap animate-fade-up">
+              <span className="mono text-[10px] text-zinc-500">Quick Share:</span>
+              <div className="flex gap-2">
+                <a
+                  href={`https://api.whatsapp.com/send?text=${encodeURIComponent(
+                    `I'm using CareerOS to analyze my CV match score and fix skill gaps for job openings in Ghana. Test your CV fit for free here: ${referralUrl}`
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-green-500/10 border border-green-500/20 px-3 py-1.5 text-xs text-green-400 hover:bg-green-500/20 transition-all press-scale"
+                >
+                  WhatsApp
+                </a>
+                <a
+                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(
+                    `Stop applying blind. Score your CV fit for free using @careeros_live before you apply to jobs: ${referralUrl}`
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-sky-500/10 border border-sky-500/20 px-3 py-1.5 text-xs text-sky-400 hover:bg-sky-500/20 transition-all press-scale"
+                >
+                  Twitter (X)
+                </a>
+                <a
+                  href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(referralUrl)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-blue-500/10 border border-blue-500/20 px-3 py-1.5 text-xs text-blue-400 hover:bg-blue-500/20 transition-all press-scale"
+                >
+                  LinkedIn
+                </a>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

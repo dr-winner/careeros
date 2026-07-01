@@ -555,7 +555,11 @@ export default function JobsPage() {
                       View Details
                     </Link>
                     <a
-                      href={job.applicationUrl}
+                      href={
+                        job.applicationUrl?.startsWith("http://") || job.applicationUrl?.startsWith("https://") || job.applicationUrl?.startsWith("mailto:")
+                          ? job.applicationUrl
+                          : `https://${job.applicationUrl}`
+                      }
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex-1 text-center py-2 rounded-lg agent-button-primary text-xs font-medium"

@@ -507,6 +507,27 @@ export default function DashboardPage() {
               ))}
             </div>
           </div>
+
+          {/* Referral Promo Box */}
+          <div className="rounded-2xl border border-green-500/20 bg-green-500/5 p-5 relative overflow-hidden group">
+            <div className="absolute -right-4 -bottom-4 text-5xl opacity-10 select-none group-hover:scale-110 transition-transform duration-300 pointer-events-none">🎁</div>
+            <h4 className="text-sm font-semibold text-white mb-1.5 flex items-center gap-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
+              Earn Free Analyses
+            </h4>
+            <p className="text-xs text-zinc-400 leading-relaxed mb-4">
+              Invite friends to CareerOS. When they join and run a fit check, you instantly get 1 bonus match check added to your quota!
+            </p>
+            <Link
+              href="/referrals"
+              className="inline-flex items-center gap-1 text-xs text-green-400 hover:text-green-300 font-medium transition-colors"
+            >
+              Get invite link
+              <svg className="h-3 w-3 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </Link>
+          </div>
         </div>
 
         {/* Progress analytics — only shown once user has activity */}
