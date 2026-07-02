@@ -53,6 +53,7 @@ export default function CVUpload({ onUploadSuccess, onAnalysisStart }: CVUploadP
   const [selectedFileName, setSelectedFileName] = useState("");
   const [selectedFileSize, setSelectedFileSize] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isUploadingRef = useRef(false);
   const posthog = usePostHog();
 
   const resetFileInput = useCallback(() => {
@@ -69,6 +70,8 @@ export default function CVUpload({ onUploadSuccess, onAnalysisStart }: CVUploadP
 
   const handleFile = useCallback(
     async (selectedFile: File) => {
+      if (isUploadingRef.current) return;
+
       const validationError = validateFile(selectedFile);
 
       if (validationError) {
@@ -82,6 +85,7 @@ export default function CVUpload({ onUploadSuccess, onAnalysisStart }: CVUploadP
       setSelectedFileName(selectedFile.name);
       setSelectedFileSize(formatFileSize(selectedFile.size));
       setUploading(true);
+      isUploadingRef.current = true;
 
       try {
         const formData = new FormData();
@@ -126,6 +130,7 @@ export default function CVUpload({ onUploadSuccess, onAnalysisStart }: CVUploadP
         toast.error(message);
       } finally {
         setUploading(false);
+        isUploadingRef.current = false;
       }
     },
     [clearSelectedFile, onUploadSuccess, onAnalysisStart, posthog],
