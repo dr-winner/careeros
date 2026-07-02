@@ -78,7 +78,7 @@ export default function Home() {
 
           <div className="mt-10 pt-8 border-t border-white/5 text-center">
             <p className="mono text-xs text-zinc-600">
-              Built for African job seekers. Powered by AI &amp; <span className="text-purple-500">Moolre</span>.
+              Built for African job seekers. Powered by AI.
             </p>
             <p className="mono text-xs text-zinc-700 mt-2">
               &copy; {new Date().getFullYear()} CareerOS. All rights reserved.
