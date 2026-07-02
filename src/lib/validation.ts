@@ -37,6 +37,17 @@ export const profileUpdateSchema = z
     experience: nullableTrimmedString,
     desiredRole: nullableTrimmedString,
     roleType: nullableTrimmedString,
+    momoNumber: z
+      .string()
+      .trim()
+      .regex(/^0\d{9}$/, "Enter a valid MoMo number, e.g. 0241234567")
+      .nullable()
+      .optional(),
+    momoChannel: z
+      .union([z.literal(1), z.literal(6), z.literal(7)])
+      .nullable()
+      .optional(),
+    smsAlerts: z.boolean().optional(),
   })
   .refine(
     (data) => Object.values(data).some((value) => value !== undefined),

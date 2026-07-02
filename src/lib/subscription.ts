@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { processReferralReward } from "@/lib/referral-reward";
 
 // Parse externalref formats:
 //   new: co-{userId}-{planCode}-{timestamp}  (planCode = "m" | "a")
@@ -53,4 +54,8 @@ export async function activateSubscription(
       currentPeriodEnd:   end,
     },
   });
+
+  // Pay the referrer (if any) via Moolre Disbursements. Never blocks or
+  // fails activation — processReferralReward catches its own errors.
+  await processReferralReward(userId);
 }

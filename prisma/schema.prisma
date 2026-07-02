@@ -12,6 +12,9 @@ model User {
   fullName       String?
   email          String        @unique
   phone          String?
+  momoNumber     String?       // mobile money wallet for referral payouts
+  momoChannel    Int?          // Moolre channel: 1=MTN, 6=Telecel, 7=AirtelTigo
+  smsAlerts      Boolean       @default(false)
   country        String?       @default("Ghana")
   roleType       String?
   headline       String?
@@ -227,12 +230,18 @@ model Referral {
   referrerId   String
   refereeEmail String
   referralCode String
-  status       String   @default("pending")
+  status       String   @default("pending") // "pending" | "converted"
+  rewardStatus String   @default("none")    // "none" | "processing" | "paid" | "failed" | "unpayable"
+  rewardAmount Float?
+  rewardTxRef  String?  @unique
+  rewardPaidAt DateTime?
+  convertedAt  DateTime?
   createdAt    DateTime @default(now())
   user         User     @relation(fields: [referrerId], references: [id], onDelete: Cascade)
 
   @@unique([referrerId, refereeEmail])
   @@index([referralCode])
+  @@index([refereeEmail])
 }
 
 model InterviewSession {

@@ -36,16 +36,32 @@ export async function GET() {
     const referralCode = buildReferralCode(user.id);
     const referralUrl = `${getBaseUrl()}/?ref=${encodeURIComponent(referralCode)}`;
 
-    const referralCount = await prisma.referral.count({
-      where: {
-        referrerId: user.id,
-      },
+    const [referralCount, convertedCount, rewards] = await Promise.all([
+      prisma.referral.count({
+        where: { referrerId: user.id },
+      }),
+      prisma.referral.count({
+        where: { referrerId: user.id, status: "converted" },
+      }),
+      prisma.referral.aggregate({
+        where: { referrerId: user.id, rewardStatus: "paid" },
+        _sum: { rewardAmount: true },
+      }),
+    ]);
+
+    const pendingRewards = await prisma.referral.aggregate({
+      where: { referrerId: user.id, rewardStatus: { in: ["unpayable", "failed", "processing"] } },
+      _sum: { rewardAmount: true },
     });
 
     return NextResponse.json({
       referralCode,
       referralUrl,
       referralCount,
+      convertedCount,
+      earnedGhs: rewards._sum.rewardAmount ?? 0,
+      pendingGhs: pendingRewards._sum.rewardAmount ?? 0,
+      hasPayoutWallet: Boolean(user.momoNumber && user.momoChannel),
     });
   } catch (error) {
     console.error("Error getting referral:", error);

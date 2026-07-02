@@ -33,6 +33,9 @@ export default function ProfilePage() {
     headline: "",
     experience: "",
     desiredRole: "",
+    momoNumber: "",
+    momoChannel: 0,
+    smsAlerts: false,
   });
 
   useEffect(() => {
@@ -55,6 +58,9 @@ export default function ProfilePage() {
           headline: data.user?.headline || "",
           experience: data.user?.experience || "",
           desiredRole: data.user?.desiredRole || "",
+          momoNumber: data.user?.momoNumber || "",
+          momoChannel: data.user?.momoChannel || 0,
+          smsAlerts: data.user?.smsAlerts || false,
         });
       }
     } catch (error) {
@@ -70,11 +76,26 @@ export default function ProfilePage() {
       const response = await fetch("/api/user/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          momoNumber: formData.momoNumber || null,
+          momoChannel: formData.momoChannel || null,
+        }),
       });
 
       if (response.ok) {
-        toast.success("Profile updated!");
+        const data = (await response.json().catch(() => ({}))) as {
+          walletName?: string | null;
+          rewardsPaid?: number;
+        };
+        if (data.walletName) {
+          toast.success(`Profile updated! Wallet verified: ${data.walletName}`);
+        } else {
+          toast.success("Profile updated!");
+        }
+        if (data.rewardsPaid) {
+          toast.success(`${data.rewardsPaid} pending referral reward${data.rewardsPaid > 1 ? "s" : ""} sent to your MoMo!`);
+        }
         await fetchProfile();
       } else {
         const data = (await response.json().catch(() => ({}))) as { error?: string };
@@ -236,6 +257,84 @@ export default function ProfilePage() {
                 className="agent-input"
               />
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Payouts & notifications */}
+      <div className="animate-fade-up delay-200 rounded-2xl border border-white/[0.08] bg-[#0d0d18] p-6">
+        <p className="section-label">Payouts &amp; Notifications</p>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          <div className="space-y-4">
+            <div>
+              <label className="block mb-2 text-sm font-medium text-zinc-400">
+                Mobile Money Number
+                <span className="text-zinc-600 font-normal ml-1">— for referral cash rewards</span>
+              </label>
+              <input
+                type="tel"
+                value={formData.momoNumber}
+                onChange={(e) => setFormData({ ...formData, momoNumber: e.target.value.trim() })}
+                placeholder="e.g. 0241234567"
+                className="agent-input"
+              />
+              <p className="mono text-xs text-zinc-600 mt-1">
+                Earn GHS 5 per friend who goes Premium — paid instantly via Moolre
+              </p>
+            </div>
+            <div>
+              <label className="block mb-2 text-sm font-medium text-zinc-400">Network</label>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { id: 1, label: "MTN" },
+                  { id: 6, label: "Telecel" },
+                  { id: 7, label: "AirtelTigo" },
+                ].map((n) => (
+                  <button
+                    key={n.id}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, momoChannel: n.id })}
+                    className={`rounded-lg px-2 py-2.5 mono text-xs transition-all border ${
+                      formData.momoChannel === n.id
+                        ? "border-purple-500/50 bg-purple-500/15 text-purple-300"
+                        : "border-white/[0.08] bg-white/[0.03] text-zinc-500 hover:text-zinc-300"
+                    }`}
+                  >
+                    {n.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div>
+            <label className="block mb-2 text-sm font-medium text-zinc-400">SMS Job Alerts</label>
+            <button
+              type="button"
+              onClick={() => setFormData({ ...formData, smsAlerts: !formData.smsAlerts })}
+              className={`w-full rounded-xl border p-4 text-left transition-all ${
+                formData.smsAlerts
+                  ? "border-green-500/30 bg-green-500/[0.06]"
+                  : "border-white/[0.08] bg-white/[0.03]"
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className={`text-sm font-medium ${formData.smsAlerts ? "text-green-400" : "text-zinc-300"}`}>
+                    {formData.smsAlerts ? "SMS alerts on" : "SMS alerts off"}
+                  </p>
+                  <p className="mono text-xs text-zinc-600 mt-1">
+                    Get your daily job matches by text — uses your phone number above
+                  </p>
+                </div>
+                <div className={`h-6 w-11 rounded-full p-0.5 transition-colors flex-shrink-0 ${
+                  formData.smsAlerts ? "bg-green-500/60" : "bg-zinc-700"
+                }`}>
+                  <div className={`h-5 w-5 rounded-full bg-white transition-transform ${
+                    formData.smsAlerts ? "translate-x-5" : ""
+                  }`} />
+                </div>
+              </div>
+            </button>
           </div>
         </div>
       </div>

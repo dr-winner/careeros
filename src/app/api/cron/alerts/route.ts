@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { isValidCronSecret } from "@/lib/validation";
 import { readEnv, getEmailFrom } from "@/lib/env";
+import { sendSms, isMoolreSmsConfigured } from "@/lib/moolre";
 
 const resendApiKey = readEnv("RESEND_API_KEY");
 const resend = resendApiKey ? new Resend(resendApiKey) : null;
@@ -21,6 +22,8 @@ type SavedSearchWithUser = SavedSearchRecord & {
     id: string;
     email: string;
     fullName: string | null;
+    phone: string | null;
+    smsAlerts: boolean;
   };
 };
 
@@ -305,12 +308,13 @@ export async function GET(request: NextRequest) {
     const searches = await prisma.savedSearch.findMany({
       where: { alertEnabled: true },
       include: {
-        user: { select: { id: true, email: true, fullName: true } },
+        user: { select: { id: true, email: true, fullName: true, phone: true, smsAlerts: true } },
       },
       orderBy: [{ createdAt: "asc" }],
     });
 
     let emailsSent = 0;
+    let smsSent = 0;
     let searchesChecked = 0;
     let searchesMatched = 0;
 
@@ -351,6 +355,28 @@ export async function GET(request: NextRequest) {
         });
 
         emailsSent++;
+
+        // SMS channel via Moolre — reaches users who don't check email.
+        // Opt-in (smsAlerts) and requires a phone number on the profile.
+        if (search.user.smsAlerts && search.user.phone && isMoolreSmsConfigured()) {
+          const topJob = matchedJobs[0];
+          const others = matchedJobs.length - 1;
+          const smsBody =
+            `CareerOS: ${matchedJobs.length} new job${matchedJobs.length !== 1 ? "s" : ""} for "${search.searchQuery}". ` +
+            `Top match: ${topJob.title} at ${topJob.companyName}` +
+            (others > 0 ? ` +${others} more` : "") +
+            `. ${baseUrl}/alerts`;
+
+          try {
+            const sms = await sendSms([
+              { recipient: search.user.phone, message: smsBody, ref: `alert-${search.id}-${now.getTime()}` },
+            ]);
+            if (sms.ok) smsSent++;
+            else console.error(`SMS alert failed for search ${search.id}: ${sms.code}`);
+          } catch (smsError) {
+            console.error(`SMS alert error for search ${search.id}:`, smsError);
+          }
+        }
       } catch (error) {
         console.error(`Error processing search ${search.id}:`, error);
       }
@@ -361,6 +387,7 @@ export async function GET(request: NextRequest) {
       searchesChecked,
       searchesMatched,
       emailsSent,
+      smsSent,
       timestamp: now.toISOString(),
     });
   } catch (error) {

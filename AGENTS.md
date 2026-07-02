@@ -41,6 +41,13 @@ The app uses a deep dark theme with purple/cyan accents inspired by zo.computer:
 - PDF extraction: Use `unpdf` (not `pdfjs-dist` - doesn't work in Next.js server context)
 - API: `getDocumentProxy(buffer)` → `numPages`, `getPage()` → `extractText(page)`
 
+## Moolre Integrations (docs: https://docs.moolre.com/llms-full.txt)
+- Shared client: `src/lib/moolre.ts` (SMS, disbursements, direct MoMo collection, name validation, tx status)
+- Collections: hosted payment link (`/api/payment/create-link`) + direct MoMo USSD prompt (`/api/payment/momo-charge`); both use `co-{userId}-{planCode}-{ts}` externalref so the webhook (`/api/webhooks/moolre`) and `/api/payment/verify` activate either flow
+- Disbursements: GHS 5 referral reward to referrer's MoMo when referee goes Premium — `src/lib/referral-reward.ts`, triggered from `activateSubscription`; retries when a wallet is added via profile PATCH
+- SMS: daily job alerts channel in `/api/cron/alerts` (opt-in via `User.smsAlerts` + phone); requires `MOOLRE_API_VASKEY` + approved `MOOLRE_SMS_SENDER_ID`
+- Channels: transfers/validate use MTN=1, Telecel=6, AT=7; direct collections map MTN to 13 (handled in `initiateMomoPayment`)
+
 ## Quality Checks
 Run `npm run check` before every push (includes typecheck, lint, tests, build)
 

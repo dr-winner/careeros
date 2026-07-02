@@ -13,6 +13,13 @@ export default function ReferralPage() {
   const [sending, setSending] = useState(false);
   const [copied, setCopied] = useState(false);
   const [loadingUrl, setLoadingUrl] = useState(true);
+  const [stats, setStats] = useState({
+    referralCount: 0,
+    convertedCount: 0,
+    earnedGhs: 0,
+    pendingGhs: 0,
+    hasPayoutWallet: false,
+  });
 
   useEffect(() => {
     if (userId) {
@@ -28,6 +35,13 @@ export default function ReferralPage() {
       if (response.ok) {
         const data = await response.json();
         setReferralUrl(data.referralUrl);
+        setStats({
+          referralCount: data.referralCount || 0,
+          convertedCount: data.convertedCount || 0,
+          earnedGhs: data.earnedGhs || 0,
+          pendingGhs: data.pendingGhs || 0,
+          hasPayoutWallet: Boolean(data.hasPayoutWallet),
+        });
       }
     } catch (error) {
       console.error("Error fetching referral:", error);
@@ -88,8 +102,36 @@ export default function ReferralPage() {
       {/* Page header */}
       <div className="animate-fade-up">
         <h1 className="text-2xl font-bold gradient-text">Refer &amp; Earn</h1>
-        <p className="text-sm text-zinc-400 mt-0.5">Share CareerOS and grow the community</p>
+        <p className="text-sm text-zinc-400 mt-0.5">
+          Earn GHS 5 to your MoMo for every friend who goes Premium — paid via Moolre
+        </p>
       </div>
+
+      {/* Earnings stats */}
+      <div className="animate-fade-up delay-100 grid grid-cols-3 gap-3">
+        {[
+          { label: "Invited", value: String(stats.referralCount), accent: "text-white" },
+          { label: "Went Premium", value: String(stats.convertedCount), accent: "text-purple-400" },
+          { label: "Earned", value: `GHS ${stats.earnedGhs}`, accent: "text-green-400" },
+        ].map((s) => (
+          <div key={s.label} className="rounded-2xl border border-white/[0.08] bg-[#0d0d18] p-4 text-center">
+            <p className={`text-xl font-bold ${s.accent}`}>{s.value}</p>
+            <p className="mono text-[10px] text-zinc-500 mt-1">{s.label}</p>
+          </div>
+        ))}
+      </div>
+
+      {stats.pendingGhs > 0 && !stats.hasPayoutWallet && (
+        <div className="animate-fade-up rounded-xl border border-amber-500/20 bg-amber-500/[0.06] p-4">
+          <p className="text-sm text-amber-300">
+            You have GHS {stats.pendingGhs} in rewards waiting.{" "}
+            <a href="/profile" className="underline hover:text-amber-200">
+              Add your MoMo number
+            </a>{" "}
+            to receive them instantly.
+          </p>
+        </div>
+      )}
 
       {/* Referral link — hero card */}
       <div className="animate-fade-up delay-100 rounded-2xl overflow-hidden border border-green-500/20 bg-[#0d0d18]">
