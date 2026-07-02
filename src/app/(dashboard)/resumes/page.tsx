@@ -215,6 +215,7 @@ export default function CVsPage() {
   const createRoleVersion = async (role: string) => {
     if (!selectedCV?.parsedText) { toast.error("Upload a CV first"); return; }
     if (!isPremium) { toast.success("Please upgrade to create role-specific versions"); return; }
+    if (tailoringForJob) return;
     setTailoringForJob(true);
     try {
       const response = await fetch("/api/cv-regenerate", {
@@ -234,6 +235,7 @@ export default function CVsPage() {
   const regenerateCV = async () => {
     if (!selectedCV?.parsedText) { toast.error("Upload a CV first"); return; }
     if (!isPremium) { toast.error("Upgrade to Premium to regenerate your CV"); return; }
+    if (regenerating) return;
     setRegenerating(true);
     try {
       const response = await fetch("/api/cv-regenerate", {
@@ -252,6 +254,7 @@ export default function CVsPage() {
 
   const generateCoverLetter = async () => {
     if (!coverForm.jobTitle || !coverForm.companyName) { toast.error("Fill in job title and company name"); return; }
+    if (generating) return;
     setGenerating(true);
     try {
       const response = await fetch("/api/ai/cover-letter", {

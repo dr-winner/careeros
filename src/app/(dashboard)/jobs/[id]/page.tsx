@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useParams } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
@@ -74,6 +74,7 @@ export default function JobDetailPage() {
     gaps: string;
     recommendation: string;
   } | null>(null);
+  const savingRef = useRef(false);
 
   const jobId = useMemo(() => {
     if (!params?.id) return "";
@@ -215,7 +216,7 @@ export default function JobDetailPage() {
   }, [jobId]);
 
   const handleApply = async () => {
-    if (!userId || !job) return;
+    if (!userId || !job || applying) return;
 
     // Open company site immediately — don't make the user wait for the DB write
     if (job.applicationUrl) {
@@ -258,7 +259,8 @@ export default function JobDetailPage() {
 
   const toggleSave = async () => {
     if (!userId || !job) return;
-
+    if (savingRef.current) return;
+    savingRef.current = true;
     try {
       const response = await fetch("/api/jobs/save", {
         method: "POST",
@@ -282,6 +284,8 @@ export default function JobDetailPage() {
       }
     } catch (error) {
       console.error("Error saving job:", error);
+    } finally {
+      savingRef.current = false;
     }
   };
 

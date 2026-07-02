@@ -131,6 +131,7 @@ export default function JobsPage() {
   const [hasMore, setHasMore] = useState(true);
   const [totalJobs, setTotalJobs] = useState(0);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const savingRefs = useRef<Record<string, boolean>>({});
 
   const LIST_CACHE_KEY = "careeros-jobs-list-v1";
   const LIST_CACHE_TTL = 5 * 60 * 1000; // 5 min — matches server-side TTL
@@ -279,6 +280,8 @@ export default function JobsPage() {
 
   const toggleSave = async (jobId: string) => {
     if (!userId) return;
+    if (savingRefs.current[jobId]) return;
+    savingRefs.current[jobId] = true;
     try {
       const job = jobs.find((j) => j.id === jobId);
       const response = await fetch("/api/jobs/save", {
@@ -308,6 +311,8 @@ export default function JobsPage() {
       }
     } catch {
       toast.error("Failed to save job. Please try again.");
+    } finally {
+      savingRefs.current[jobId] = false;
     }
   };
 
