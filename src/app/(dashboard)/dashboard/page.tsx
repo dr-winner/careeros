@@ -368,21 +368,39 @@ export default function DashboardPage() {
             </div>
             <div className="space-y-2">
               {[
-                { step: "1", label: "Upload your CV", desc: "Lets AI extract your skills for matching", href: "/resumes" },
-                { step: "2", label: "Browse jobs", desc: "Find roles and see your fit score", href: "/jobs" },
-                { step: "3", label: "Apply with confidence", desc: "Generate a cover letter, prep for interviews", href: "/resumes?tab=cover-letter" },
+                { step: "1", label: "Upload your CV", desc: "Lets AI extract your skills for matching", href: "/resumes", done: analytics.resumeCount > 0 },
+                { step: "2", label: "Browse jobs", desc: "Find roles and see your fit score", href: "/jobs", done: false },
+                { step: "3", label: "Apply with confidence", desc: "Generate a cover letter, prep for interviews", href: "/resumes?tab=cover-letter", done: false },
               ].map((item) => (
                 <a
                   key={item.step}
                   href={item.href}
-                  className="flex items-center gap-4 rounded-xl border border-white/[0.06] bg-white/[0.03] p-3.5 hover:border-amber-500/20 hover:bg-amber-500/5 transition-all group"
+                  className={`flex items-center gap-4 rounded-xl border p-3.5 transition-all group ${
+                    item.done
+                      ? "border-green-500/15 bg-green-500/[0.04]"
+                      : "border-white/[0.06] bg-white/[0.03] hover:border-amber-500/20 hover:bg-amber-500/5"
+                  }`}
                 >
-                  <div className="h-8 w-8 rounded-full border border-amber-500/30 bg-amber-500/10 flex items-center justify-center flex-shrink-0">
-                    <span className="mono text-xs font-bold text-amber-400">{item.step}</span>
+                  <div className={`h-8 w-8 rounded-full border flex items-center justify-center flex-shrink-0 ${
+                    item.done
+                      ? "border-green-500/30 bg-green-500/10"
+                      : "border-amber-500/30 bg-amber-500/10"
+                  }`}>
+                    {item.done ? (
+                      <svg className="h-4 w-4 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                      </svg>
+                    ) : (
+                      <span className="mono text-xs font-bold text-amber-400">{item.step}</span>
+                    )}
                   </div>
                   <div className="flex-1">
-                    <div className="text-sm font-medium text-white">{item.label}</div>
-                    <div className="mono text-xs text-zinc-500 mt-0.5">{item.desc}</div>
+                    <div className={`text-sm font-medium ${item.done ? "text-zinc-400 line-through decoration-zinc-600" : "text-white"}`}>
+                      {item.label}
+                    </div>
+                    <div className="mono text-xs text-zinc-500 mt-0.5">
+                      {item.done ? "Done — your skills are extracted and ready" : item.desc}
+                    </div>
                   </div>
                   <svg className="h-4 w-4 text-zinc-600 group-hover:text-amber-400/60 group-hover:translate-x-0.5 transition-all" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />

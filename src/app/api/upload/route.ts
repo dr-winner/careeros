@@ -163,34 +163,51 @@ function parseCVText(text: string): ParsedResumeData {
   };
 }
 
-async function extractSkillsWithAI(resumeId: string, text: string): Promise<void> {
+// Extracts skills, experience, and education in one AI call. The regex
+// parser needs newline-separated lines, which PDF extraction often doesn't
+// produce — so experience/education silently came out empty. AI fills in
+// whichever sections the parser missed (needsExperience/needsEducation).
+async function extractProfileWithAI(
+  resumeId: string,
+  text: string,
+  options: { needsExperience: boolean; needsEducation: boolean },
+): Promise<void> {
   try {
     const { text: aiText } = await generateWithFallback(
-      `Extract all skills from this CV. Include:
+      `Extract structured data from this CV.
+
+Skills — include:
 - Technical: programming languages, frameworks, libraries, databases, cloud platforms, tools
 - Domain: industries, methodologies, certifications, standards
 - Soft skills: leadership, communication, project management (only if explicitly mentioned)
 
+Experience — every job/role held, most recent first.
+Education — every institution attended.
+
 CV TEXT:
 ${text.substring(0, 6000)}
 
-Return ONLY JSON: {"skills": ["React", "Node.js", "AWS", "PostgreSQL", "Agile", "Team Leadership"]}
-Rules: each skill is 1-5 words, proper casing (React not react), no duplicates, 10-40 skills total.`,
-      "You are a skill extraction expert. Return ONLY valid JSON with a skills array. No explanations.",
-      { maxTokens: 600, temperature: 0.1, json: true },
+Return ONLY JSON:
+{"skills": ["React", "Team Leadership"], "experience": [{"title": "Social Media Manager", "company": "Acme Ltd"}], "education": [{"institution": "University of Ghana", "degree": "BSc Marketing"}]}
+Rules: skills are 1-5 words each, proper casing, no duplicates, 10-40 total. Use null for unknown company/degree. Empty arrays if a section is absent.`,
+      "You are a CV data extraction expert. Return ONLY valid JSON with skills, experience, and education. No explanations.",
+      { maxTokens: 900, temperature: 0.1, json: true },
     );
 
-    let skills: string[];
+    let parsed: {
+      skills?: string[];
+      experience?: { title?: string; company?: string | null }[];
+      education?: { institution?: string; degree?: string | null }[];
+    };
     try {
-      const parsed = JSON.parse(aiText);
-      skills = Array.isArray(parsed) ? parsed : (parsed.skills as string[]) || [];
+      parsed = JSON.parse(aiText);
     } catch {
-      const match = aiText.match(/\[[\s\S]*\]/);
+      const match = aiText.match(/\{[\s\S]*\}/);
       if (!match) return;
-      skills = JSON.parse(match[0]) as string[];
+      parsed = JSON.parse(match[0]);
     }
 
-    const cleanSkills = skills
+    const cleanSkills = (parsed.skills || [])
       .filter((s) => typeof s === "string" && s.trim().length > 1 && s.trim().length < 60)
       .map((s) => s.trim())
       .slice(0, 40);
@@ -205,8 +222,38 @@ Rules: each skill is 1-5 words, proper casing (React not react), no duplicates, 
         skipDuplicates: true,
       });
     }
+
+    if (options.needsExperience) {
+      const experience = (parsed.experience || [])
+        .filter((e) => typeof e?.title === "string" && e.title.trim().length > 1)
+        .slice(0, 8);
+      if (experience.length > 0) {
+        await prisma.resumeExperience.createMany({
+          data: experience.map((exp) => ({
+            resumeId,
+            title: exp.title!.trim().slice(0, 120),
+            company: typeof exp.company === "string" ? exp.company.trim().slice(0, 120) : null,
+          })),
+        });
+      }
+    }
+
+    if (options.needsEducation) {
+      const education = (parsed.education || [])
+        .filter((e) => typeof e?.institution === "string" && e.institution.trim().length > 1)
+        .slice(0, 5);
+      if (education.length > 0) {
+        await prisma.resumeEducation.createMany({
+          data: education.map((edu) => ({
+            resumeId,
+            institution: edu.institution!.trim().slice(0, 120),
+            degree: typeof edu.degree === "string" ? edu.degree.trim().slice(0, 120) : null,
+          })),
+        });
+      }
+    }
   } catch (err) {
-    console.error("AI skill extraction failed (non-fatal):", err);
+    console.error("AI profile extraction failed (non-fatal):", err);
   }
 }
 
@@ -414,7 +461,10 @@ export async function POST(request: NextRequest) {
 
       if (parsedText && hasAiProviderConfigured()) {
         // AI extraction: await so skills are ready before the response returns
-        await extractSkillsWithAI(resume.id, parsedText);
+        await extractProfileWithAI(resume.id, parsedText, {
+          needsExperience: parsedData.experience.length === 0,
+          needsEducation: parsedData.education.length === 0,
+        });
       } else if (parsedData.skills.length > 0) {
         // Keyword fallback when no AI provider is configured
         await prisma.resumeSkill.createMany({
