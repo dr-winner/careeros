@@ -4,6 +4,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { initiateMomoPayment, isValidMomoChannel } from "@/lib/moolre";
 import { getZodErrorMessage } from "@/lib/validation";
+import { checkRateLimit, getRateLimitHeaders, RATE_LIMITS } from "@/lib/ratelimit";
 
 // Direct MoMo checkout: Moolre pushes a USSD approval prompt to the payer's
 // phone — no browser redirect, works alongside the hosted payment link.
@@ -32,6 +33,16 @@ export async function POST(request: NextRequest) {
     const { userId: clerkId } = await auth();
     if (!clerkId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Per-user limit: each call pushes a USSD prompt to an arbitrary phone
+    // number, so unthrottled access is a harassment vector.
+    const rateLimitResult = await checkRateLimit("payment", RATE_LIMITS.payment, clerkId);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: "Too many payment attempts. Please wait a minute and try again." },
+        { status: 429, headers: getRateLimitHeaders(rateLimitResult) },
+      );
     }
 
     const parsed = momoChargeSchema.safeParse(await request.json().catch(() => ({})));

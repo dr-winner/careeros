@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
+import { checkRateLimit, getRateLimitHeaders, RATE_LIMITS } from "@/lib/ratelimit";
 
 const MOOLRE_BASE =
   process.env.MOOLRE_SANDBOX === "true"
@@ -26,6 +27,14 @@ export async function POST(request: NextRequest) {
     const { userId: clerkId } = await auth();
     if (!clerkId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const rateLimitResult = await checkRateLimit("payment", RATE_LIMITS.payment, clerkId);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: "Too many payment attempts. Please wait a minute and try again." },
+        { status: 429, headers: getRateLimitHeaders(rateLimitResult) },
+      );
     }
 
     const body = await request.json().catch(() => ({}));

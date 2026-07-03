@@ -6,6 +6,7 @@ import { getZodErrorMessage, referralInviteSchema } from "@/lib/validation";
 import { sendReferralReceivedEmail } from "@/lib/transactional-emails";
 import { getEmailFrom } from "@/lib/env";
 import { buildReferralCode } from "@/lib/referral-code";
+import { finalizeProcessingRewards } from "@/lib/referral-reward";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://careeros.live";
 
@@ -29,6 +30,9 @@ export async function GET() {
 
     const referralCode = buildReferralCode(user.id);
     const referralUrl = `${getBaseUrl()}/?ref=${encodeURIComponent(referralCode)}`;
+
+    // Settle any in-flight payouts before reporting earnings.
+    await finalizeProcessingRewards(user.id).catch(() => {});
 
     const [referralCount, convertedCount, rewards] = await Promise.all([
       prisma.referral.count({

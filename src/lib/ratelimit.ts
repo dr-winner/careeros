@@ -59,6 +59,7 @@ export const RATE_LIMITS = {
   jobs: { max: 30, window: "1 m" },
   ai: { max: 10, window: "1 m" },
   upload: { max: 5, window: "1 m" },
+  payment: { max: 5, window: "1 m" },
   default: { max: 100, window: "1 m" },
   strict: { max: 10, window: "1 m" },
 } as const;

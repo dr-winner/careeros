@@ -1,7 +1,29 @@
 import { prisma } from "@/lib/db";
-import { initiateTransfer, isMoolreConfigured } from "@/lib/moolre";
+import { getTransactionStatus, initiateTransfer, isMoolreConfigured } from "@/lib/moolre";
 import { readEnv } from "@/lib/env";
 import { getPostHogClient } from "@/lib/posthog-server";
+
+// Initiate a payout and confirm settlement. Transfers settle async
+// (txstatus 0 on initiation), so poll status once; if still pending the
+// reward stays "processing" and finalizeProcessingRewards resolves it.
+async function executeRewardTransfer(params: {
+  amount: string;
+  receiver: string;
+  channel: number;
+  externalref: string;
+}): Promise<"paid" | "processing" | "failed"> {
+  const transfer = await initiateTransfer({ ...params, reference: "CareerOS referral reward" });
+  if (!transfer.initiated) {
+    console.error(`Referral reward initiation failed: ref=${params.externalref} code=${transfer.code}`);
+    return "failed";
+  }
+  if (transfer.settled) return "paid";
+
+  const status = await getTransactionStatus(params.externalref).catch(() => ({ txstatus: null }));
+  if (status.txstatus === 1) return "paid";
+  if (status.txstatus === 2) return "failed";
+  return "processing";
+}
 
 // GHS paid to the referrer's MoMo wallet when their referee goes premium.
 export function getReferralRewardAmount(): string {
@@ -58,33 +80,29 @@ export async function processReferralReward(newPremiumUserId: string): Promise<v
       data: { rewardStatus: "processing", rewardAmount: parseFloat(amount), rewardTxRef },
     });
 
-    const transfer = await initiateTransfer({
+    const outcome = await executeRewardTransfer({
       amount,
       receiver: momoNumber,
       channel: momoChannel,
       externalref: rewardTxRef,
-      reference: "CareerOS referral reward",
     });
 
     await prisma.referral.update({
       where: { id: referral.id },
-      data: transfer.ok
-        ? { rewardStatus: "paid", rewardPaidAt: new Date() }
-        : { rewardStatus: "failed" },
+      data:
+        outcome === "paid"
+          ? { rewardStatus: "paid", rewardPaidAt: new Date() }
+          : { rewardStatus: outcome },
     });
-
-    if (!transfer.ok) {
-      console.error(`Referral reward transfer failed: ref=${rewardTxRef} code=${transfer.code}`);
-    }
 
     const posthog = getPostHogClient();
     posthog.capture({
       distinctId: referral.referrerId,
-      event: transfer.ok ? "referral_reward_paid" : "referral_reward_failed",
+      event: outcome === "failed" ? "referral_reward_failed" : "referral_reward_paid",
       properties: {
         amount_ghs: amount,
         referral_id: referral.id,
-        moolre_code: transfer.code,
+        outcome,
       },
     });
   } catch (error) {
@@ -108,31 +126,33 @@ export async function retryUnpaidRewards(referrerId: string): Promise<number> {
 
   let paid = 0;
   for (const referral of unpaid) {
-    const rewardTxRef = referral.rewardTxRef || `rw-${referral.id}`;
+    // Fresh ref per attempt (Moolre rejects duplicate externalrefs), stored
+    // so finalizeProcessingRewards can look up this exact transfer later.
+    const retryRef = `rw-${referral.id}-r${Date.now()}`;
     const amount = String(referral.rewardAmount ?? getReferralRewardAmount());
 
     const claimed = await prisma.referral.updateMany({
       where: { id: referral.id, rewardStatus: { in: ["unpayable", "failed"] } },
-      data: { rewardStatus: "processing", rewardTxRef },
+      data: { rewardStatus: "processing", rewardTxRef: retryRef },
     });
     if (claimed.count === 0) continue;
 
     try {
-      const transfer = await initiateTransfer({
+      const outcome = await executeRewardTransfer({
         amount,
         receiver: referrer.momoNumber,
         channel: referrer.momoChannel,
-        externalref: `${rewardTxRef}-r${Date.now()}`,
-        reference: "CareerOS referral reward",
+        externalref: retryRef,
       });
 
       await prisma.referral.update({
         where: { id: referral.id },
-        data: transfer.ok
-          ? { rewardStatus: "paid", rewardPaidAt: new Date() }
-          : { rewardStatus: "failed" },
+        data:
+          outcome === "paid"
+            ? { rewardStatus: "paid", rewardPaidAt: new Date() }
+            : { rewardStatus: outcome },
       });
-      if (transfer.ok) paid++;
+      if (outcome === "paid") paid++;
     } catch (error) {
       console.error(`Reward retry failed for referral ${referral.id}:`, error);
       await prisma.referral.update({
@@ -142,4 +162,36 @@ export async function retryUnpaidRewards(referrerId: string): Promise<number> {
     }
   }
   return paid;
+}
+
+// Resolve rewards stuck in "processing" by checking the transfer's final
+// status with Moolre. Called when the referrer views their referrals, so
+// pending payouts settle into paid/failed without a dedicated cron.
+export async function finalizeProcessingRewards(referrerId: string): Promise<void> {
+  if (!isMoolreConfigured()) return;
+
+  const processing = await prisma.referral.findMany({
+    where: { referrerId, rewardStatus: "processing", rewardTxRef: { not: null } },
+    select: { id: true, rewardTxRef: true },
+  });
+
+  for (const referral of processing) {
+    try {
+      const status = await getTransactionStatus(referral.rewardTxRef!);
+      if (status.txstatus === 1) {
+        await prisma.referral.update({
+          where: { id: referral.id },
+          data: { rewardStatus: "paid", rewardPaidAt: new Date() },
+        });
+      } else if (status.txstatus === 2) {
+        await prisma.referral.update({
+          where: { id: referral.id },
+          data: { rewardStatus: "failed" },
+        });
+      }
+      // txstatus 0 or null: still in flight — leave for the next check.
+    } catch (error) {
+      console.error(`Finalize reward check failed for referral ${referral.id}:`, error);
+    }
+  }
 }

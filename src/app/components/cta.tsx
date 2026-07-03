@@ -58,6 +58,7 @@ export default function CTA() {
             { icon: "M4.5 12.75l6 6 9-13.5", label: "Free to start" },
             { icon: "M4.5 12.75l6 6 9-13.5", label: "Detailed fit analysis" },
             { icon: "M4.5 12.75l6 6 9-13.5", label: "Local MoMo & Card payments" },
+            { icon: "M4.5 12.75l6 6 9-13.5", label: "Earn GHS 5 per referral, paid to MoMo" },
           ].map((item) => (
             <span key={item.label} className="flex items-center gap-2 mono text-sm text-zinc-500">
               <svg className="h-4 w-4 text-purple-400" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">

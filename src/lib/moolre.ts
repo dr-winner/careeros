@@ -98,13 +98,17 @@ export async function validateWalletName(
   return { ok: false, name: null };
 }
 
+// A successful initiation returns txstatus 0 ("Pay out in Progress",
+// code APY16) — settlement is confirmed separately via transaction
+// status. Verified against the Moolre sandbox; the docs' success
+// example (immediate txstatus 1) is not what the API returns.
 export async function initiateTransfer(params: {
   amount: string;
   receiver: string;
   channel: number;
   externalref: string;
   reference?: string;
-}): Promise<{ ok: boolean; code: string; transactionId: string | null }> {
+}): Promise<{ initiated: boolean; settled: boolean; code: string }> {
   const data = await moolrePost("/open/transact/transfer", keyHeaders(), {
     type: 1,
     channel: String(params.channel),
@@ -116,9 +120,9 @@ export async function initiateTransfer(params: {
     accountnumber: readEnv("MOOLRE_ACCOUNT_NUMBER"),
   });
 
-  const payload = data.data as { txstatus?: number; transactionid?: string } | null;
-  const ok = Number(data.status) === 1 && payload?.txstatus === 1;
-  return { ok, code: data.code, transactionId: payload?.transactionid ?? null };
+  const payload = data.data as { txstatus?: number } | null;
+  const initiated = Number(data.status) === 1;
+  return { initiated, settled: initiated && payload?.txstatus === 1, code: data.code };
 }
 
 // ─── Direct MoMo collection (USSD approval prompt) ──────────────────────────
