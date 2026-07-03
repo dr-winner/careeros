@@ -78,3 +78,6 @@ posthog-setup-report.md
 test-results/
 playwright-report/
 playwright/
+
+# AI assistant memory (personal notes, not product code)
+memory/

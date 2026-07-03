@@ -425,6 +425,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Same file re-uploaded (same name, identical extracted text) just
+    // clutters the CV list — point the user at the existing copy instead.
+    const duplicate = await prisma.resume.findFirst({
+      where: { userId: user.id, originalName: file.name, parsedText },
+      select: { id: true },
+    });
+    if (duplicate) {
+      return NextResponse.json(
+        { error: "This CV is already uploaded. Delete the existing copy first if you want to replace it." },
+        { status: 409 },
+      );
+    }
+
     const resume = await prisma.resume.create({
       data: {
         userId: user.id,
