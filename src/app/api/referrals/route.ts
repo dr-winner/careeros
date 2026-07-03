@@ -5,15 +5,9 @@ import { getDbUser } from "@/lib/auth";
 import { getZodErrorMessage, referralInviteSchema } from "@/lib/validation";
 import { sendReferralReceivedEmail } from "@/lib/transactional-emails";
 import { getEmailFrom } from "@/lib/env";
+import { buildReferralCode } from "@/lib/referral-code";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://careeros.live";
-
-function buildReferralCode(userId: string): string {
-  return `CAREER-${userId
-    .replace(/[^a-zA-Z0-9]/g, "")
-    .slice(-10)
-    .toUpperCase()}`;
-}
 
 function getBaseUrl(): string {
   return APP_URL.replace(/\/+$/, "");

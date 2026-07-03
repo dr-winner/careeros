@@ -2,18 +2,19 @@ import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { clerkClient } from "@clerk/nextjs/server";
 import { syncClerkUserToDb } from "@/lib/user";
+import { readReferralCookie } from "@/lib/auth";
 
 export async function POST() {
   try {
     const { userId } = await auth();
-    
+
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const client = await clerkClient();
     const clerkUser = await client.users.getUser(userId);
-    await syncClerkUserToDb(clerkUser);
+    await syncClerkUserToDb(clerkUser, await readReferralCookie());
 
     return NextResponse.json({ success: true });
   } catch (error) {

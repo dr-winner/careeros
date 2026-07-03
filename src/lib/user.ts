@@ -1,8 +1,9 @@
 import { prisma } from "./db";
 import type { User } from "@clerk/backend";
 import { sendWelcomeEmail } from "./transactional-emails";
+import { attributeReferral } from "./referral-code";
 
-export async function syncClerkUserToDb(clerkUser: User) {
+export async function syncClerkUserToDb(clerkUser: User, referralCode?: string | null) {
   const primaryEmail =
     clerkUser.emailAddresses.find((e) => e.id === clerkUser.primaryEmailAddressId) ||
     clerkUser.emailAddresses[0];
@@ -69,6 +70,13 @@ export async function syncClerkUserToDb(clerkUser: User) {
       sendWelcomeEmail(email, fullName || "there").catch(err =>
         console.error("Failed to send welcome email:", err)
       );
+
+      // Credit the referrer whose ?ref= link brought this signup (cookie
+      // captured in middleware). Awaited: fire-and-forget work can be
+      // killed when the serverless invocation ends.
+      if (referralCode) {
+        await attributeReferral(referralCode, { id: user.id, email });
+      }
     }
 
     return user;

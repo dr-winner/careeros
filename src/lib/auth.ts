@@ -1,6 +1,20 @@
 import { auth, clerkClient } from "@clerk/nextjs/server";
+import { cookies } from "next/headers";
 import { prisma } from "@/lib/db";
 import { syncClerkUserToDb } from "@/lib/user";
+import { REFERRAL_COOKIE } from "@/lib/referral-code";
+
+// Cookie set by middleware when a visitor lands via a ?ref= link.
+// Only relevant on the first-login sync path; failures are ignored
+// because cookies() is unavailable outside a request context.
+export async function readReferralCookie(): Promise<string | null> {
+  try {
+    const store = await cookies();
+    return store.get(REFERRAL_COOKIE)?.value ?? null;
+  } catch {
+    return null;
+  }
+}
 
 export async function getClerkUserId(): Promise<string | null> {
   const { userId } = await auth();
@@ -34,7 +48,7 @@ export async function getDbUser() {
         return null;
       }
 
-      const synced = await syncClerkUserToDb(clerkUser);
+      const synced = await syncClerkUserToDb(clerkUser, await readReferralCookie());
       if (synced) return synced;
 
       // syncClerkUserToDb returned null — check if a concurrent request already created the user
