@@ -6,6 +6,7 @@ import { generateWithFallback } from "@/lib/ai";
 import { coverLetterRequestSchema, getZodErrorMessage } from "@/lib/validation";
 import { checkRateLimit, getRateLimitHeaders, RATE_LIMITS } from "@/lib/ratelimit";
 import { hasAiProviderConfigured } from "@/lib/env";
+import { claimQuota, releaseQuota } from "@/lib/quota";
 
 async function findPreferredResume(userId: string) {
   const include = {
@@ -79,6 +80,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
+    // Cover letters are a premium feature; free users spend one of their
+    // monthly analysis slots per letter (atomic claim, refunded on failure).
+    const quota = await claimQuota(user.id, user.isPremium);
+    if (!quota.allowed) {
+      return NextResponse.json(
+        {
+          error: "quota_exceeded",
+          message: `Free plan includes ${quota.limit} AI generations per month. Upgrade to Premium for unlimited cover letters.`,
+          resetAt: quota.resetAt,
+        },
+        { status: 402 },
+      );
+    }
+    const refundQuota = user.isPremium ? null : () => releaseQuota(user.id, user.isPremium);
+
     const { resume: selectedResume, usedPrimaryResume } =
       await findPreferredResume(user.id);
 
@@ -143,15 +159,23 @@ Write ONLY the cover letter body. No preamble or explanation.`;
 
 Do NOT write generic cover letters that could apply to any job or person.`;
 
-    const { text: coverLetter, model } = await generateWithFallback(
-      prompt,
-      systemPrompt,
-      {
-        maxTokens: 600,
-        temperature: 0.65,
-        json: false,
-      },
-    );
+    let coverLetter: string;
+    let model: string;
+    try {
+      ({ text: coverLetter, model } = await generateWithFallback(
+        prompt,
+        systemPrompt,
+        {
+          maxTokens: 600,
+          temperature: 0.65,
+          json: false,
+        },
+      ));
+    } catch (aiError) {
+      // Refund the claimed slot — a failed generation shouldn't count.
+      if (refundQuota) await refundQuota().catch(() => {});
+      throw aiError;
+    }
 
     const wordCount = coverLetter.trim().split(/\s+/).filter(Boolean).length;
     const hasGenericPhrases =

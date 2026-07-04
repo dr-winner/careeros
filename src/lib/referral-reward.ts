@@ -42,8 +42,13 @@ export async function processReferralReward(newPremiumUserId: string): Promise<v
     });
     if (!referee) return;
 
+    // "pending" = invited, "engaged" = ran their first analysis (bonus
+    // credit already given); both are still eligible for the cash payout.
     const referral = await prisma.referral.findFirst({
-      where: { refereeEmail: referee.email.toLowerCase(), status: "pending" },
+      where: {
+        refereeEmail: referee.email.toLowerCase(),
+        status: { in: ["pending", "engaged"] },
+      },
       include: {
         user: { select: { id: true, momoNumber: true, momoChannel: true, fullName: true } },
       },
@@ -56,7 +61,7 @@ export async function processReferralReward(newPremiumUserId: string): Promise<v
     // Claim the referral atomically — the updateMany count tells us whether
     // this invocation won the race (webhook + manual verify can both fire).
     const claimed = await prisma.referral.updateMany({
-      where: { id: referral.id, status: "pending" },
+      where: { id: referral.id, status: { in: ["pending", "engaged"] } },
       data: { status: "converted", convertedAt: new Date() },
     });
     if (claimed.count === 0) return;

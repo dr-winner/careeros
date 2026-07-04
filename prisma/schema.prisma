@@ -230,7 +230,7 @@ model Referral {
   referrerId   String
   refereeEmail String
   referralCode String
-  status       String   @default("pending") // "pending" | "converted"
+  status       String   @default("pending") // "pending" | "engaged" (first analysis) | "converted" (went premium)
   rewardStatus String   @default("none")    // "none" | "processing" | "paid" | "failed" | "unpayable"
   rewardAmount Float?
   rewardTxRef  String?  @unique

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { getDbUserId } from "@/lib/auth";
 import { generateWithFallback } from "@/lib/ai";
 import { hasAiProviderConfigured } from "@/lib/env";
+import { checkRateLimit, getRateLimitHeaders, RATE_LIMITS } from "@/lib/ratelimit";
 
 interface AnalysisResult {
   overall: {
@@ -206,6 +207,14 @@ export async function POST(request: NextRequest) {
     const userId = await getDbUserId();
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const rateLimitResult = await checkRateLimit("ai", RATE_LIMITS.ai, userId);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: "Too many analyses. Please wait a moment and try again." },
+        { status: 429, headers: getRateLimitHeaders(rateLimitResult) },
+      );
     }
 
     const contentType = request.headers.get("content-type") || "";

@@ -123,9 +123,9 @@ export default function EmployersPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
-                <h3 className="text-lg font-bold text-white mb-2">Job Published Live! 🚀</h3>
+                <h3 className="text-lg font-bold text-white mb-2">Listing Submitted! ✅</h3>
                 <p className="text-sm text-zinc-400 mb-6">
-                  Your job opening is now active on CareerOS. Job seekers can search for it, perform resume fit-matching analyses, and apply directly.
+                  Your job opening is in review and goes live within 24 hours. Once approved, job seekers can search for it, run fit-matching analyses, and apply directly.
                 </p>
                 <button
                   type="button"

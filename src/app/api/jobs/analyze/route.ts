@@ -6,7 +6,7 @@ import { hasAiProviderConfigured } from "@/lib/env";
 import { isUserPremium } from "@/lib/auth";
 import { checkRateLimit, getRateLimitHeaders, RATE_LIMITS } from "@/lib/ratelimit";
 import { ensureJobRecord } from "@/lib/jobs";
-import { checkQuota, consumeQuota } from "@/lib/quota";
+import { claimQuota, releaseQuota } from "@/lib/quota";
 import { sendReferralConvertedEmail } from "@/lib/transactional-emails";
 
 const SKILL_KEYWORDS: Record<string, string[]> = {
@@ -70,6 +70,10 @@ function extractSkills(text: string): string[] {
 }
 
 export async function POST(request: NextRequest) {
+  // Set once a free-tier slot has been claimed, so the catch block can
+  // refund it if the analysis fails after claiming.
+  let refund: (() => Promise<void>) | null = null;
+
   try {
     const ip = request.headers.get("x-forwarded-for")?.split(",")[0] || "anonymous";
     const rateLimitResult = await checkRateLimit("ai", RATE_LIMITS.ai, ip);
@@ -86,7 +90,8 @@ export async function POST(request: NextRequest) {
     }
 
     const isPremiumEarly = await isUserPremium();
-    const quota = await checkQuota(userId, isPremiumEarly);
+    // Atomic claim: parallel requests cannot exceed the free-tier limit.
+    const quota = await claimQuota(userId, isPremiumEarly);
 
     if (!quota.allowed) {
       return NextResponse.json(
@@ -98,6 +103,9 @@ export async function POST(request: NextRequest) {
         },
         { status: 402 },
       );
+    }
+    if (!isPremiumEarly) {
+      refund = () => releaseQuota(userId, isPremiumEarly);
     }
 
     const { jobId, jobDescription: clientDescription, jobTitle, companyName } = await request.json();
@@ -283,7 +291,7 @@ Return ONLY this JSON (no markdown):
       }
     }
 
-    await consumeQuota(userId, isPremium);
+    // Quota already claimed atomically at the top of the handler.
 
     // Persist this analysis so the analytics page has real data
     try {
@@ -299,10 +307,14 @@ Return ONLY this JSON (no markdown):
         const totalAnalyses = await prisma.fitAnalysis.count({ where: { userId } });
         if (totalAnalyses === 1) {
           const referral = await prisma.referral.findFirst({
-            where: { refereeEmail: user?.email, status: "pending" },
+            where: { refereeEmail: user?.email?.toLowerCase(), status: "pending" },
             select: { id: true, referrerId: true },
           });
           if (referral) {
+            // "engaged" (not "converted"): the referee ran their first
+            // analysis, earning the referrer a bonus slot. "converted" is
+            // reserved for premium upgrade, which triggers the GHS 5
+            // Moolre payout in processReferralReward.
             const [referrer] = await Promise.all([
               prisma.user.update({
                 where: { id: referral.referrerId },
@@ -311,7 +323,7 @@ Return ONLY this JSON (no markdown):
               }),
               prisma.referral.update({
                 where: { id: referral.id },
-                data: { status: "converted" },
+                data: { status: "engaged" },
               }),
             ]);
             sendReferralConvertedEmail(
@@ -344,11 +356,13 @@ Return ONLY this JSON (no markdown):
         lowConfidence,
         quota: isPremium
           ? null
-          : { remaining: quota.remaining - 1, limit: quota.limit, resetAt: quota.resetAt },
+          : { remaining: quota.remaining, limit: quota.limit, resetAt: quota.resetAt },
       },
     });
   } catch (error) {
     console.error("Error analyzing job fit:", error);
+    // Refund the claimed free-tier slot — a failed analysis shouldn't count.
+    if (refund) await refund().catch(() => {});
     return NextResponse.json({ error: "Failed to analyze job fit" }, { status: 500 });
   }
 }

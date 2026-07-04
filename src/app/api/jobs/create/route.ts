@@ -72,7 +72,10 @@ export async function POST(request: NextRequest) {
         description: fullDescription,
         applicationUrl,
         postedAt: new Date(),
-        status: "active",
+        // Employer submissions are public and unauthenticated — never
+        // publish directly. An admin approves via /admin before the job
+        // appears in listings (which filter on status "active").
+        status: "pending_review",
         jobSkills: {
           create: parsedSkills.map((skillName) => ({
             skillName,
@@ -97,7 +100,11 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return NextResponse.json({ success: true, jobId: job.id });
+    return NextResponse.json({
+      success: true,
+      jobId: job.id,
+      message: "Listing submitted — it goes live after a quick review (usually within 24 hours).",
+    });
   } catch (error) {
     console.error("Error creating job:", error);
     return NextResponse.json({ error: "Failed to submit job listing. Please contact support." }, { status: 500 });

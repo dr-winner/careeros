@@ -68,25 +68,41 @@ export async function ensureJobRecord(input: EnsureJobRecordInput) {
 
   const title = nullIfBlank(input.title) ?? "Unknown Position";
 
-  return prisma.job.upsert({
-    where: { id: normalizedId },
-    update: {
-      externalSource,
-      externalJobId,
-      title,
-      companyName: nullIfBlank(input.companyName),
-      location: nullIfBlank(input.location),
-      country: nullIfBlank(input.country),
-      workMode: nullIfBlank(input.workMode),
-      employmentType: nullIfBlank(input.employmentType),
-      description: nullIfBlank(input.description),
-      requirementsText: nullIfBlank(input.requirementsText),
-      applicationUrl: nullIfBlank(input.applicationUrl),
-      postedAt: parseDate(input.postedAt),
-      expiresAt: parseDate(input.expiresAt),
-      status: nullIfBlank(input.status),
-    },
-    create: {
+  const existing = await prisma.job.findUnique({ where: { id: normalizedId } });
+
+  if (existing) {
+    // Employer-submitted jobs are moderated content — user-triggered cache
+    // calls (save/analyze) must never rewrite them or flip their status.
+    if (existing.externalSource === "employer") {
+      return existing;
+    }
+
+    // Cache semantics: only fill fields that are still missing. One user's
+    // request must not overwrite the title/description/applicationUrl other
+    // users already see, and status never changes on update.
+    return prisma.job.update({
+      where: { id: normalizedId },
+      data: {
+        title: existing.title === "Unknown Position" ? title : undefined,
+        companyName: existing.companyName ?? nullIfBlank(input.companyName) ?? undefined,
+        location: existing.location ?? nullIfBlank(input.location) ?? undefined,
+        country: existing.country ?? nullIfBlank(input.country) ?? undefined,
+        workMode: existing.workMode ?? nullIfBlank(input.workMode) ?? undefined,
+        employmentType:
+          existing.employmentType ?? nullIfBlank(input.employmentType) ?? undefined,
+        description: existing.description ?? nullIfBlank(input.description) ?? undefined,
+        requirementsText:
+          existing.requirementsText ?? nullIfBlank(input.requirementsText) ?? undefined,
+        applicationUrl:
+          existing.applicationUrl ?? nullIfBlank(input.applicationUrl) ?? undefined,
+        postedAt: existing.postedAt ?? parseDate(input.postedAt) ?? undefined,
+        expiresAt: existing.expiresAt ?? parseDate(input.expiresAt) ?? undefined,
+      },
+    });
+  }
+
+  return prisma.job.create({
+    data: {
       id: normalizedId,
       externalSource,
       externalJobId,

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import Groq from "groq-sdk";
 import { readEnv } from "@/lib/env";
+import { checkRateLimit, getRateLimitHeaders, RATE_LIMITS } from "@/lib/ratelimit";
 
 const groqApiKey = readEnv("GROQ_API_KEY");
 
@@ -34,9 +35,17 @@ interface CVAnalysis {
 export async function POST(request: NextRequest) {
   try {
     const { userId } = await auth();
-    
+
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const rateLimitResult = await checkRateLimit("ai", RATE_LIMITS.ai, userId);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: "Too many questions. Please wait a moment and try again." },
+        { status: 429, headers: getRateLimitHeaders(rateLimitResult) },
+      );
     }
 
     const body = await request.json();

@@ -82,6 +82,9 @@ export default function CoverLetterPage() {
           method: "ai",
         });
         toast.success("Cover letter generated!");
+      } else if (response.status === 402) {
+        toast.error("Monthly AI limit reached — using a template. Upgrade to Premium for unlimited AI letters.");
+        generateTemplateCoverLetter();
       } else if (data.error === "AI not configured") {
         toast.error("AI not configured. Using template.");
         generateTemplateCoverLetter();

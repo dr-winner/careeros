@@ -17,6 +17,9 @@ const isPublicRoute = createRouteMatcher([
   "/api/cron(.*)",
   "/api/webhooks(.*)",
   "/api/employer-waitlist(.*)",
+  // Employers submit listings without an account; rate-limited by IP and
+  // held as pending_review until an admin approves.
+  "/api/jobs/create(.*)",
 ]);
 
 const isLandingPage = createRouteMatcher(["/"]);

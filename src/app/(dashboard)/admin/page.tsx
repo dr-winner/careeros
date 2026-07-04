@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { getDbUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 
@@ -11,6 +12,24 @@ function isAdmin(email: string): boolean {
     .split(",")
     .map((e) => e.trim().toLowerCase())
     .includes(email.toLowerCase());
+}
+
+// Approve or reject a pending employer job submission. Re-checks the
+// admin guard — server actions are callable outside this page's render.
+async function moderateJob(formData: FormData) {
+  "use server";
+  const user = await getDbUser();
+  if (!user || !isAdmin(user.email)) return;
+
+  const jobId = String(formData.get("jobId") || "");
+  const action = String(formData.get("action") || "");
+  if (!jobId || !["approve", "reject"].includes(action)) return;
+
+  await prisma.job.update({
+    where: { id: jobId },
+    data: { status: action === "approve" ? "active" : "rejected" },
+  });
+  revalidatePath("/admin");
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -206,6 +225,22 @@ export default async function AdminPage() {
     }),
   ]);
 
+  // Employer submissions awaiting review (created via the public form)
+  const pendingJobs = await prisma.job.findMany({
+    where: { externalSource: "employer", status: "pending_review" },
+    orderBy: { postedAt: "desc" },
+    take: 20,
+    select: {
+      id: true,
+      title: true,
+      companyName: true,
+      location: true,
+      applicationUrl: true,
+      description: true,
+      postedAt: true,
+    },
+  });
+
   // ── Derived numbers ──────────────────────────────────────────────────────────
 
   const conversionRate = pct(premiumUsers, totalUsers);
@@ -367,6 +402,67 @@ export default async function AdminPage() {
           </p>
         </div>
       </div>
+
+      {/* Employer job moderation queue */}
+      {pendingJobs.length > 0 && (
+        <div className="agent-card p-5 border border-amber-500/20">
+          <p className="text-xs text-amber-400 mono uppercase tracking-widest mb-4">
+            Employer Jobs Awaiting Review ({pendingJobs.length})
+          </p>
+          <div className="space-y-4">
+            {pendingJobs.map((job) => (
+              <div
+                key={job.id}
+                className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4"
+              >
+                <div className="flex items-start justify-between gap-4 flex-wrap">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-white">
+                      {job.title}{" "}
+                      <span className="text-zinc-500 font-normal">
+                        at {job.companyName} · {job.location}
+                      </span>
+                    </p>
+                    <a
+                      href={job.applicationUrl || "#"}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mono text-xs text-cyan-400 break-all"
+                    >
+                      {job.applicationUrl}
+                    </a>
+                    <p className="text-xs text-zinc-500 mt-2 line-clamp-3 whitespace-pre-wrap">
+                      {(job.description || "").slice(0, 400)}
+                    </p>
+                  </div>
+                  <div className="flex gap-2 flex-shrink-0">
+                    <form action={moderateJob}>
+                      <input type="hidden" name="jobId" value={job.id} />
+                      <button
+                        name="action"
+                        value="approve"
+                        className="rounded-lg border border-green-500/30 bg-green-500/10 px-4 py-2 text-xs font-bold text-green-400 hover:bg-green-500/20 transition-all"
+                      >
+                        Approve
+                      </button>
+                    </form>
+                    <form action={moderateJob}>
+                      <input type="hidden" name="jobId" value={job.id} />
+                      <button
+                        name="action"
+                        value="reject"
+                        className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2 text-xs font-bold text-red-400 hover:bg-red-500/20 transition-all"
+                      >
+                        Reject
+                      </button>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Row 4: Top jobs + Recent signups */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
