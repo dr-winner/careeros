@@ -32,6 +32,66 @@ async function moderateJob(formData: FormData) {
   revalidatePath("/admin");
 }
 
+// Grant or revoke Premium on any account. Grants use status "comp"
+// (admin-comped): the expiry cron only downgrades status "active", so
+// comps never lapse, and we deliberately bypass activateSubscription so
+// a comp never triggers a referral cash payout.
+async function setPremium(formData: FormData) {
+  "use server";
+  const admin = await getDbUser();
+  if (!admin || !isAdmin(admin.email)) return;
+
+  const userId = String(formData.get("userId") || "");
+  const action = String(formData.get("action") || "");
+  if (!userId || !["grant", "revoke"].includes(action)) return;
+
+  await prisma.user.update({
+    where: { id: userId },
+    data:
+      action === "grant"
+        ? {
+            isPremium: true,
+            premiumSince: new Date(),
+            subscriptionStatus: "comp",
+            billingCycle: null,
+            currentPeriodEnd: null,
+          }
+        : {
+            isPremium: false,
+            subscriptionStatus: "cancelled",
+            billingCycle: null,
+            currentPeriodEnd: null,
+          },
+  });
+  revalidatePath("/admin");
+}
+
+// Small grant/revoke button pair used in user rows
+function PremiumToggle({ userId, isPremium }: { userId: string; isPremium: boolean }) {
+  return (
+    <form action={setPremium}>
+      <input type="hidden" name="userId" value={userId} />
+      {isPremium ? (
+        <button
+          name="action"
+          value="revoke"
+          className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-[11px] font-bold text-red-400 hover:bg-red-500/20 transition-all mono"
+        >
+          Revoke Pro
+        </button>
+      ) : (
+        <button
+          name="action"
+          value="grant"
+          className="rounded-lg border border-green-500/30 bg-green-500/10 px-3 py-1.5 text-[11px] font-bold text-green-400 hover:bg-green-500/20 transition-all mono"
+        >
+          Grant Pro
+        </button>
+      )}
+    </form>
+  );
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface DailyRow {
@@ -141,9 +201,16 @@ function StatCard({
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-export default async function AdminPage() {
+export default async function AdminPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}) {
   const user = await getDbUser();
   if (!user || !isAdmin(user.email)) redirect("/dashboard");
+
+  const { q } = await searchParams;
+  const userQuery = (q || "").trim();
 
   const now = new Date();
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
@@ -215,6 +282,7 @@ export default async function AdminPage() {
       orderBy: { createdAt: "desc" },
       take: 8,
       select: {
+        id: true,
         fullName: true,
         email: true,
         isPremium: true,
@@ -224,6 +292,28 @@ export default async function AdminPage() {
       },
     }),
   ]);
+
+  // Account lookup for premium management
+  const foundUsers = userQuery
+    ? await prisma.user.findMany({
+        where: {
+          OR: [
+            { email: { contains: userQuery, mode: "insensitive" } },
+            { fullName: { contains: userQuery, mode: "insensitive" } },
+          ],
+        },
+        take: 10,
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          fullName: true,
+          email: true,
+          isPremium: true,
+          subscriptionStatus: true,
+          premiumSince: true,
+        },
+      })
+    : [];
 
   // Employer submissions awaiting review (created via the public form)
   const pendingJobs = await prisma.job.findMany({
@@ -268,6 +358,12 @@ export default async function AdminPage() {
       count:
         subscriptionRows.find((r) => r.subscriptionStatus === null)?._count.id ?? 0,
       color: "text-cyan-400",
+    },
+    {
+      label: "Comped (admin)",
+      count:
+        subscriptionRows.find((r) => r.subscriptionStatus === "comp")?._count.id ?? 0,
+      color: "text-purple-400",
     },
     {
       label: "Expired",
@@ -403,6 +499,51 @@ export default async function AdminPage() {
         </div>
       </div>
 
+      {/* Account lookup: grant/revoke premium */}
+      <div className="agent-card p-5">
+        <p className="text-xs text-zinc-500 mono uppercase tracking-widest mb-4">
+          Manage Premium Access
+        </p>
+        <form method="GET" className="flex gap-2 mb-4">
+          <input
+            type="text"
+            name="q"
+            defaultValue={userQuery}
+            placeholder="Search by email or name…"
+            className="agent-input flex-1"
+          />
+          <button className="agent-button-primary px-5 text-sm">Search</button>
+        </form>
+        {userQuery && foundUsers.length === 0 && (
+          <p className="text-sm text-zinc-600">No accounts match “{userQuery}”.</p>
+        )}
+        <div className="space-y-2">
+          {foundUsers.map((u) => (
+            <div
+              key={u.id}
+              className="flex items-center justify-between gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3.5"
+            >
+              <div className="min-w-0">
+                <p className="text-sm text-white truncate">{u.fullName || "—"}</p>
+                <p className="text-xs text-zinc-500 truncate mono">{u.email}</p>
+              </div>
+              <div className="flex items-center gap-3 flex-shrink-0">
+                <span
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full mono ${
+                    u.isPremium
+                      ? "bg-purple-500/20 text-purple-300"
+                      : "bg-white/5 text-zinc-500"
+                  }`}
+                >
+                  {u.isPremium ? (u.subscriptionStatus || "PRO").toUpperCase() : "FREE"}
+                </span>
+                <PremiumToggle userId={u.id} isPremium={u.isPremium} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* Employer job moderation queue */}
       {pendingJobs.length > 0 && (
         <div className="agent-card p-5 border border-amber-500/20">
@@ -507,6 +648,7 @@ export default async function AdminPage() {
                       FREE
                     </span>
                   )}
+                  <PremiumToggle userId={u.id} isPremium={u.isPremium} />
                 </div>
               </div>
             ))}
