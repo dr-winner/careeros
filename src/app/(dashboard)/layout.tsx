@@ -31,6 +31,32 @@ function isNavActive(href: string, pathname: string) {
   return pathname === href || pathname.startsWith(href + "/");
 }
 
+// Persistent upsell card shown to free users in the sidebar/drawer —
+// premium must be discoverable everywhere, not only when a limit is hit.
+function UpgradeCard({ onNavigate }: { onNavigate?: () => void }) {
+  return (
+    <Link
+      href="/pricing"
+      onClick={onNavigate}
+      className="block rounded-xl border border-purple-500/25 bg-gradient-to-br from-purple-500/15 via-purple-500/5 to-cyan-500/10 p-3.5 hover:border-purple-500/45 hover:from-purple-500/20 transition-all group"
+    >
+      <div className="flex items-center gap-2 mb-1.5">
+        <div className="h-6 w-6 rounded-md bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shadow-md shadow-purple-500/30">
+          <svg className="h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+        </div>
+        <span className="text-sm font-bold text-white group-hover:text-purple-200 transition-colors">
+          Upgrade to Pro
+        </span>
+      </div>
+      <p className="mono text-[10px] text-zinc-500 leading-relaxed">
+        Unlimited analyses · AI cover letters<br />GHS 25/mo · pay with MoMo
+      </p>
+    </Link>
+  );
+}
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { userId, isLoaded } = useAuth();
   const { signOut } = useClerk();
@@ -38,6 +64,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pathname = usePathname();
   const [synced, setSynced] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  // null = unknown (render nothing) — avoids flashing the upsell at premium users
+  const [isPremium, setIsPremium] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (isLoaded && !userId) {
@@ -52,6 +80,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         .catch(console.error);
     }
   }, [userId, synced]);
+
+  useEffect(() => {
+    if (!userId) return;
+    fetch("/api/user/premium")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data) setIsPremium(Boolean(data.isPremium));
+      })
+      .catch(() => {});
+  }, [userId, pathname]);
 
   if (!isLoaded) {
     return (
@@ -119,6 +157,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           })}
         </nav>
 
+        {isPremium === false && (
+          <div className="p-3">
+            <UpgradeCard />
+          </div>
+        )}
+        {isPremium === true && (
+          <div className="px-6 py-2 flex items-center gap-2">
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 mono">PRO</span>
+            <span className="mono text-[10px] text-zinc-600">All features unlocked</span>
+          </div>
+        )}
+
         <div className="p-3 border-t border-white/5 space-y-1">
           <div className="flex items-center gap-3 px-3 py-2">
             <UserButton />
@@ -146,6 +196,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </Link>
 
           <div className="flex items-center gap-2">
+            {isPremium === false && (
+              <Link
+                href="/pricing"
+                className="flex items-center gap-1 rounded-full border border-purple-500/30 bg-purple-500/10 px-2.5 py-1 mono text-[10px] font-bold text-purple-300 hover:bg-purple-500/20 transition-all"
+              >
+                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                PRO
+              </Link>
+            )}
             <UserButton />
             <button
               onClick={() => setSidebarOpen(true)}
@@ -199,6 +260,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 );
               })}
             </nav>
+
+            {isPremium === false && (
+              <div className="p-3">
+                <UpgradeCard onNavigate={() => setSidebarOpen(false)} />
+              </div>
+            )}
 
             <div className="p-3 border-t border-white/5 space-y-1 mt-auto">
               <div className="flex items-center gap-3 px-3 py-2">
