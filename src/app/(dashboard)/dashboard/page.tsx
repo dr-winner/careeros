@@ -45,6 +45,12 @@ export default function DashboardPage() {
     pct: number;
     missing: string[];
   } | null>(null);
+  const [quota, setQuota] = useState<{
+    used: number;
+    limit: number;
+    remaining: number;
+    resetAt: string;
+  } | null>(null);
 
   useEffect(() => {
     if (isLoaded && isUserLoaded && userId) {
@@ -71,6 +77,13 @@ export default function DashboardPage() {
       })
       .catch(console.error)
       .finally(() => setIsLoadingAction(false));
+
+    fetch("/api/user/premium")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.quota) setQuota(data.quota);
+      })
+      .catch(() => {});
 
     Promise.all([
       fetch("/api/applications").then((res) => res.ok ? res.json() : { applications: [] }),
@@ -351,6 +364,47 @@ export default function DashboardPage() {
             </div>
           ))}
         </div>
+
+        {/* Free-tier quota meter (hidden for premium users) */}
+        {quota && (
+          <div className="animate-fade-up delay-200 rounded-2xl border border-white/[0.08] bg-[#0d0d18] p-5">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div className="flex-1 min-w-[220px]">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="mono text-xs text-zinc-500 uppercase tracking-widest">
+                    Free plan · AI analyses
+                  </p>
+                  <p className={`mono text-xs font-bold ${
+                    quota.remaining === 0 ? "text-red-400" : quota.remaining === 1 ? "text-amber-400" : "text-zinc-300"
+                  }`}>
+                    {quota.remaining} of {quota.limit} left this month
+                  </p>
+                </div>
+                <div className="h-2 rounded-full bg-white/[0.06] overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all ${
+                      quota.remaining === 0
+                        ? "bg-red-500/70"
+                        : quota.remaining === 1
+                          ? "bg-amber-500/70"
+                          : "bg-gradient-to-r from-purple-500 to-cyan-500"
+                    }`}
+                    style={{ width: `${Math.min(100, (quota.used / quota.limit) * 100)}%` }}
+                  />
+                </div>
+                <p className="mono text-[10px] text-zinc-600 mt-1.5">
+                  Resets {new Date(quota.resetAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                </p>
+              </div>
+              <Link
+                href="/pricing"
+                className="agent-button-primary px-5 py-2.5 text-sm font-bold press-scale flex-shrink-0"
+              >
+                {quota.remaining === 0 ? "Upgrade — unlock unlimited" : "Go unlimited — GHS 25/mo"}
+              </Link>
+            </div>
+          </div>
+        )}
 
         {/* Empty state for new users */}
         {!isLoadingAction && stats.applications === 0 && stats.savedJobs === 0 && stats.interviews === 0 && (
