@@ -67,6 +67,10 @@ export default function PricingPage() {
   const [momoLoading, setMomoLoading] = useState(false);
   const [momoRef, setMomoRef] = useState("");
   const [momoVerifying, setMomoVerifying] = useState(false);
+  // Moolre requires one-time SMS OTP verification for a number's first
+  // direct charge (TP14) — collect the code and resubmit.
+  const [momoOtpRequired, setMomoOtpRequired] = useState(false);
+  const [momoOtp, setMomoOtp] = useState("");
   const isSuccess = searchParams.get("success") === "true";
   const paymentRef = searchParams.get("ref") || "";
 
@@ -146,7 +150,7 @@ export default function PricingPage() {
     }
   };
 
-  const handleMomoCharge = async () => {
+  const handleMomoCharge = async (otpcode?: string) => {
     if (!/^0\d{9}$/.test(momoPhone)) {
       toast.error("Enter a valid MoMo number, e.g. 0241234567");
       return;
@@ -160,17 +164,30 @@ export default function PricingPage() {
           plan: annual ? "annual" : "monthly",
           phone: momoPhone,
           channel: momoChannel,
+          ...(otpcode ? { otpcode } : {}),
         }),
       });
       const data = await res.json();
       if (!res.ok) { toast.error(data.error || "Could not start the MoMo payment."); return; }
-      setMomoRef(data.ref);
-      posthog?.capture("upgrade_initiated", {
-        plan: annual ? "annual" : "monthly",
-        amount_ghs: annual ? 199 : 25,
-        method: "momo_ussd",
-      });
-      toast.success(data.message || "Approve the prompt on your phone.");
+
+      if (data.otpRequired) {
+        // First charge on this number: Moolre texted a verification code.
+        setMomoOtpRequired(true);
+        setMomoOtp("");
+        toast.info(data.message || "Enter the verification code Moolre sent you by SMS.");
+        return;
+      }
+
+      if (data.success) {
+        setMomoOtpRequired(false);
+        setMomoRef(data.ref);
+        posthog?.capture("upgrade_initiated", {
+          plan: annual ? "annual" : "monthly",
+          amount_ghs: annual ? 199 : 25,
+          method: "momo_ussd",
+        });
+        toast.success(data.message || "Approve the prompt on your phone.");
+      }
     } catch {
       toast.error("Something went wrong. Please try again.");
     } finally {
@@ -428,7 +445,41 @@ export default function PricingPage() {
 
                 {momoOpen && (
                   <div className="mt-3 rounded-xl border border-purple-500/20 bg-purple-500/[0.04] p-4 space-y-3">
-                    {momoRef ? (
+                    {momoOtpRequired && !momoRef ? (
+                      <>
+                        <p className="text-sm text-zinc-300">
+                          Moolre sent a verification code by SMS to{" "}
+                          <span className="text-purple-300 mono">{momoPhone}</span> — a one-time
+                          step to confirm your number before the payment prompt.
+                        </p>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={momoOtp}
+                          onChange={(e) => setMomoOtp(e.target.value.trim())}
+                          placeholder="Verification code from SMS"
+                          className="agent-input w-full"
+                        />
+                        <button
+                          onClick={() => handleMomoCharge(momoOtp)}
+                          disabled={momoLoading || momoOtp.length < 4}
+                          className="agent-button-primary w-full justify-center py-3 text-sm font-bold press-scale disabled:opacity-50"
+                        >
+                          {momoLoading ? (
+                            <>
+                              <div className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                              Verifying…
+                            </>
+                          ) : "Verify & send payment prompt"}
+                        </button>
+                        <button
+                          onClick={() => { setMomoOtpRequired(false); setMomoOtp(""); }}
+                          className="block mx-auto mono text-[10px] text-zinc-600 hover:text-zinc-400 transition-colors"
+                        >
+                          Use a different number
+                        </button>
+                      </>
+                    ) : momoRef ? (
                       <>
                         <p className="text-sm text-zinc-300">
                           A payment prompt was sent to <span className="text-purple-300 mono">{momoPhone}</span>.
@@ -482,7 +533,7 @@ export default function PricingPage() {
                           className="agent-input w-full"
                         />
                         <button
-                          onClick={handleMomoCharge}
+                          onClick={() => handleMomoCharge()}
                           disabled={momoLoading}
                           className="agent-button-primary w-full justify-center py-3 text-sm font-bold press-scale disabled:opacity-50"
                         >
