@@ -14,6 +14,9 @@ export default function ReferralPage() {
   const [copied, setCopied] = useState(false);
   const [loadingUrl, setLoadingUrl] = useState(true);
   const [withdrawing, setWithdrawing] = useState(false);
+  const [referralList, setReferralList] = useState<
+    { id: string; email: string; status: string; rewardGhs: number; createdAt: string }[]
+  >([]);
   const [stats, setStats] = useState({
     referralCount: 0,
     convertedCount: 0,
@@ -47,6 +50,7 @@ export default function ReferralPage() {
           minWithdrawalGhs: data.minWithdrawalGhs || 5,
           hasPayoutWallet: Boolean(data.hasPayoutWallet),
         });
+        setReferralList(data.referrals || []);
       }
     } catch (error) {
       console.error("Error fetching referral:", error);
@@ -274,6 +278,43 @@ export default function ReferralPage() {
           )}
         </div>
       </div>
+
+      {/* Referral list */}
+      {referralList.length > 0 && (
+        <div className="animate-fade-up delay-200 rounded-2xl border border-white/[0.08] bg-[#0d0d18] p-5">
+          <p className="section-label">Your Referrals</p>
+          <div className="space-y-2">
+            {referralList.map((r) => (
+              <div
+                key={r.id}
+                className="flex items-center justify-between gap-3 rounded-xl border border-white/[0.04] bg-white/[0.02] px-4 py-3"
+              >
+                <div className="min-w-0">
+                  <p className="mono text-sm text-zinc-300 truncate">{r.email}</p>
+                  <p className="mono text-[10px] text-zinc-600 mt-0.5">
+                    {new Date(r.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {r.status === "converted" ? (
+                    <>
+                      <span className="mono text-xs font-bold text-green-400">+GHS {r.rewardGhs.toFixed(0)}</span>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 mono">PREMIUM</span>
+                    </>
+                  ) : r.status === "engaged" ? (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-400 mono">ACTIVE</span>
+                  ) : (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/5 text-zinc-500 mono">INVITED</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className="mono text-[10px] text-zinc-600 mt-3">
+            INVITED joined via your link or email · ACTIVE ran their first analysis · PREMIUM earned you GHS 5
+          </p>
+        </div>
+      )}
 
       {/* Send invite card */}
       <div className="animate-fade-up delay-200 rounded-2xl border border-white/[0.08] bg-[#0d0d18] p-5">

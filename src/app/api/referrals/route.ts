@@ -34,7 +34,7 @@ export async function GET() {
     // Settle any in-flight withdrawals before reporting balances.
     await finalizeProcessingWithdrawals(user.id).catch(() => {});
 
-    const [referralCount, convertedCount, lifetime, withdrawn, freshUser] = await Promise.all([
+    const [referralCount, convertedCount, lifetime, withdrawn, freshUser, referralRows] = await Promise.all([
       prisma.referral.count({
         where: { referrerId: user.id },
       }),
@@ -54,7 +54,38 @@ export async function GET() {
         where: { id: user.id },
         select: { earningsBalance: true },
       }),
+      prisma.referral.findMany({
+        where: { referrerId: user.id },
+        orderBy: { createdAt: "desc" },
+        take: 25,
+        select: {
+          id: true,
+          refereeEmail: true,
+          status: true,
+          rewardAmount: true,
+          createdAt: true,
+          convertedAt: true,
+        },
+      }),
     ]);
+
+    // Mask referee emails — link-attributed referees never shared their
+    // address with the referrer directly.
+    const maskEmail = (email: string) => {
+      const [local, domain] = email.split("@");
+      if (!domain) return "•••";
+      const visible = local.slice(0, 2);
+      return `${visible}${"•".repeat(Math.max(2, Math.min(6, local.length - 2)))}@${domain}`;
+    };
+
+    const referrals = referralRows.map((r) => ({
+      id: r.id,
+      email: maskEmail(r.refereeEmail),
+      status: r.status, // "pending" | "engaged" | "converted"
+      rewardGhs: r.status === "converted" ? (r.rewardAmount ?? 0) : 0,
+      createdAt: r.createdAt,
+      convertedAt: r.convertedAt,
+    }));
 
     return NextResponse.json({
       referralCode,
@@ -66,6 +97,7 @@ export async function GET() {
       withdrawnGhs: withdrawn._sum.amount ?? 0,
       minWithdrawalGhs: MIN_WITHDRAWAL_GHS,
       hasPayoutWallet: Boolean(user.momoNumber && user.momoChannel),
+      referrals,
     });
   } catch (error) {
     console.error("Error getting referral:", error);
