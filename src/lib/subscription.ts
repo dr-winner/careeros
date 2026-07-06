@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/db";
 import { processReferralReward } from "@/lib/referral-reward";
+import { sendPremiumActivatedEmail } from "@/lib/transactional-emails";
+import { smsPremiumActivated } from "@/lib/notify-sms";
 
 // Parse externalref formats:
 //   new: co-{userId}-{planCode}-{timestamp}  (planCode = "m" | "a")
@@ -44,7 +46,7 @@ export async function activateSubscription(
   const isLifetime = billingCycle === "lifetime";
   const end = periodEnd(billingCycle);
 
-  await prisma.user.update({
+  const user = await prisma.user.update({
     where: { id: userId },
     data: {
       isPremium:          true,
@@ -53,9 +55,17 @@ export async function activateSubscription(
       billingCycle:       isLifetime ? null : billingCycle,
       currentPeriodEnd:   end,
     },
+    select: { email: true, fullName: true, phone: true },
   });
 
-  // Pay the referrer (if any) via Moolre Disbursements. Never blocks or
-  // fails activation — processReferralReward catches its own errors.
+  // Receipt + activation nudges on both channels. Awaited (fire-and-forget
+  // can be killed when the serverless invocation ends) but never fatal.
+  await Promise.all([
+    sendPremiumActivatedEmail(user.email, user.fullName, billingCycle).catch(() => {}),
+    smsPremiumActivated(user.phone),
+  ]);
+
+  // Credit the referrer (if any). Never blocks or fails activation —
+  // processReferralReward catches its own errors.
   await processReferralReward(userId);
 }

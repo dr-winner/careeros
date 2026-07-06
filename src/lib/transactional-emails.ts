@@ -687,3 +687,180 @@ export async function sendRejectionEmail(
     return { success: false, error: error as Error };
   }
 }
+
+export async function sendPremiumActivatedEmail(
+  to: string,
+  firstName: string | null,
+  billingCycle: "monthly" | "annual" | "lifetime",
+): Promise<{ success: boolean; error?: Error }> {
+  if (!isConfigured()) {
+    return { success: false, error: new Error("Email not configured") };
+  }
+
+  const name = firstName?.trim()?.split(" ")[0] || "there";
+  const planLabel =
+    billingCycle === "annual" ? "Annual (GHS 199/yr)" : billingCycle === "lifetime" ? "Lifetime" : "Monthly (GHS 25/mo)";
+
+  const content = [
+    '<div class="container">',
+    '<div class="header">',
+    '<span class="logo">CareerOS</span>',
+    '</div>',
+    '<div class="celebration">',
+    '<p class="big-number">PRO</p>',
+    '<p class="greeting" style="font-size: 22px;">You\'re Premium, ' + name + ' 🎉</p>',
+    '</div>',
+    '<div class="card">',
+    '<p class="body-text">',
+    'Payment confirmed — <span class="highlight">' + planLabel + '</span>. Every limit is now off your account.',
+    '</p>',
+    '<p class="body-text">',
+    "Here's how to get your money's worth in the next 10 minutes:",
+    '</p>',
+    '<div class="tip-box">',
+    '<p class="tip-title">⚡ Do these three things now:</p>',
+    '<p class="tip-text">',
+    '1. Run a <b>full analysis</b> on the job you want most — you\'ll see every skill gap, not just the score<br>',
+    '2. Generate an <b>AI cover letter</b> for it while the analysis is fresh<br>',
+    '3. Open <b>Interview Prep</b> and run one mock round — people who prep before they\'re invited interview better',
+    '</p>',
+    '</div>',
+    '<p class="body-text">',
+    'One more thing: share your referral link and you earn <span class="highlight">GHS 5 to your MoMo</span> for every friend who goes Premium. Your subscription can literally pay for itself.',
+    '</p>',
+    '<p class="body-text" style="margin-bottom: 0;">',
+    'Go get that job.<br>',
+    '<span class="highlight">— Winner</span>',
+    '</p>',
+    '</div>',
+    '<div style="text-align: center;">',
+    '<a href="' + APP_URL + '/jobs" class="cta-button">Run a Full Analysis</a>',
+    '<a href="' + APP_URL + '/referrals" class="cta-secondary">Earn GHS 5 per referral</a>',
+    '</div>',
+    '<div class="footer">',
+    '<p class="footer-text">Receipt: CareerOS Premium, ' + planLabel + ' · billed via Moolre</p>',
+    '<p class="footer-text"><a href="' + APP_URL + '/profile" class="footer-link">Manage account</a></p>',
+    '</div>',
+    '</div>',
+  ].join("\n");
+
+  try {
+    await resend!.emails.send({
+      from: FROM,
+      to,
+      subject: "You're Premium — here's how to use it 🎉",
+      html: wrapHtml(content),
+    });
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to send premium activated email:", error);
+    return { success: false, error: error as Error };
+  }
+}
+
+export async function sendRewardCreditedEmail(
+  to: string,
+  firstName: string | null,
+  amountGhs: number,
+  balanceGhs: number,
+): Promise<{ success: boolean; error?: Error }> {
+  if (!isConfigured()) {
+    return { success: false, error: new Error("Email not configured") };
+  }
+
+  const name = firstName?.trim()?.split(" ")[0] || "there";
+
+  const content = [
+    '<div class="container">',
+    '<div class="header">',
+    '<span class="logo">CareerOS</span>',
+    '</div>',
+    '<div class="celebration">',
+    '<p class="big-number">+GHS ' + amountGhs.toFixed(0) + '</p>',
+    '<p class="greeting" style="font-size: 20px;">Someone you referred just went Premium 💰</p>',
+    '</div>',
+    '<div class="card">',
+    '<p class="greeting">Hey ' + name + ',</p>',
+    '<p class="body-text">',
+    'That\'s real money — <span class="highlight">GHS ' + amountGhs.toFixed(0) + '</span> just landed in your CareerOS earnings.',
+    '</p>',
+    '<div class="tip-box">',
+    '<p class="tip-title">💵 Your balance: GHS ' + balanceGhs.toFixed(2) + '</p>',
+    '<p class="tip-text">Withdraw to your MoMo anytime, or keep stacking — every friend who goes Premium adds GHS ' + amountGhs.toFixed(0) + '.</p>',
+    '</div>',
+    '<p class="body-text">',
+    'The people most likely to upgrade are the ones actively job hunting right now. You know who they are — send them your link today while this is fresh.',
+    '</p>',
+    '</div>',
+    '<div style="text-align: center;">',
+    '<a href="' + APP_URL + '/referrals" class="cta-button">Withdraw or Share Again</a>',
+    '</div>',
+    '<div class="footer">',
+    '<p class="footer-text">Paid via Moolre when you withdraw · CareerOS Referrals</p>',
+    '</div>',
+    '</div>',
+  ].join("\n");
+
+  try {
+    await resend!.emails.send({
+      from: FROM,
+      to,
+      subject: "💰 GHS " + amountGhs.toFixed(0) + " earned — your referral went Premium",
+      html: wrapHtml(content),
+    });
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to send reward credited email:", error);
+    return { success: false, error: error as Error };
+  }
+}
+
+export async function sendWithdrawalEmail(
+  to: string,
+  firstName: string | null,
+  amountGhs: number,
+  momoNumber: string,
+): Promise<{ success: boolean; error?: Error }> {
+  if (!isConfigured()) {
+    return { success: false, error: new Error("Email not configured") };
+  }
+
+  const name = firstName?.trim()?.split(" ")[0] || "there";
+  const maskedNumber = momoNumber.slice(0, 3) + "****" + momoNumber.slice(-3);
+
+  const content = [
+    '<div class="container">',
+    '<div class="header">',
+    '<span class="logo">CareerOS</span>',
+    '</div>',
+    '<div class="card">',
+    '<p class="greeting">Withdrawal sent, ' + name + ' ✅</p>',
+    '<p class="body-text">',
+    '<span class="highlight">GHS ' + amountGhs.toFixed(2) + '</span> is on its way to your MoMo (' + maskedNumber + ') via Moolre. It usually lands within minutes.',
+    '</p>',
+    '<p class="body-text">',
+    'Want to keep earning? Every friend who goes Premium through your link adds to your balance.',
+    '</p>',
+    '</div>',
+    '<div style="text-align: center;">',
+    '<a href="' + APP_URL + '/referrals" class="cta-button">Share Your Link</a>',
+    '</div>',
+    '<div class="footer">',
+    '<p class="footer-text">CareerOS Referral Earnings · paid via Moolre Disbursements</p>',
+    '</div>',
+    '</div>',
+  ].join("\n");
+
+  try {
+    await resend!.emails.send({
+      from: FROM,
+      to,
+      subject: "GHS " + amountGhs.toFixed(2) + " sent to your MoMo ✅",
+      html: wrapHtml(content),
+    });
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to send withdrawal email:", error);
+    return { success: false, error: error as Error };
+  }
+}

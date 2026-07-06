@@ -2,6 +2,8 @@ import { prisma } from "@/lib/db";
 import { getTransactionStatus, initiateTransfer, isMoolreConfigured } from "@/lib/moolre";
 import { readEnv } from "@/lib/env";
 import { getPostHogClient } from "@/lib/posthog-server";
+import { sendRewardCreditedEmail, sendWithdrawalEmail } from "@/lib/transactional-emails";
+import { smsRewardCredited } from "@/lib/notify-sms";
 
 // GHS credited to the referrer's in-app earnings balance when their
 // referee goes premium. Paid out via Moolre only when they withdraw.
@@ -46,7 +48,7 @@ export async function processReferralReward(newPremiumUserId: string): Promise<v
 
     const amount = getReferralRewardAmount();
 
-    await prisma.$transaction([
+    const [, referrer] = await prisma.$transaction([
       prisma.referral.update({
         where: { id: referral.id },
         data: { rewardStatus: "credited", rewardAmount: amount },
@@ -54,7 +56,15 @@ export async function processReferralReward(newPremiumUserId: string): Promise<v
       prisma.user.update({
         where: { id: referral.referrerId },
         data: { earningsBalance: { increment: amount } },
+        select: { email: true, fullName: true, phone: true, earningsBalance: true },
       }),
+    ]);
+
+    // The "you just made money" moment — the strongest share trigger we
+    // have, delivered on both channels.
+    await Promise.all([
+      sendRewardCreditedEmail(referrer.email, referrer.fullName, amount, referrer.earningsBalance).catch(() => {}),
+      smsRewardCredited(referrer.phone, amount, referrer.earningsBalance),
     ]);
 
     const posthog = getPostHogClient();
@@ -99,7 +109,7 @@ export async function requestWithdrawal(userId: string): Promise<WithdrawalResul
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { earningsBalance: true, momoNumber: true, momoChannel: true },
+    select: { earningsBalance: true, momoNumber: true, momoChannel: true, email: true, fullName: true },
   });
   if (!user) return { ok: false, error: "Account not found." };
 
@@ -169,6 +179,10 @@ export async function requestWithdrawal(userId: string): Promise<WithdrawalResul
       event: "earnings_withdrawn",
       properties: { amount_ghs: amount, status },
     });
+
+    // Receipt email closes the loop (MoMo's own credit alert covers SMS,
+    // so no SMS here — don't burn credits duplicating the network's).
+    await sendWithdrawalEmail(user.email, user.fullName, amount, user.momoNumber).catch(() => {});
 
     return { ok: true, amount, status };
   } catch (error) {
