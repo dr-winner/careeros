@@ -26,6 +26,10 @@ const momoChargeSchema = z.object({
   phone: z.string().trim().regex(/^0\d{9}$/, "Enter a valid MoMo number, e.g. 0241234567"),
   channel: z.number().int(),
   otpcode: z.string().trim().optional(),
+  // The externalref from the request that triggered OTP verification —
+  // the OTP resubmission must reuse it, or Moolre treats the call as a
+  // fresh payment and sends another OTP (infinite verification loop).
+  ref: z.string().trim().max(100).optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -51,7 +55,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: getZodErrorMessage(parsed.error) }, { status: 400 });
     }
 
-    const { plan, phone, channel, otpcode } = parsed.data;
+    const { plan, phone, channel, otpcode, ref } = parsed.data;
     if (!isValidMomoChannel(channel)) {
       return NextResponse.json({ error: "Select a valid mobile money network" }, { status: 400 });
     }
@@ -69,7 +73,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Already premium" }, { status: 400 });
     }
 
-    const externalref = `co-${user.id}-${PLAN_CODE[plan]}-${Date.now()}`;
+    // Reuse the ref from the OTP-triggering request when resubmitting
+    // with a code; ownership-checked so nobody can replay another user's
+    // reference. Otherwise mint a fresh one.
+    const refPrefix = `co-${user.id}-${PLAN_CODE[plan]}-`;
+    const externalref =
+      otpcode && ref && ref.startsWith(refPrefix)
+        ? ref
+        : `${refPrefix}${Date.now()}`;
 
     const result = await initiateMomoPayment({
       payer: phone,

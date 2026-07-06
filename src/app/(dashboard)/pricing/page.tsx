@@ -71,6 +71,9 @@ export default function PricingPage() {
   // direct charge (TP14) — collect the code and resubmit.
   const [momoOtpRequired, setMomoOtpRequired] = useState(false);
   const [momoOtp, setMomoOtp] = useState("");
+  // Ref from the OTP-triggering request — resubmission must reuse it or
+  // Moolre starts a fresh payment and sends yet another OTP.
+  const [momoOtpRef, setMomoOtpRef] = useState("");
   const isSuccess = searchParams.get("success") === "true";
   const paymentRef = searchParams.get("ref") || "";
 
@@ -164,7 +167,7 @@ export default function PricingPage() {
           plan: annual ? "annual" : "monthly",
           phone: momoPhone,
           channel: momoChannel,
-          ...(otpcode ? { otpcode } : {}),
+          ...(otpcode ? { otpcode, ref: momoOtpRef } : {}),
         }),
       });
       const data = await res.json();
@@ -172,6 +175,9 @@ export default function PricingPage() {
 
       if (data.otpRequired) {
         // First charge on this number: Moolre texted a verification code.
+        // Keep the ref — the resubmission must reuse it. Only overwrite it
+        // on a fresh (non-OTP) request so retries don't rotate the ref.
+        if (!otpcode) setMomoOtpRef(data.ref);
         setMomoOtpRequired(true);
         setMomoOtp("");
         toast.info(data.message || "Enter the verification code Moolre sent you by SMS.");
@@ -473,7 +479,7 @@ export default function PricingPage() {
                           ) : "Verify & send payment prompt"}
                         </button>
                         <button
-                          onClick={() => { setMomoOtpRequired(false); setMomoOtp(""); }}
+                          onClick={() => { setMomoOtpRequired(false); setMomoOtp(""); setMomoOtpRef(""); }}
                           className="block mx-auto mono text-[10px] text-zinc-600 hover:text-zinc-400 transition-colors"
                         >
                           Use a different number
