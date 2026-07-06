@@ -15,6 +15,7 @@ model User {
   momoNumber     String?       // mobile money wallet for referral payouts
   momoChannel    Int?          // Moolre channel: 1=MTN, 6=Telecel, 7=AirtelTigo
   smsAlerts      Boolean       @default(false)
+  earningsBalance Float        @default(0) // accumulated referral earnings (GHS), withdrawn on demand
   country        String?       @default("Ghana")
   roleType       String?
   headline       String?
@@ -39,6 +40,7 @@ model User {
   referrals         Referral[]
   interviewSessions InterviewSession[]
   interviewRooms    InterviewRoom[]
+  withdrawals       Withdrawal[]
 
   @@index([clerkId])
   @@index([email])
@@ -242,6 +244,20 @@ model Referral {
   @@unique([referrerId, refereeEmail])
   @@index([referralCode])
   @@index([refereeEmail])
+}
+
+model Withdrawal {
+  id         String    @id @default(cuid())
+  userId     String
+  amount     Float
+  status     String    @default("processing") // "processing" | "paid" | "failed"
+  txRef      String    @unique // Moolre externalref for this transfer
+  momoNumber String
+  createdAt  DateTime  @default(now())
+  paidAt     DateTime?
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
 }
 
 model InterviewSession {

@@ -86,15 +86,11 @@ export default function ProfilePage() {
       if (response.ok) {
         const data = (await response.json().catch(() => ({}))) as {
           walletName?: string | null;
-          rewardsPaid?: number;
         };
         if (data.walletName) {
           toast.success(`Profile updated! Wallet verified: ${data.walletName}`);
         } else {
           toast.success("Profile updated!");
-        }
-        if (data.rewardsPaid) {
-          toast.success(`${data.rewardsPaid} pending referral reward${data.rewardsPaid > 1 ? "s" : ""} sent to your MoMo!`);
         }
         await fetchProfile();
       } else {

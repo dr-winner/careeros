@@ -13,11 +13,14 @@ export default function ReferralPage() {
   const [sending, setSending] = useState(false);
   const [copied, setCopied] = useState(false);
   const [loadingUrl, setLoadingUrl] = useState(true);
+  const [withdrawing, setWithdrawing] = useState(false);
   const [stats, setStats] = useState({
     referralCount: 0,
     convertedCount: 0,
-    earnedGhs: 0,
-    pendingGhs: 0,
+    balanceGhs: 0,
+    lifetimeGhs: 0,
+    withdrawnGhs: 0,
+    minWithdrawalGhs: 5,
     hasPayoutWallet: false,
   });
 
@@ -38,8 +41,10 @@ export default function ReferralPage() {
         setStats({
           referralCount: data.referralCount || 0,
           convertedCount: data.convertedCount || 0,
-          earnedGhs: data.earnedGhs || 0,
-          pendingGhs: data.pendingGhs || 0,
+          balanceGhs: data.balanceGhs || 0,
+          lifetimeGhs: data.lifetimeGhs || 0,
+          withdrawnGhs: data.withdrawnGhs || 0,
+          minWithdrawalGhs: data.minWithdrawalGhs || 5,
           hasPayoutWallet: Boolean(data.hasPayoutWallet),
         });
       }
@@ -56,6 +61,25 @@ export default function ReferralPage() {
     setCopied(true);
     toast.success("Copied!");
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleWithdraw = async () => {
+    setWithdrawing(true);
+    try {
+      const res = await fetch("/api/referrals/withdraw", { method: "POST" });
+      const data = await res.json();
+      if (res.ok) {
+        posthog?.capture("earnings_withdraw_clicked", { amount_ghs: data.amount });
+        toast.success(data.message || "Withdrawal sent!");
+        await fetchReferral();
+      } else {
+        toast.error(data.error || "Withdrawal failed");
+      }
+    } catch {
+      toast.error("Withdrawal failed. Please try again.");
+    } finally {
+      setWithdrawing(false);
+    }
   };
 
   const sendInvite = async () => {
@@ -107,31 +131,61 @@ export default function ReferralPage() {
         </p>
       </div>
 
-      {/* Earnings stats */}
-      <div className="animate-fade-up delay-100 grid grid-cols-3 gap-3">
-        {[
-          { label: "Invited", value: String(stats.referralCount), accent: "text-white" },
-          { label: "Went Premium", value: String(stats.convertedCount), accent: "text-purple-400" },
-          { label: "Earned", value: `GHS ${stats.earnedGhs}`, accent: "text-green-400" },
-        ].map((s) => (
-          <div key={s.label} className="rounded-2xl border border-white/[0.08] bg-[#0d0d18] p-4 text-center">
-            <p className={`text-xl font-bold ${s.accent}`}>{s.value}</p>
-            <p className="mono text-[10px] text-zinc-500 mt-1">{s.label}</p>
+      {/* Earnings wallet */}
+      <div className="animate-fade-up delay-100 rounded-2xl overflow-hidden border border-green-500/20 bg-[#0d0d18]">
+        <div className="h-1 w-full bg-gradient-to-r from-green-500/40 via-cyan-500/40 to-green-500/40" />
+        <div className="p-6">
+          <div className="flex items-end justify-between gap-4 flex-wrap">
+            <div>
+              <p className="mono text-xs text-zinc-500 uppercase tracking-widest mb-1">Your Earnings</p>
+              <p className="text-4xl font-bold text-green-400">
+                GHS {stats.balanceGhs.toFixed(2)}
+              </p>
+              <p className="mono text-xs text-zinc-600 mt-1.5">
+                GHS {stats.lifetimeGhs.toFixed(0)} earned all-time
+                {stats.withdrawnGhs > 0 && ` · GHS ${stats.withdrawnGhs.toFixed(0)} withdrawn`}
+              </p>
+            </div>
+            <button
+              onClick={handleWithdraw}
+              disabled={withdrawing || stats.balanceGhs < stats.minWithdrawalGhs || !stats.hasPayoutWallet}
+              className="agent-button-primary px-6 py-3 text-sm font-bold press-scale disabled:opacity-40"
+            >
+              {withdrawing ? (
+                <>
+                  <div className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                  Sending…
+                </>
+              ) : (
+                "Withdraw to MoMo"
+              )}
+            </button>
           </div>
-        ))}
-      </div>
 
-      {stats.pendingGhs > 0 && !stats.hasPayoutWallet && (
-        <div className="animate-fade-up rounded-xl border border-amber-500/20 bg-amber-500/[0.06] p-4">
-          <p className="text-sm text-amber-300">
-            You have GHS {stats.pendingGhs} in rewards waiting.{" "}
-            <a href="/profile" className="underline hover:text-amber-200">
-              Add your MoMo number
-            </a>{" "}
-            to receive them instantly.
-          </p>
+          {stats.balanceGhs > 0 && stats.balanceGhs < stats.minWithdrawalGhs && (
+            <p className="mono text-xs text-zinc-500 mt-3">
+              Minimum withdrawal is GHS {stats.minWithdrawalGhs} — keep referring to grow your balance.
+            </p>
+          )}
+          {stats.balanceGhs >= stats.minWithdrawalGhs && !stats.hasPayoutWallet && (
+            <p className="text-sm text-amber-300 mt-3">
+              <a href="/profile" className="underline hover:text-amber-200">Add your MoMo number</a>{" "}
+              to withdraw — paid instantly via Moolre.
+            </p>
+          )}
+
+          <div className="grid grid-cols-2 gap-3 mt-5 pt-5 border-t border-white/[0.06]">
+            <div className="text-center">
+              <p className="text-lg font-bold text-white">{stats.referralCount}</p>
+              <p className="mono text-[10px] text-zinc-500">Invited</p>
+            </div>
+            <div className="text-center">
+              <p className="text-lg font-bold text-purple-400">{stats.convertedCount}</p>
+              <p className="mono text-[10px] text-zinc-500">Went Premium · GHS 5 each</p>
+            </div>
+          </div>
         </div>
-      )}
+      </div>
 
       {/* Referral link — hero card */}
       <div className="animate-fade-up delay-100 rounded-2xl overflow-hidden border border-green-500/20 bg-[#0d0d18]">

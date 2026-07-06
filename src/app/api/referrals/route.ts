@@ -6,7 +6,7 @@ import { getZodErrorMessage, referralInviteSchema } from "@/lib/validation";
 import { sendReferralReceivedEmail } from "@/lib/transactional-emails";
 import { getEmailFrom } from "@/lib/env";
 import { buildReferralCode } from "@/lib/referral-code";
-import { finalizeProcessingRewards } from "@/lib/referral-reward";
+import { finalizeProcessingWithdrawals, MIN_WITHDRAWAL_GHS } from "@/lib/referral-reward";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://careeros.live";
 
@@ -31,34 +31,40 @@ export async function GET() {
     const referralCode = buildReferralCode(user.id);
     const referralUrl = `${getBaseUrl()}/?ref=${encodeURIComponent(referralCode)}`;
 
-    // Settle any in-flight payouts before reporting earnings.
-    await finalizeProcessingRewards(user.id).catch(() => {});
+    // Settle any in-flight withdrawals before reporting balances.
+    await finalizeProcessingWithdrawals(user.id).catch(() => {});
 
-    const [referralCount, convertedCount, rewards] = await Promise.all([
+    const [referralCount, convertedCount, lifetime, withdrawn, freshUser] = await Promise.all([
       prisma.referral.count({
         where: { referrerId: user.id },
       }),
       prisma.referral.count({
         where: { referrerId: user.id, status: "converted" },
       }),
+      // Everything ever credited (old direct-paid rewards included)
       prisma.referral.aggregate({
-        where: { referrerId: user.id, rewardStatus: "paid" },
+        where: { referrerId: user.id, rewardStatus: { in: ["credited", "paid"] } },
         _sum: { rewardAmount: true },
       }),
+      prisma.withdrawal.aggregate({
+        where: { userId: user.id, status: "paid" },
+        _sum: { amount: true },
+      }),
+      prisma.user.findUnique({
+        where: { id: user.id },
+        select: { earningsBalance: true },
+      }),
     ]);
-
-    const pendingRewards = await prisma.referral.aggregate({
-      where: { referrerId: user.id, rewardStatus: { in: ["unpayable", "failed", "processing"] } },
-      _sum: { rewardAmount: true },
-    });
 
     return NextResponse.json({
       referralCode,
       referralUrl,
       referralCount,
       convertedCount,
-      earnedGhs: rewards._sum.rewardAmount ?? 0,
-      pendingGhs: pendingRewards._sum.rewardAmount ?? 0,
+      balanceGhs: freshUser?.earningsBalance ?? 0,
+      lifetimeGhs: lifetime._sum.rewardAmount ?? 0,
+      withdrawnGhs: withdrawn._sum.amount ?? 0,
+      minWithdrawalGhs: MIN_WITHDRAWAL_GHS,
       hasPayoutWallet: Boolean(user.momoNumber && user.momoChannel),
     });
   } catch (error) {

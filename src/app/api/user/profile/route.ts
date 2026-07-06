@@ -4,7 +4,6 @@ import { getDbUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getZodErrorMessage, profileUpdateSchema } from "@/lib/validation";
 import { isMoolreConfigured, validateWalletName } from "@/lib/moolre";
-import { retryUnpaidRewards } from "@/lib/referral-reward";
 
 export async function GET() {
   try {
@@ -70,14 +69,7 @@ export async function PATCH(request: Request) {
       data,
     });
 
-    // A wallet just became available — pay out any rewards earned while
-    // the referrer had no payout number on file.
-    let rewardsPaid = 0;
-    if (data.momoNumber && data.momoChannel) {
-      rewardsPaid = await retryUnpaidRewards(user.id).catch(() => 0);
-    }
-
-    return NextResponse.json({ user: updatedUser, walletName, rewardsPaid });
+    return NextResponse.json({ user: updatedUser, walletName });
   } catch (error) {
     if (error instanceof ZodError) {
       return NextResponse.json(
