@@ -75,9 +75,11 @@ export function hasSupabaseConfigured(): boolean {
 }
 
 export function getUpstashRedisConfig() {
+  // Vercel's Upstash marketplace integration injects KV_REST_API_* names;
+  // accept both so provisioning is plug-and-play.
   return {
-    url: readEnv("UPSTASH_REDIS_REST_URL"),
-    token: readEnv("UPSTASH_REDIS_REST_TOKEN"),
+    url: readEnv("UPSTASH_REDIS_REST_URL") || readEnv("KV_REST_API_URL"),
+    token: readEnv("UPSTASH_REDIS_REST_TOKEN") || readEnv("KV_REST_API_TOKEN"),
   };
 }
 

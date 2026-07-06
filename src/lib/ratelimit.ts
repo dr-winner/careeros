@@ -64,6 +64,36 @@ export const RATE_LIMITS = {
   strict: { max: 10, window: "1 m" },
 } as const;
 
+// In-memory fixed-window fallback for when Redis is unavailable. Scoped
+// per serverless instance, so it's weaker than Upstash (each warm lambda
+// counts separately) — but for fail-closed money endpoints it keeps a
+// real cap in place instead of denying every legitimate payment.
+const memoryWindows = new Map<string, { count: number; resetAt: number }>();
+const MEMORY_MAP_MAX = 10_000;
+
+function memoryLimit(
+  bucket: string,
+  max: number,
+): { success: boolean; remaining: number; reset: number } {
+  const now = Date.now();
+  const windowMs = 60_000;
+
+  if (memoryWindows.size > MEMORY_MAP_MAX) memoryWindows.clear();
+
+  const entry = memoryWindows.get(bucket);
+  if (!entry || entry.resetAt <= now) {
+    memoryWindows.set(bucket, { count: 1, resetAt: now + windowMs });
+    return { success: true, remaining: max - 1, reset: now + windowMs };
+  }
+
+  entry.count++;
+  return {
+    success: entry.count <= max,
+    remaining: Math.max(0, max - entry.count),
+    reset: entry.resetAt,
+  };
+}
+
 export async function checkRateLimit(
   identifier: string,
   config: RateLimitConfig,
@@ -72,14 +102,13 @@ export async function checkRateLimit(
 ): Promise<{ success: boolean; remaining: number; reset: number }> {
   const ratelimit = createRatelimit(identifier, config);
 
-  // failClosed is for endpoints that trigger outbound cost or abuse
-  // (USSD prompts, transfers, SMS): if the limiter is unavailable, deny
-  // rather than run unmetered. Read paths keep failing open so a Redis
-  // outage doesn't take the app down.
+  // failClosed endpoints (USSD prompts, transfers, payment links) must
+  // never run unmetered: when Redis is unavailable they fall back to the
+  // per-instance in-memory limiter. Read paths keep failing open so a
+  // Redis outage doesn't take the app down.
   if (!ratelimit) {
     if (options.failClosed) {
-      console.error(`Rate limiter unavailable for ${identifier} (fail-closed): denying request`);
-      return { success: false, remaining: 0, reset: Date.now() + 60_000 };
+      return memoryLimit(`${identifier}:${key || "anon"}`, config.max);
     }
     return { success: true, remaining: 999, reset: 0 };
   }
@@ -94,7 +123,7 @@ export async function checkRateLimit(
   } catch (err) {
     console.error(`Rate limit check failed for ${identifier}:`, err);
     if (options.failClosed) {
-      return { success: false, remaining: 0, reset: Date.now() + 60_000 };
+      return memoryLimit(`${identifier}:${key || "anon"}`, config.max);
     }
     return { success: true, remaining: 999, reset: 0 };
   }
