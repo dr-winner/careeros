@@ -12,7 +12,8 @@ export async function POST() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const rateLimitResult = await checkRateLimit("payment", RATE_LIMITS.payment, user.id);
+    // Fail-closed: withdrawals move real money and must never run unmetered.
+    const rateLimitResult = await checkRateLimit("payment", RATE_LIMITS.payment, user.id, { failClosed: true });
     if (!rateLimitResult.success) {
       return NextResponse.json(
         { error: "Too many withdrawal attempts. Please wait a minute." },

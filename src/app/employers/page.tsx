@@ -41,6 +41,7 @@ export default function EmployersPage() {
     skills: "",
     employerName: "",
     employerEmail: "",
+    website: "", // honeypot — humans never see or fill this
   });
   const [jobStatus, setJobStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
 
@@ -142,6 +143,7 @@ export default function EmployersPage() {
                       skills: "",
                       employerName: "",
                       employerEmail: "",
+                      website: "",
                     });
                     setJobStatus("idle");
                   }}
@@ -291,6 +293,19 @@ export default function EmployersPage() {
                         />
                       </div>
                     </div>
+                    <p className="mono text-[10px] text-zinc-600 mt-2">
+                      Your name and email appear as the contact on the published listing so candidates can reach you.
+                    </p>
+                    {/* Honeypot — hidden from humans, bots fill it and get silently dropped */}
+                    <input
+                      type="text"
+                      name="website"
+                      tabIndex={-1}
+                      autoComplete="off"
+                      aria-hidden="true"
+                      style={{ position: "absolute", left: "-9999px", height: 0, width: 0, opacity: 0 }}
+                      onChange={(e) => setJobForm((f) => ({ ...f, website: e.target.value }))}
+                    />
                   </div>
 
                   {jobStatus === "error" && (

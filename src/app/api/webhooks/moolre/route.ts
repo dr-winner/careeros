@@ -8,7 +8,18 @@ const MOOLRE_BASE =
     ? "https://sandbox.moolre.com"
     : "https://api.moolre.com";
 
-async function verifyTransaction(externalref: string): Promise<boolean> {
+// Expected GHS per plan — activation asserts the paid amount matches,
+// so a verified-but-underpaid transaction can never grant a plan.
+function expectedAmount(billingCycle: "monthly" | "annual" | "lifetime"): number | null {
+  if (billingCycle === "monthly") return parseFloat(process.env.MOOLRE_MONTHLY_AMOUNT || "25");
+  if (billingCycle === "annual") return parseFloat(process.env.MOOLRE_ANNUAL_AMOUNT || "199");
+  return null; // legacy lifetime refs predate amount encoding — status check only
+}
+
+async function verifyTransaction(
+  externalref: string,
+  billingCycle: "monthly" | "annual" | "lifetime",
+): Promise<boolean> {
   try {
     const res = await fetch(`${MOOLRE_BASE}/open/transact/status`, {
       method: "POST",
@@ -27,20 +38,38 @@ async function verifyTransaction(externalref: string): Promise<boolean> {
     const data = await res.json();
     // txstatus: 0=Pending, 1=Success, 2=Failed
     const txstatus = data?.data?.txstatus ?? data?.txstatus;
-    return txstatus === 1;
+    if (txstatus !== 1) return false;
+
+    const expected = expectedAmount(billingCycle);
+    if (expected !== null) {
+      const paid = parseFloat(data?.data?.amount ?? data?.data?.value ?? "0");
+      if (!(paid >= expected)) {
+        console.error(
+          `Moolre verify: amount mismatch for ref=${externalref} — paid ${paid}, expected ${expected}`,
+        );
+        return false;
+      }
+    }
+    return true;
   } catch (err) {
     console.error("Moolre verify error:", err);
     return false;
   }
 }
 
+// Trust model: Moolre does not sign webhooks (no HMAC/signature in their
+// spec), so this endpoint treats every payload as untrusted input. The
+// ONLY thing that activates a subscription is our own server-to-server
+// verifyTransaction call against Moolre's status API — a forged webhook
+// can at most trigger a lookup that finds nothing.
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { code, data } = body;
 
-    // Only process successful payment notifications
-    if (code !== "SS01") {
+    // P01 is the documented payment-received code; SS01 (status-lookup
+    // success) is kept for compatibility with observed payloads.
+    if (code !== "P01" && code !== "SS01") {
       return NextResponse.json({ received: true });
     }
 
@@ -70,7 +99,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ received: true });
     }
 
-    const verified = await verifyTransaction(externalref);
+    const verified = await verifyTransaction(externalref, billingCycle);
     if (!verified) {
       console.error(`Moolre webhook: transaction verification failed for ref=${externalref}. Aborting subscription activation.`);
       return NextResponse.json({ error: "Transaction verification failed" }, { status: 400 });

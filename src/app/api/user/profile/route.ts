@@ -51,10 +51,16 @@ export async function PATCH(request: Request) {
     const data = profileUpdateSchema.parse(body);
 
     // Confirm the wallet holder's name with Moolre before saving a payout
-    // number, so referral rewards can't be sent to a mistyped wallet.
+    // number. Validation runs on the EFFECTIVE pair (incoming merged with
+    // stored), so setting number and network in separate requests can't
+    // bypass the check.
     let walletName: string | null = null;
-    if (data.momoNumber && data.momoChannel && isMoolreConfigured()) {
-      const validation = await validateWalletName(data.momoNumber, data.momoChannel);
+    const effectiveNumber = data.momoNumber !== undefined ? data.momoNumber : user.momoNumber;
+    const effectiveChannel = data.momoChannel !== undefined ? data.momoChannel : user.momoChannel;
+    const walletTouched = data.momoNumber !== undefined || data.momoChannel !== undefined;
+
+    if (walletTouched && effectiveNumber && effectiveChannel && isMoolreConfigured()) {
+      const validation = await validateWalletName(effectiveNumber, effectiveChannel);
       if (!validation.ok) {
         return NextResponse.json(
           { error: "This mobile money number could not be verified. Check the number and network." },

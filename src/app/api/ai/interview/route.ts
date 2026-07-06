@@ -7,8 +7,13 @@ import { ZodError } from "zod";
 
 export async function POST(request: NextRequest) {
   try {
-    const ip = request.headers.get("x-forwarded-for")?.split(",")[0] || "anonymous";
-    const rateLimitResult = await checkRateLimit("ai", RATE_LIMITS.ai, ip);
+    const { userId: clerkId } = await auth();
+    if (!clerkId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Per-user keying — mobile carrier NAT makes IP keying unfair here.
+    const rateLimitResult = await checkRateLimit("ai", RATE_LIMITS.ai, clerkId);
 
     if (!rateLimitResult.success) {
       return NextResponse.json(
@@ -18,11 +23,6 @@ export async function POST(request: NextRequest) {
           headers: getRateLimitHeaders(rateLimitResult),
         },
       );
-    }
-
-    const { userId: clerkId } = await auth();
-    if (!clerkId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body = await request.json();

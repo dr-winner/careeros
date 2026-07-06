@@ -202,6 +202,10 @@ Return ONLY this JSON (no markdown, no explanation):
   return parsed;
 }
 
+// SECURITY NOTE: extracted CV text is untrusted user input flowing into
+// an LLM prompt (prompt injection possible). Safe today because output
+// only affects the requesting user's own displayed analysis and scores
+// are clamped — revisit if AI output ever gains authority.
 export async function POST(request: NextRequest) {
   try {
     const userId = await getDbUserId();

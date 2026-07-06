@@ -67,25 +67,35 @@ export const RATE_LIMITS = {
 export async function checkRateLimit(
   identifier: string,
   config: RateLimitConfig,
-  ip?: string,
+  key?: string,
+  options: { failClosed?: boolean } = {},
 ): Promise<{ success: boolean; remaining: number; reset: number }> {
   const ratelimit = createRatelimit(identifier, config);
 
+  // failClosed is for endpoints that trigger outbound cost or abuse
+  // (USSD prompts, transfers, SMS): if the limiter is unavailable, deny
+  // rather than run unmetered. Read paths keep failing open so a Redis
+  // outage doesn't take the app down.
   if (!ratelimit) {
+    if (options.failClosed) {
+      console.error(`Rate limiter unavailable for ${identifier} (fail-closed): denying request`);
+      return { success: false, remaining: 0, reset: Date.now() + 60_000 };
+    }
     return { success: true, remaining: 999, reset: 0 };
   }
 
-  const key = ip || identifier;
   try {
-    const result = await ratelimit.limit(key);
+    const result = await ratelimit.limit(key || identifier);
     return {
       success: result.success,
       remaining: result.remaining,
       reset: result.reset,
     };
   } catch (err) {
-    // Fail open: if Redis is unavailable, allow the request rather than blocking it
-    console.error("Rate limit check failed (allowing request):", err);
+    console.error(`Rate limit check failed for ${identifier}:`, err);
+    if (options.failClosed) {
+      return { success: false, remaining: 0, reset: Date.now() + 60_000 };
+    }
     return { success: true, remaining: 999, reset: 0 };
   }
 }

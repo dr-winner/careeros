@@ -47,8 +47,15 @@ async function findPreferredResume(userId: string) {
 
 export async function POST(request: NextRequest) {
   try {
-    const ip = request.headers.get("x-forwarded-for")?.split(",")[0] || "anonymous";
-    const rateLimitResult = await checkRateLimit("ai", RATE_LIMITS.ai, ip);
+    const { userId: clerkId } = await auth();
+
+    if (!clerkId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Keyed per user, not per IP — Ghanaian mobile traffic is heavily
+    // NAT'd, so IP keying throttles innocent users sharing a carrier IP.
+    const rateLimitResult = await checkRateLimit("ai", RATE_LIMITS.ai, clerkId);
 
     if (!rateLimitResult.success) {
       return NextResponse.json(
@@ -58,12 +65,6 @@ export async function POST(request: NextRequest) {
           headers: getRateLimitHeaders(rateLimitResult),
         },
       );
-    }
-
-    const { userId: clerkId } = await auth();
-
-    if (!clerkId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     if (!hasAiProviderConfigured()) {

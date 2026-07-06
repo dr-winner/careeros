@@ -16,13 +16,16 @@ export function isValidReferralCode(code: string): boolean {
 }
 
 // Reverse buildReferralCode: cuids are lowercase, so lowercasing the code
-// suffix recovers the tail of the referrer's user id.
+// suffix recovers the tail of the referrer's user id. A 10-char cuid tail
+// collision is ~impossible, but orderBy makes the result deterministic
+// (oldest account wins) if it ever happens.
 export async function findReferrerByCode(code: string) {
   if (!isValidReferralCode(code)) return null;
   const suffix = code.slice("CAREER-".length).toLowerCase();
   return prisma.user.findFirst({
     where: { id: { endsWith: suffix } },
     select: { id: true, email: true },
+    orderBy: { createdAt: "asc" },
   });
 }
 

@@ -69,6 +69,25 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Defense-in-depth: the verified transaction must cover the plan price
+    // (legacy lifetime refs predate amount encoding — status check only).
+    const expected =
+      billingCycle === "monthly"
+        ? parseFloat(process.env.MOOLRE_MONTHLY_AMOUNT || "25")
+        : billingCycle === "annual"
+          ? parseFloat(process.env.MOOLRE_ANNUAL_AMOUNT || "199")
+          : null;
+    if (expected !== null) {
+      const paid = parseFloat(data?.data?.amount ?? data?.data?.value ?? "0");
+      if (!(paid >= expected)) {
+        console.error(`Payment verify: amount mismatch ref=${ref} paid=${paid} expected=${expected}`);
+        return NextResponse.json(
+          { error: "Payment amount does not match the selected plan." },
+          { status: 400 },
+        );
+      }
+    }
+
     await activateSubscription(user.id, billingCycle);
 
     console.log(`Moolre: subscription manually verified — user ${user.id} plan=${billingCycle} ref=${ref}`);

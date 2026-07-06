@@ -72,6 +72,23 @@ export type WithdrawalResult =
   | { ok: true; amount: number; status: "paid" | "processing" }
   | { ok: false; error: string };
 
+// Refund a withdrawal's amount back to the user's balance, but only if
+// this caller wins the race to flip the row out of "processing" — a
+// concurrent finalize/request path can never double-credit real cash.
+async function refundWithdrawal(withdrawalId: string, userId: string, amount: number): Promise<boolean> {
+  const flipped = await prisma.withdrawal.updateMany({
+    where: { id: withdrawalId, status: "processing" },
+    data: { status: "failed" },
+  });
+  if (flipped.count !== 1) return false;
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: { earningsBalance: { increment: amount } },
+  });
+  return true;
+}
+
 // Send the user's full earnings balance to their verified MoMo wallet.
 // The balance is deducted atomically before the transfer (no double-spend
 // across parallel requests) and refunded if the transfer fails outright.
@@ -119,11 +136,8 @@ export async function requestWithdrawal(userId: string): Promise<WithdrawalResul
     });
 
     if (!transfer.initiated) {
-      // Transfer rejected outright — refund the balance.
-      await prisma.$transaction([
-        prisma.withdrawal.update({ where: { id: withdrawal.id }, data: { status: "failed" } }),
-        prisma.user.update({ where: { id: userId }, data: { earningsBalance: { increment: amount } } }),
-      ]);
+      // Transfer rejected outright — refund the balance (guarded).
+      await refundWithdrawal(withdrawal.id, userId, amount);
       console.error(`Withdrawal failed: ref=${txRef} code=${transfer.code}`);
       return { ok: false, error: "Transfer could not be completed. Your balance was not affected." };
     }
@@ -135,18 +149,19 @@ export async function requestWithdrawal(userId: string): Promise<WithdrawalResul
       const check = await getTransactionStatus(txRef).catch(() => ({ txstatus: null }));
       if (check.txstatus === 1) status = "paid";
       if (check.txstatus === 2) {
-        await prisma.$transaction([
-          prisma.withdrawal.update({ where: { id: withdrawal.id }, data: { status: "failed" } }),
-          prisma.user.update({ where: { id: userId }, data: { earningsBalance: { increment: amount } } }),
-        ]);
+        await refundWithdrawal(withdrawal.id, userId, amount);
         return { ok: false, error: "Transfer failed on the network. Your balance was not affected." };
       }
     }
 
-    await prisma.withdrawal.update({
-      where: { id: withdrawal.id },
-      data: { status, ...(status === "paid" ? { paidAt: new Date() } : {}) },
-    });
+    if (status === "paid") {
+      // Guarded flip: only mark paid if still processing (a concurrent
+      // finalize may have already resolved this row).
+      await prisma.withdrawal.updateMany({
+        where: { id: withdrawal.id, status: "processing" },
+        data: { status: "paid", paidAt: new Date() },
+      });
+    }
 
     const posthog = getPostHogClient();
     posthog.capture({
@@ -158,10 +173,7 @@ export async function requestWithdrawal(userId: string): Promise<WithdrawalResul
     return { ok: true, amount, status };
   } catch (error) {
     console.error(`Withdrawal error for ${txRef}:`, error);
-    await prisma.$transaction([
-      prisma.withdrawal.update({ where: { id: withdrawal.id }, data: { status: "failed" } }),
-      prisma.user.update({ where: { id: userId }, data: { earningsBalance: { increment: amount } } }),
-    ]);
+    await refundWithdrawal(withdrawal.id, userId, amount).catch(() => {});
     return { ok: false, error: "Something went wrong. Your balance was not affected." };
   }
 }
@@ -180,15 +192,13 @@ export async function finalizeProcessingWithdrawals(userId: string): Promise<voi
     try {
       const status = await getTransactionStatus(w.txRef);
       if (status.txstatus === 1) {
-        await prisma.withdrawal.update({
-          where: { id: w.id },
+        await prisma.withdrawal.updateMany({
+          where: { id: w.id, status: "processing" },
           data: { status: "paid", paidAt: new Date() },
         });
       } else if (status.txstatus === 2) {
-        await prisma.$transaction([
-          prisma.withdrawal.update({ where: { id: w.id }, data: { status: "failed" } }),
-          prisma.user.update({ where: { id: userId }, data: { earningsBalance: { increment: w.amount } } }),
-        ]);
+        // Guarded refund — two concurrent page loads can't both credit.
+        await refundWithdrawal(w.id, userId, w.amount);
       }
       // txstatus 0 or null: still in flight — leave for the next check.
     } catch (error) {

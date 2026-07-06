@@ -16,6 +16,9 @@ const schema = z.object({
   skills: z.string().max(500).optional(),
   employerName: z.string().min(2).max(200),
   employerEmail: z.string().email().max(300),
+  // Honeypot: hidden field humans never fill. Bots that do get a fake
+  // success and nothing is written.
+  website: z.string().max(200).optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -29,6 +32,10 @@ export async function POST(request: NextRequest) {
   const parsed = schema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid input.", details: parsed.error.format() }, { status: 400 });
+  }
+
+  if (parsed.data.website) {
+    return NextResponse.json({ success: true, jobId: "ok" });
   }
 
   const {

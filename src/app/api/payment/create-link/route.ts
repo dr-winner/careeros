@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const rateLimitResult = await checkRateLimit("payment", RATE_LIMITS.payment, clerkId);
+    const rateLimitResult = await checkRateLimit("payment", RATE_LIMITS.payment, clerkId, { failClosed: true });
     if (!rateLimitResult.success) {
       return NextResponse.json(
         { error: "Too many payment attempts. Please wait a minute and try again." },

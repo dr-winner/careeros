@@ -36,8 +36,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Per-user limit: each call pushes a USSD prompt to an arbitrary phone
-    // number, so unthrottled access is a harassment vector.
-    const rateLimitResult = await checkRateLimit("payment", RATE_LIMITS.payment, clerkId);
+    // number, so unthrottled access is a harassment vector. Fail-closed:
+    // if the limiter is down, this endpoint must not run unmetered.
+    const rateLimitResult = await checkRateLimit("payment", RATE_LIMITS.payment, clerkId, { failClosed: true });
     if (!rateLimitResult.success) {
       return NextResponse.json(
         { error: "Too many payment attempts. Please wait a minute and try again." },

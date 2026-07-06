@@ -75,18 +75,18 @@ export async function POST(request: NextRequest) {
   let refund: (() => Promise<void>) | null = null;
 
   try {
-    const ip = request.headers.get("x-forwarded-for")?.split(",")[0] || "anonymous";
-    const rateLimitResult = await checkRateLimit("ai", RATE_LIMITS.ai, ip);
+    const userId = await getDbUserId();
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Per-user keying — mobile carrier NAT makes IP keying unfair here.
+    const rateLimitResult = await checkRateLimit("ai", RATE_LIMITS.ai, userId);
     if (!rateLimitResult.success) {
       return NextResponse.json(
         { error: "Too many requests. Please wait before trying again." },
         { status: 429, headers: getRateLimitHeaders(rateLimitResult) },
       );
-    }
-
-    const userId = await getDbUserId();
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const isPremiumEarly = await isUserPremium();
@@ -189,6 +189,11 @@ export async function POST(request: NextRequest) {
     // Low confidence: CV has very few identifiable skills — score may not reflect true fit
     const lowConfidence = allUserSkills.length < 3 && !profileIncomplete;
 
+    // SECURITY NOTE: jobDescription and CV text below are untrusted user
+    // input flowing into LLM prompts (prompt injection is possible). Safe
+    // today because model output only affects the requesting user's own
+    // displayed score/advice and scores are clamped — revisit if AI output
+    // ever gains authority (auto-actions, payments, other users' data).
     if (hasAI && jobDescription && !profileIncomplete) {
       // AI narrative analysis for ALL users — brief summary of fit + AI-scored fitScore
       try {
