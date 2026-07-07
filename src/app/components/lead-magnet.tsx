@@ -15,24 +15,27 @@ export default function LeadMagnet() {
   const [scanning, setScanning] = useState(false);
   const [extractedKeywords, setExtractedKeywords] = useState<string[]>([]);
   const [hasScanned, setHasScanned] = useState(false);
+  const [inputError, setInputError] = useState("");
 
   const handleScan = () => {
-    if (!jobText.trim()) return;
+    // A real job description is at least a few sentences — anything
+    // shorter can't be honestly "scanned", so don't pretend.
+    if (jobText.trim().length < 60) {
+      setInputError("Paste the full job advert — at least a few sentences — so there's something real to scan.");
+      return;
+    }
+    setInputError("");
     setScanning(true);
-    
-    // Simulate real extraction processing
+
     setTimeout(() => {
       const text = jobText.toLowerCase();
-      const found = COMMON_KEYWORDS.filter(kw => 
+      const found = COMMON_KEYWORDS.filter(kw =>
         text.includes(kw.toLowerCase())
       );
-      
-      // Fallback defaults if no keywords are matched
-      const result = found.length > 0 
-        ? found.slice(0, 5) 
-        : ["Communication", "Problem Solving", "Teamwork", "Project Management"];
-      
-      setExtractedKeywords(result);
+
+      // Never fabricate results: if nothing matched, show the honest
+      // empty state instead of inventing generic skills.
+      setExtractedKeywords(found.slice(0, 5));
       setScanning(false);
       setHasScanned(true);
     }, 1200);
@@ -66,10 +69,13 @@ export default function LeadMagnet() {
                 </label>
                 <textarea
                   value={jobText}
-                  onChange={(e) => setJobText(e.target.value)}
+                  onChange={(e) => { setJobText(e.target.value); if (inputError) setInputError(""); }}
                   placeholder="Paste the job advertisement text here (e.g., We are looking for a React Developer who knows TypeScript and AWS...)"
                   className="w-full h-32 bg-black/40 border border-white/[0.06] rounded-xl p-3 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-cyan-500/40 transition-colors resize-none"
                 />
+                {inputError && (
+                  <p className="text-xs text-amber-400 mt-2">{inputError}</p>
+                )}
               </div>
               <button
                 onClick={handleScan}
@@ -88,19 +94,30 @@ export default function LeadMagnet() {
             </div>
           ) : (
             <div className="space-y-6 text-center py-2 animate-fade-up">
-              <div>
-                <span className="mono text-[10px] text-zinc-500 uppercase tracking-wider">Identified key requirements:</span>
-                <div className="flex flex-wrap gap-2 justify-center mt-3">
-                  {extractedKeywords.map((kw) => (
-                    <span 
-                      key={kw} 
-                      className="text-xs font-medium px-3 py-1.5 rounded-lg border bg-cyan-500/10 border-cyan-500/20 text-cyan-400"
-                    >
-                      {kw}
-                    </span>
-                  ))}
+              {extractedKeywords.length > 0 ? (
+                <div>
+                  <span className="mono text-[10px] text-zinc-500 uppercase tracking-wider">Identified key requirements:</span>
+                  <div className="flex flex-wrap gap-2 justify-center mt-3">
+                    {extractedKeywords.map((kw) => (
+                      <span
+                        key={kw}
+                        className="text-xs font-medium px-3 py-1.5 rounded-lg border bg-cyan-500/10 border-cyan-500/20 text-cyan-400"
+                      >
+                        {kw}
+                      </span>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div>
+                  <span className="mono text-[10px] text-zinc-500 uppercase tracking-wider">Quick scan found no clear matches</span>
+                  <p className="text-xs text-zinc-400 max-w-xs mx-auto mt-3 leading-relaxed">
+                    This free scanner only spots common keywords. The full AI analysis inside
+                    reads the entire advert against your actual CV — that&apos;s where the real
+                    answers are.
+                  </p>
+                </div>
+              )}
 
               <div className="h-px w-full bg-white/[0.06]" />
 
