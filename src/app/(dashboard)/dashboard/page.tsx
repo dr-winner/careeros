@@ -221,7 +221,8 @@ export default function DashboardPage() {
 
         {/* AI Next Best Action */}
         <div className="animate-fade-up delay-100 agent-card border-l-4 border-l-purple-500/60 bg-purple-500/5 p-5">
-          <div className="absolute top-3 right-3">
+          {/* Hidden on mobile — overlaps the card title on narrow screens */}
+          <div className="hidden sm:block absolute top-3 right-3">
             <div className="px-2 py-0.5 rounded border border-purple-500/30 bg-purple-500/10 text-[8px] mono text-purple-400 uppercase tracking-widest">AI Recommendation</div>
           </div>
           <div className="flex items-start gap-4 mt-1">
