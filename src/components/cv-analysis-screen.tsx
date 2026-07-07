@@ -598,8 +598,32 @@ export default function CVAnalysisScreen({
   useEffect(() => {
     if (!isComplete || fetchedRef.current) return;
     fetchedRef.current = true;
-    runAnalysis().then(() => setTimeout(() => setShowResults(true), 1000));
-  }, [isComplete, runAnalysis]);
+
+    let cancelled = false;
+    fetch("/api/cv-analyze", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ resumeId: cvId }),
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (cancelled) return;
+        if (data?.analysis) {
+          setAnalysis(data.analysis);
+          setAiPowered(data.aiPowered !== false);
+        } else {
+          setFailed(true);
+        }
+        setTimeout(() => setShowResults(true), 1000);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setFailed(true);
+        setTimeout(() => setShowResults(true), 1000);
+      });
+
+    return () => { cancelled = true; };
+  }, [isComplete, cvId]);
 
   const handleRetry = useCallback(async () => {
     setRetrying(true);
