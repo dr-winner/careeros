@@ -297,6 +297,16 @@ export default function JobDetailPage() {
     });
   };
 
+  // Job sources send raw enums like "part_time" / "FULL_TIME" — humanize
+  // before display so internals never leak into the UI.
+  const formatLabel = (value?: string | null) => {
+    if (!value) return value;
+    return value
+      .replace(/[_-]+/g, " ")
+      .toLowerCase()
+      .replace(/\b\w/g, (c) => c.toUpperCase());
+  };
+
   const formatSalary = (min?: number, max?: number, country?: string) => {
     if (!min && !max) return null;
 
@@ -415,8 +425,8 @@ export default function JobDetailPage() {
         <div className="mt-5 flex flex-wrap gap-2">
           {[
             { icon: "M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z M15 11a3 3 0 11-6 0 3 3 0 016 0z", label: job.location },
-            { icon: "M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z", label: job.workMode },
-            { icon: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z", label: job.seniorityLevel },
+            { icon: "M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z", label: formatLabel(job.workMode) },
+            { icon: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z", label: formatLabel(job.seniorityLevel) },
           ].map((item, i) => (
             <div key={i} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.06]">
               <svg className="h-3.5 w-3.5 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -428,7 +438,7 @@ export default function JobDetailPage() {
         </div>
 
         <div className="mt-4 mono text-xs text-zinc-600">
-          {formatDate(job.postedAt)} · {job.employmentType}
+          {formatDate(job.postedAt)} · {formatLabel(job.employmentType)}
         </div>
       </div>
 
@@ -558,9 +568,9 @@ export default function JobDetailPage() {
             )}
           </div>
 
-          <div className="mt-4 pt-4 border-t border-zinc-800/50 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-zinc-500">
+          <div className="mt-4 pt-4 border-t border-zinc-800/50 flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs text-zinc-500 whitespace-nowrap">
                 {hasResume ? "CV Analysis" : "Profile Analysis"}
               </span>
               {aiEnabled && (
@@ -575,14 +585,14 @@ export default function JobDetailPage() {
                     : quotaRemaining === 1
                     ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
                     : "bg-white/[0.04] text-zinc-500 border-white/[0.06]"
-                }`}>
+                } whitespace-nowrap`}>
                   {quotaRemaining} left this month
                 </span>
               )}
             </div>
             <button
               onClick={() => job && analyzeFit(job)}
-              className="mono text-xs text-cyan-400 hover:text-cyan-300 flex items-center gap-1"
+              className="mono text-xs text-cyan-400 hover:text-cyan-300 flex items-center gap-1 whitespace-nowrap flex-shrink-0"
             >
               <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
