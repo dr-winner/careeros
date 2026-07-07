@@ -119,7 +119,7 @@ export default function Hero() {
                 <div className="text-sm font-semibold text-white">CareerOS Agent</div>
                 <div className="mono text-xs text-zinc-600">Processing: Software Engineer — Accra</div>
               </div>
-              <span className="mono text-xs text-green-400 ml-auto">live</span>
+              <span className="mono text-xs text-zinc-500 ml-auto">demo</span>
             </div>
 
             <div className="space-y-2.5">

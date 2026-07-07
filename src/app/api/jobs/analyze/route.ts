@@ -186,8 +186,12 @@ export async function POST(request: NextRequest) {
 
     const profileIncomplete = allUserSkills.length === 0 && !user?.headline && !user?.experience;
 
-    // Low confidence: CV has very few identifiable skills — score may not reflect true fit
-    const lowConfidence = allUserSkills.length < 3 && !profileIncomplete;
+    // Low confidence: the keyword score has weak inputs — either the CV
+    // has few identifiable skills, or the job text yielded no extractable
+    // requirements (score defaults to 50 with no real basis). The UI must
+    // caveat these scores; AI scoring below replaces them when available.
+    const lowConfidence =
+      (allUserSkills.length < 3 && !profileIncomplete) || jobSkills.length === 0;
 
     // SECURITY NOTE: jobDescription and CV text below are untrusted user
     // input flowing into LLM prompts (prompt injection is possible). Safe

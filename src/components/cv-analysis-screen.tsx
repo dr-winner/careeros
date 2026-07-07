@@ -543,6 +543,9 @@ export default function CVAnalysisScreen({
   const [isComplete, setIsComplete] = useState(false);
   const [analysis, setAnalysis] = useState<CVAnalysisResult | null>(null);
   const [showResults, setShowResults] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const [aiPowered, setAiPowered] = useState(true);
+  const [retrying, setRetrying] = useState(false);
   const fetchedRef = useRef(false);
 
   // Stream in log lines at their defined delays
@@ -570,30 +573,39 @@ export default function CVAnalysisScreen({
     return () => clearInterval(interval);
   }, []);
 
+  // Never show fabricated results: a failed analysis gets an honest
+  // error state with a retry, not invented scores.
+  const runAnalysis = useCallback(async () => {
+    try {
+      const res = await fetch("/api/cv-analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ resumeId: cvId }),
+      });
+      const data = res.ok ? await res.json() : null;
+      if (data?.analysis) {
+        setAnalysis(data.analysis);
+        setAiPowered(data.aiPowered !== false);
+        setFailed(false);
+      } else {
+        setFailed(true);
+      }
+    } catch {
+      setFailed(true);
+    }
+  }, [cvId]);
+
   useEffect(() => {
     if (!isComplete || fetchedRef.current) return;
     fetchedRef.current = true;
+    runAnalysis().then(() => setTimeout(() => setShowResults(true), 1000));
+  }, [isComplete, runAnalysis]);
 
-    let cancelled = false;
-    fetch("/api/cv-analyze", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ resumeId: cvId }),
-    })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (cancelled) return;
-        setAnalysis(data?.analysis ?? generateMockAnalysis());
-        setTimeout(() => setShowResults(true), 1000);
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setAnalysis(generateMockAnalysis());
-        setTimeout(() => setShowResults(true), 1000);
-      });
-
-    return () => { cancelled = true; };
-  }, [isComplete, cvId]);
+  const handleRetry = useCallback(async () => {
+    setRetrying(true);
+    await runAnalysis();
+    setRetrying(false);
+  }, [runAnalysis]);
 
   const handleContinue = useCallback(() => {
     if (analysis) onComplete(analysis);
@@ -606,24 +618,44 @@ export default function CVAnalysisScreen({
 
       {!showResults ? (
         <AnalyzingPhase progress={progress} lines={visibleLogs} />
+      ) : failed || !analysis ? (
+        <div className="h-full flex items-center justify-center p-6">
+          <div className="max-w-sm text-center space-y-5">
+            <div className="h-14 w-14 rounded-2xl bg-amber-500/10 border border-amber-500/25 flex items-center justify-center mx-auto">
+              <svg className="h-7 w-7 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-white mb-2">Analysis didn&apos;t complete</h2>
+              <p className="text-sm text-zinc-400 leading-relaxed">
+                We couldn&apos;t analyze your CV just now. Your CV is saved — nothing was lost.
+              </p>
+            </div>
+            <div className="flex items-center justify-center gap-3">
+              <button onClick={onClose} className="agent-button py-2.5 text-sm">Close</button>
+              <button
+                onClick={handleRetry}
+                disabled={retrying}
+                className="agent-button-primary py-2.5 text-sm font-bold press-scale disabled:opacity-50"
+              >
+                {retrying ? "Retrying…" : "Try Again"}
+              </button>
+            </div>
+          </div>
+        </div>
       ) : (
-        <ResultsPhase analysis={analysis} onContinue={handleContinue} />
+        <>
+          {!aiPowered && (
+            <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 rounded-full border border-amber-500/25 bg-amber-500/10 px-4 py-1.5">
+              <span className="mono text-[11px] text-amber-400">
+                Quick automated check — AI was unavailable, re-run later for the full analysis
+              </span>
+            </div>
+          )}
+          <ResultsPhase analysis={analysis} onContinue={handleContinue} />
+        </>
       )}
     </div>
   );
-}
-
-function generateMockAnalysis(): CVAnalysisResult {
-  return {
-    overall: { score: 72, verdict: "Good Foundation", summary: "Your CV shows solid potential with room for optimization." },
-    content: { score: 78, issues: ["Limited quantified achievements"], strengths: ["Clear work history"] },
-    style: { score: 68, issues: ["Inconsistent formatting"], strengths: ["Professional tone"] },
-    structure: { score: 75, issues: ["Skills section placement"], strengths: ["Logical flow"] },
-    recommendations: [
-      "Add metrics to achievements (e.g., 'increased sales by 30%')",
-      "Include ATS-friendly keywords from your target roles",
-      "Simplify bullet formatting for better machine parsing",
-      "Prioritize most relevant skills at the top of your CV",
-    ],
-  };
 }
