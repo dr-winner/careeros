@@ -104,7 +104,10 @@ export default function Hero() {
         </div>
 
         <p className="animate-fade-up delay-500 mt-5 mono text-xs text-zinc-600">
-          Free to start · No credit card required
+          Free to start · No credit card required ·{" "}
+          <a href="#fit-check" className="text-cyan-400 hover:text-cyan-300 transition-colors">
+            or try it right now — no account ↓
+          </a>
         </p>
 
         {/* Agent analysis card */}

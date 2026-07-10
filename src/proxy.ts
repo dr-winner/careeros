@@ -20,6 +20,8 @@ const isPublicRoute = createRouteMatcher([
   // Employers submit listings without an account; rate-limited by IP and
   // held as pending_review until an admin approves.
   "/api/jobs/create(.*)",
+  // Anonymous landing-page fit preview; strict per-IP limit, no storage.
+  "/api/fit-preview(.*)",
 ]);
 
 const isLandingPage = createRouteMatcher(["/"]);

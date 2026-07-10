@@ -2,145 +2,212 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { usePostHog } from "posthog-js/react";
 
-const COMMON_KEYWORDS = [
-  "React", "TypeScript", "Node.js", "Python", "Java", "SQL", "Docker", "AWS", "Figma",
-  "HTML", "CSS", "Javascript", "Kubernetes", "Git", "PostgreSQL", "MongoDB", "Redis",
-  "Product Management", "Project Management", "Agile", "Scrum", "UI/UX", "Excel",
-  "Sales", "Marketing", "SEO", "Customer Service", "Finance", "Communication", "Data Analysis"
-];
+interface PreviewResult {
+  fitScore: number;
+  verdict: string;
+  matchedSkills: string[];
+  missingCount: number;
+  teaser: string;
+}
+
+function ScoreRing({ score }: { score: number }) {
+  const dash = (score / 100) * 264;
+  const color = score >= 70 ? "#22c55e" : score >= 45 ? "#f59e0b" : "#ef4444";
+  return (
+    <svg width="120" height="120" viewBox="0 0 100 100">
+      <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,.07)" strokeWidth="7" />
+      <circle
+        cx="50" cy="50" r="42" fill="none" stroke={color} strokeWidth="7" strokeLinecap="round"
+        strokeDasharray={`${dash} 264`} transform="rotate(-90 50 50)"
+        style={{ transition: "stroke-dasharray 1s ease" }}
+      />
+      <text x="50" y="54" textAnchor="middle" fill="#fafafa" fontSize="24" fontWeight="700">{score}%</text>
+    </svg>
+  );
+}
 
 export default function LeadMagnet() {
+  const posthog = usePostHog();
+  const [step, setStep] = useState<"job" | "cv" | "result">("job");
   const [jobText, setJobText] = useState("");
-  const [scanning, setScanning] = useState(false);
-  const [extractedKeywords, setExtractedKeywords] = useState<string[]>([]);
-  const [hasScanned, setHasScanned] = useState(false);
-  const [inputError, setInputError] = useState("");
+  const [cvText, setCvText] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [result, setResult] = useState<PreviewResult | null>(null);
 
-  const handleScan = () => {
-    // A real job description is at least a few sentences — anything
-    // shorter can't be honestly "scanned", so don't pretend.
-    if (jobText.trim().length < 60) {
-      setInputError("Paste the full job advert — at least a few sentences — so there's something real to scan.");
+  const runPreview = async () => {
+    if (cvText.trim().length < 150) {
+      setError("Paste more of your CV — at least your skills and recent experience.");
       return;
     }
-    setInputError("");
-    setScanning(true);
-
-    setTimeout(() => {
-      const text = jobText.toLowerCase();
-      const found = COMMON_KEYWORDS.filter(kw =>
-        text.includes(kw.toLowerCase())
-      );
-
-      // Never fabricate results: if nothing matched, show the honest
-      // empty state instead of inventing generic skills.
-      setExtractedKeywords(found.slice(0, 5));
-      setScanning(false);
-      setHasScanned(true);
-    }, 1200);
+    setError("");
+    setLoading(true);
+    posthog?.capture("fit_preview_started");
+    try {
+      const res = await fetch("/api/fit-preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobText, cvText }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Preview failed — please try again.");
+        return;
+      }
+      setResult(data);
+      setStep("result");
+      posthog?.capture("fit_preview_completed", { fit_score: data.fitScore, missing_count: data.missingCount });
+    } catch {
+      setError("Something went wrong — please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <section className="relative py-20 px-6">
+    <section id="fit-check" className="relative py-20 px-6">
       <div className="absolute inset-0 bg-[#0a0a0f]" />
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-cyan-500/5 blur-[120px] rounded-full pointer-events-none" />
 
       <div className="relative mx-auto max-w-3xl text-center">
         <div className="inline-flex items-center gap-2 rounded-full bg-cyan-500/10 border border-cyan-500/20 px-4 py-1.5 mb-6">
           <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse" />
-          <span className="text-xs text-cyan-400 font-medium mono">Free Interactive Tool</span>
+          <span className="text-xs text-cyan-400 font-medium mono">Try it right now — no account needed</span>
         </div>
-        
+
         <h2 className="font-display text-3xl sm:text-4xl font-bold text-white mb-4">
-          Scan any job description in <span className="gradient-text">seconds</span>
+          Get your real fit score in <span className="gradient-text">30 seconds</span>
         </h2>
-        
+
         <p className="text-sm text-zinc-400 max-w-md mx-auto mb-8 leading-relaxed">
-          Paste a job description below. We will extract the core skills required, so you know exactly what is needed.
+          Paste a job advert, paste your CV, and our AI scores your actual fit — the same engine premium users pay for.
         </p>
 
         <div className="agent-card p-6 text-left border-cyan-500/20 max-w-xl mx-auto">
-          {!hasScanned ? (
+          {step === "job" && (
             <div className="space-y-4">
-              <div>
-                <label className="text-xs font-semibold text-zinc-400 mb-2 block">
-                  Paste Job Description
-                </label>
-                <textarea
-                  value={jobText}
-                  onChange={(e) => { setJobText(e.target.value); if (inputError) setInputError(""); }}
-                  placeholder="Paste the job advertisement text here (e.g., We are looking for a React Developer who knows TypeScript and AWS...)"
-                  className="w-full h-32 bg-black/40 border border-white/[0.06] rounded-xl p-3 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-cyan-500/40 transition-colors resize-none"
-                />
-                {inputError && (
-                  <p className="text-xs text-amber-400 mt-2">{inputError}</p>
-                )}
+              <div className="flex items-center gap-2 mb-1">
+                <span className="mono text-[10px] font-bold text-cyan-400">STEP 1 OF 2</span>
+                <span className="mono text-[10px] text-zinc-600">· the job</span>
               </div>
+              <textarea
+                value={jobText}
+                onChange={(e) => { setJobText(e.target.value); if (error) setError(""); }}
+                placeholder="Paste the job advert here — title, requirements, everything…"
+                className="w-full h-32 bg-black/40 border border-white/[0.06] rounded-xl p-3 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-cyan-500/40 transition-colors resize-none"
+              />
+              {error && <p className="text-xs text-amber-400">{error}</p>}
               <button
-                onClick={handleScan}
-                disabled={scanning || !jobText.trim()}
-                className="w-full agent-button-primary justify-center py-3 text-xs font-bold disabled:opacity-50 press-scale"
+                onClick={() => {
+                  if (jobText.trim().length < 100) {
+                    setError("Paste the full job advert — at least a few sentences.");
+                    return;
+                  }
+                  setError("");
+                  setStep("cv");
+                }}
+                className="w-full agent-button-primary justify-center py-3 text-xs font-bold press-scale"
               >
-                {scanning ? (
-                  <>
-                    <div className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                    Extracting skills…
-                  </>
-                ) : (
-                  "Scan Key Requirements"
-                )}
+                Next: Add Your CV →
               </button>
             </div>
-          ) : (
-            <div className="space-y-6 text-center py-2 animate-fade-up">
-              {extractedKeywords.length > 0 ? (
+          )}
+
+          {step === "cv" && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="mono text-[10px] font-bold text-cyan-400">STEP 2 OF 2</span>
+                <span className="mono text-[10px] text-zinc-600">· your CV (just paste the text)</span>
+              </div>
+              <textarea
+                value={cvText}
+                onChange={(e) => { setCvText(e.target.value); if (error) setError(""); }}
+                placeholder="Paste your CV text — skills, experience, education. Copy it straight from your document or LinkedIn…"
+                className="w-full h-32 bg-black/40 border border-white/[0.06] rounded-xl p-3 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-cyan-500/40 transition-colors resize-none"
+              />
+              {error && <p className="text-xs text-amber-400">{error}</p>}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { setStep("job"); setError(""); }}
+                  className="agent-button py-3 px-4 text-xs"
+                >
+                  ← Back
+                </button>
+                <button
+                  onClick={runPreview}
+                  disabled={loading}
+                  className="flex-1 agent-button-primary justify-center py-3 text-xs font-bold press-scale disabled:opacity-50"
+                >
+                  {loading ? (
+                    <>
+                      <div className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                      AI is scoring your fit…
+                    </>
+                  ) : (
+                    "Score My Fit — Free"
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {step === "result" && result && (
+            <div className="space-y-5 text-center py-2 animate-fade-up">
+              <div className="flex flex-col items-center">
+                <ScoreRing score={result.fitScore} />
+                <h3 className="text-lg font-bold text-white mt-3">{result.verdict}</h3>
+              </div>
+
+              {result.matchedSkills.length > 0 && (
                 <div>
-                  <span className="mono text-[10px] text-zinc-500 uppercase tracking-wider">Identified key requirements:</span>
-                  <div className="flex flex-wrap gap-2 justify-center mt-3">
-                    {extractedKeywords.map((kw) => (
-                      <span
-                        key={kw}
-                        className="text-xs font-medium px-3 py-1.5 rounded-lg border bg-cyan-500/10 border-cyan-500/20 text-cyan-400"
-                      >
-                        {kw}
+                  <span className="mono text-[10px] text-zinc-500 uppercase tracking-wider">You already match:</span>
+                  <div className="flex flex-wrap gap-2 justify-center mt-2">
+                    {result.matchedSkills.map((kw) => (
+                      <span key={kw} className="text-xs font-medium px-3 py-1.5 rounded-lg border bg-green-500/10 border-green-500/20 text-green-400">
+                        ✓ {kw}
                       </span>
                     ))}
                   </div>
                 </div>
-              ) : (
-                <div>
-                  <span className="mono text-[10px] text-zinc-500 uppercase tracking-wider">Quick scan found no clear matches</span>
-                  <p className="text-xs text-zinc-400 max-w-xs mx-auto mt-3 leading-relaxed">
-                    This free scanner only spots common keywords. The full AI analysis inside
-                    reads the entire advert against your actual CV — that&apos;s where the real
-                    answers are.
+              )}
+
+              {result.missingCount > 0 && (
+                <div className="rounded-xl border border-amber-500/20 bg-amber-500/[0.05] p-4 text-left">
+                  <p className="text-sm text-amber-300 font-semibold mb-1.5">
+                    🔒 {result.missingCount} requirement{result.missingCount !== 1 ? "s" : ""} you&apos;re missing
                   </p>
+                  {result.teaser && (
+                    <p className="text-xs text-zinc-400 leading-relaxed mb-3">{result.teaser}</p>
+                  )}
+                  <div className="space-y-1.5 select-none" aria-hidden="true">
+                    {Array.from({ length: Math.min(3, result.missingCount) }).map((_, i) => (
+                      <div key={i} className="h-3.5 rounded bg-white/[0.05] blur-[3px]" style={{ width: `${85 - i * 18}%` }} />
+                    ))}
+                  </div>
                 </div>
               )}
 
               <div className="h-px w-full bg-white/[0.06]" />
 
-              <div className="space-y-4">
-                <h4 className="text-sm font-semibold text-white">Does your CV match this?</h4>
+              <div className="space-y-3">
                 <p className="text-xs text-zinc-400 max-w-xs mx-auto leading-relaxed">
-                  Sign up for a free account, upload your CV, and see your exact match percentage, skill gaps, and custom CV improvement points.
+                  Your free account shows every gap, exactly how to fix your CV for this job, and 3 full analyses a month — free forever.
                 </p>
                 <div className="flex items-center justify-center gap-3">
                   <button
-                    onClick={() => {
-                      setJobText("");
-                      setHasScanned(false);
-                    }}
+                    onClick={() => { setStep("job"); setResult(null); setJobText(""); setCvText(""); }}
                     className="agent-button py-2.5 text-xs font-medium"
                   >
-                    Scan Another
+                    Try Another
                   </button>
                   <Link
                     href="/sign-up"
+                    onClick={() => posthog?.capture("fit_preview_signup_clicked", { fit_score: result.fitScore })}
                     className="agent-button-primary py-2.5 text-xs font-bold group press-scale"
                   >
-                    Score My CV Fit
+                    Unlock My Full Analysis
                     <svg className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
                     </svg>

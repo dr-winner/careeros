@@ -60,6 +60,7 @@ export const RATE_LIMITS = {
   ai: { max: 10, window: "1 m" },
   upload: { max: 5, window: "1 m" },
   payment: { max: 5, window: "1 m" },
+  preview: { max: 5, window: "1 h" },
   default: { max: 100, window: "1 m" },
   strict: { max: 10, window: "1 m" },
 } as const;
