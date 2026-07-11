@@ -358,9 +358,9 @@ export default function ReferralPage() {
         <p className="section-label">Why Refer Friends</p>
         <div className="space-y-3">
           {[
-            { icon: "M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z", color: "purple", text: "Help someone land their dream job" },
-            { icon: "M13 10V3L4 14h7v7l9-11h-7z", color: "cyan", text: "Priority access for you and your referrals" },
-            { icon: "M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z", color: "green", text: "Build the African tech community together" },
+            { icon: "M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z", color: "green", text: "GHS 5 to your MoMo when a friend goes Premium — real money, not points" },
+            { icon: "M13 10V3L4 14h7v7l9-11h-7z", color: "cyan", text: "+1 free analysis the moment they run their first scan" },
+            { icon: "M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z", color: "purple", text: "And your friend stops applying blind — you did that" },
           ].map((item, i) => (
             <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
               <div className={`h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0 ${

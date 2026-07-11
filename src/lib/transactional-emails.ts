@@ -313,7 +313,7 @@ export async function sendOfferEmail(
     '</div>',
     '<div class="footer">',
     '<p class="footer-text">',
-    '<a href="' + APP_URL + '/applications" class="footer-link">View your journey</a> · ',
+    '<a href="' + APP_URL + '/applications" class="footer-link">Track your applications</a> · ',
     '<a href="' + APP_URL + '/unsubscribe" class="footer-link">Unsubscribe</a>',
     '</p>',
     '</div>',
