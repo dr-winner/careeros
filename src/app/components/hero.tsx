@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import Logo from "./logo";
 
 const AGENT_LINES = [
   "parsing CV…",
@@ -41,7 +40,7 @@ export default function Hero() {
   }, [charIndex, isDeleting, lineIndex]);
 
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
+    <section className="relative min-h-[88vh] flex items-center justify-center overflow-hidden pt-24 pb-16">
       {/* Background grid */}
       <div className="absolute inset-0 grid-pattern" />
 
@@ -110,72 +109,12 @@ export default function Hero() {
           </a>
         </p>
 
-        {/* Agent analysis card */}
-        <div className="animate-fade-up delay-600 mt-20">
-          <div className="agent-card max-w-lg mx-auto p-6">
-            <div className="flex items-center gap-3 mb-5">
-              <div className="relative flex-shrink-0">
-                <Logo size="sm" variant="mark" />
-                <div className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-green-500" />
-              </div>
-              <div className="text-left">
-                <div className="text-sm font-semibold text-white">CareerOS Agent</div>
-                <div className="mono text-xs text-zinc-600">Processing: Software Engineer — Accra</div>
-              </div>
-              <span className="mono text-xs text-zinc-500 ml-auto">demo</span>
-            </div>
-
-            <div className="space-y-2.5">
-              {[
-                { label: "CV parsed", status: "done", time: "0.2s" },
-                { label: "12 skills matched", status: "done", time: "0.5s" },
-                { label: "Scoring job fit", status: "running", time: null },
-              ].map((row) => (
-                <div key={row.label} className="flex items-center gap-3 text-sm">
-                  <div
-                    className={`h-5 w-5 rounded-full flex items-center justify-center flex-shrink-0 ${
-                      row.status === "done"
-                        ? "bg-green-500/20"
-                        : "bg-purple-500/20"
-                    }`}
-                  >
-                    {row.status === "done" ? (
-                      <svg className="h-3 w-3 text-green-400" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                    ) : (
-                      <div className="h-2 w-2 rounded-full bg-purple-400 animate-pulse" />
-                    )}
-                  </div>
-                  <span className="text-zinc-300">{row.label}</span>
-                  <span className="mono text-xs text-zinc-600 ml-auto">
-                    {row.time ?? "running"}
-                  </span>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-5 pt-4 border-t border-white/[0.06]">
-              <div className="flex items-center justify-between text-sm mb-2">
-                <span className="text-zinc-500">Match score</span>
-                <span className="font-display font-bold gradient-text text-lg">87%</span>
-              </div>
-              <div className="h-1.5 w-full rounded-full bg-zinc-800 overflow-hidden">
-                <div className="h-full w-[87%] rounded-full bg-gradient-to-r from-purple-500 to-cyan-500 animate-gradient" />
-              </div>
-              <p className="mono text-xs text-zinc-600 mt-3 leading-relaxed">
-                Action plan: Highlight TypeScript depth. Add AWS Cloud cert. Customize profile.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Stats */}
-        <div className="animate-fade-up delay-700 mt-14 grid grid-cols-3 gap-4 max-w-sm mx-auto">
+        {/* Compact stats — the real interactive demo is one scroll below */}
+        <div className="animate-fade-up delay-600 mt-14 grid grid-cols-3 gap-4 max-w-sm mx-auto">
           {[
             { value: "9+", label: "live job sources" },
             { value: "Free", label: "to get started" },
-            { value: "< 3 min", label: "to your first score" },
+            { value: "< 30s", label: "to your first score" },
           ].map((stat) => (
             <div key={stat.value} className="text-center">
               <div className="font-display text-xl font-bold text-white">{stat.value}</div>

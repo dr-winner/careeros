@@ -3,7 +3,6 @@ import "./globals.css";
 import Nav from "./components/nav";
 import Hero from "./components/hero";
 import HowItWorks from "./components/how-it-works";
-import FeaturesSection from "./components/features-section";
 import LeadMagnet from "./components/lead-magnet";
 import WhySection from "./components/why-section";
 import PricingSection from "./components/pricing-section";
@@ -40,8 +39,8 @@ export default function Home() {
 
       <AuthCheck>
         <main>
+          {/* One idea per beat: promise → try it → how → why → price → go */}
           <Hero />
-          <FeaturesSection />
           <LeadMagnet />
           <HowItWorks />
           <WhySection />
