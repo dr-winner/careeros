@@ -28,7 +28,7 @@ const PREMIUM_FEATURES = [
 const FAQS = [
   {
     q: "What payment methods are accepted?",
-    a: "MTN Mobile Money, Telecel Cash, AirtelTigo Money, or card — all processed securely by Moolre, Ghana's digital payment platform.",
+    a: "MTN Mobile Money, Telecel Cash, AirtelTigo Money, or card — all processed securely by Moolre.",
   },
   {
     q: "What exactly is free?",
@@ -383,7 +383,7 @@ export default function PricingPage() {
               </svg>
             </div>
             <div>
-              <p className="text-sm font-semibold text-white">Hiring in Ghana?</p>
+              <p className="text-sm font-semibold text-white">Hiring?</p>
               <p className="mono text-xs text-zinc-500">Post jobs and access a pre-scored candidate pool. From GHS 500/listing.</p>
             </div>
           </div>

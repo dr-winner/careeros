@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   authors: [{ name: "CareerOS" }],
   openGraph: {
     title: "CareerOS — Your AI Career Agent",
-    description: "Stop applying blind. Know your fit, optimize your CV, and prepare for interviews — built for Ghana and Africa.",
+    description: "Stop applying blind. Know your fit, optimize your CV, and prepare for interviews — built for African job seekers.",
     url: "https://careeros.live",
     siteName: "CareerOS",
     locale: "en_GH",

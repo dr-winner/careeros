@@ -83,8 +83,8 @@ export default function Hero() {
 
         {/* Subheadline */}
         <p className="animate-fade-up delay-300 mx-auto mt-8 max-w-xl text-lg text-zinc-400 leading-relaxed">
-          Upload your CV. CareerOS scores your fit against any job in Ghana,
-          then tells you exactly what to fix — before you spend a minute applying.
+          Upload your CV. CareerOS scores your fit against any job — local or
+          remote — then tells you exactly what to fix, before you spend a minute applying.
         </p>
 
         {/* CTA Buttons */}

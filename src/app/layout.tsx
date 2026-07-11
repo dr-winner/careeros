@@ -7,7 +7,7 @@ import { PostHogProvider } from "@/components/posthog-provider";
 export const metadata: Metadata = {
   title: "CareerOS — Your AI Career Agent",
   description:
-    "Stop applying blind. CareerOS uses AI to analyze your CV fit, optimize your application, and prepare you for interviews — built for Ghana and Africa.",
+    "Stop applying blind. CareerOS uses AI to analyze your CV fit, optimize your application, and prepare you for interviews — built for African job seekers.",
   keywords: ["career", "job search", "AI", "CV", "Ghana", "Africa", "interview prep"],
   authors: [{ name: "CareerOS" }],
   metadataBase: new URL("https://careeros.live"),

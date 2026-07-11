@@ -51,7 +51,7 @@ export default function WhySection() {
                 We believe every qualified African professional deserves a fair shot.
                 No more shotgun applications, no more rejection after rejection.
                 Just clarity, confidence, and a clear path forward — powered by real AI,
-                built for the Ghanaian and African market.
+                built for the African market.
               </p>
             </div>
           </div>

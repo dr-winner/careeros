@@ -121,7 +121,7 @@ export default function Image() {
           {[
             { value: "9+", label: "Job sources" },
             { value: "AI", label: "Skills analysis" },
-            { value: "Ghana", label: "Market focus" },
+            { value: "Africa", label: "Built for" },
           ].map((stat) => (
             <div
               key={stat.label}
