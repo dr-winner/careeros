@@ -46,15 +46,76 @@ function validateFile(file: File): string | null {
   return null;
 }
 
+// CV text saved by the anonymous landing-page fit check, if any —
+// offered as a one-tap prefill so the visitor's momentum carries over.
+function getPreviewCvText(): string {
+  if (typeof window === "undefined") return "";
+  try {
+    const raw = localStorage.getItem("careeros_preview");
+    if (!raw) return "";
+    const parsed = JSON.parse(raw) as { cvText?: string };
+    return typeof parsed.cvText === "string" ? parsed.cvText : "";
+  } catch {
+    return "";
+  }
+}
+
 export default function CVUpload({ onUploadSuccess, onAnalysisStart }: CVUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
   const [dragging, setDragging] = useState(false);
   const [selectedFileName, setSelectedFileName] = useState("");
   const [selectedFileSize, setSelectedFileSize] = useState("");
+  // Paste is the default when the visitor already pasted a CV in the
+  // landing fit check — phones rarely have the CV as a file anyway.
+  const [mode, setMode] = useState<"file" | "paste">(() =>
+    getPreviewCvText() ? "paste" : "file",
+  );
+  const [pasteText, setPasteText] = useState("");
+  const previewCv = getPreviewCvText();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isUploadingRef = useRef(false);
   const posthog = usePostHog();
+
+  const handlePasteSubmit = useCallback(async () => {
+    if (isUploadingRef.current) return;
+    if (pasteText.trim().length < 150) {
+      setError("Paste more of your CV — at least your skills and recent experience.");
+      return;
+    }
+    setError("");
+    setUploading(true);
+    isUploadingRef.current = true;
+    try {
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: pasteText }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        const message = data.error || "Could not save your CV";
+        setError(message);
+        toast.error(message);
+        return;
+      }
+      posthog?.capture("cv_pasted", { text_length: pasteText.length });
+      toast.success("CV saved!");
+      setPasteText("");
+      if (data.id && onAnalysisStart) {
+        onAnalysisStart(data.id);
+      } else if (onUploadSuccess) {
+        onUploadSuccess();
+      }
+    } catch {
+      const message = "Could not save your CV. Try again.";
+      setError(message);
+      toast.error(message);
+    } finally {
+      setUploading(false);
+      isUploadingRef.current = false;
+    }
+  }, [pasteText, onAnalysisStart, onUploadSuccess, posthog]);
 
   const resetFileInput = useCallback(() => {
     if (fileInputRef.current) {
@@ -163,6 +224,65 @@ export default function CVUpload({ onUploadSuccess, onAnalysisStart }: CVUploadP
 
   return (
     <div className="space-y-4">
+      {/* Mode tabs */}
+      <div className="flex gap-1 rounded-xl bg-white/[0.04] border border-white/[0.06] p-1">
+        {(
+          [
+            { id: "file", label: "Upload file" },
+            { id: "paste", label: "Paste text" },
+          ] as const
+        ).map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => { setMode(t.id); setError(""); }}
+            className={`flex-1 rounded-lg px-3 py-2 mono text-xs font-medium transition-all ${
+              mode === t.id ? "bg-white/10 text-white" : "text-zinc-500 hover:text-zinc-300"
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {mode === "paste" && (
+        <div className="space-y-3">
+          {previewCv && !pasteText && (
+            <button
+              type="button"
+              onClick={() => setPasteText(previewCv)}
+              className="w-full rounded-xl border border-cyan-500/25 bg-cyan-500/[0.06] px-4 py-3 text-left text-xs text-cyan-300 hover:bg-cyan-500/10 transition-all"
+            >
+              ⚡ Use the CV from your instant fit check — tap to fill it in
+            </button>
+          )}
+          <textarea
+            value={pasteText}
+            onChange={(e) => { setPasteText(e.target.value); if (error) setError(""); }}
+            placeholder="Paste your CV text here — skills, experience, education. Straight from your document or LinkedIn…"
+            disabled={uploading}
+            className="w-full h-40 bg-black/40 border border-white/[0.06] rounded-xl p-3 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-purple-500/40 transition-colors resize-none"
+          />
+          {error && <p className="text-xs text-amber-400">{error}</p>}
+          <button
+            type="button"
+            onClick={() => void handlePasteSubmit()}
+            disabled={uploading}
+            className="w-full agent-button-primary justify-center py-3 text-sm font-bold press-scale disabled:opacity-50"
+          >
+            {uploading ? (
+              <>
+                <div className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                Saving &amp; extracting skills…
+              </>
+            ) : (
+              "Save CV & Extract Skills"
+            )}
+          </button>
+        </div>
+      )}
+
+      {mode === "file" && (
       <div
         onDragOver={(e) => {
           e.preventDefault();
@@ -255,6 +375,7 @@ export default function CVUpload({ onUploadSuccess, onAnalysisStart }: CVUploadP
 
         {error && <p className="mt-4 text-sm text-red-400">{error}</p>}
       </div>
+      )}
 
       <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-4">
         <h4 className="text-sm font-medium text-white">What happens next?</h4>

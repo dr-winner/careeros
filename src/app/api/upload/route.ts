@@ -340,6 +340,109 @@ export async function POST(request: NextRequest) {
     }
     console.log(`[POST /api/upload] Authorized user: ${user.id}`);
 
+    // JSON branch: pasted CV text (no file). Most mobile users don't have
+    // a CV file on their phone — pasting from a doc or LinkedIn removes
+    // the single biggest onboarding friction. Reuses the same validation,
+    // extraction, and creation pipeline as file uploads.
+    const contentType = request.headers.get("content-type") || "";
+    if (contentType.includes("application/json")) {
+      const body = await request.json().catch(() => ({}));
+      const pastedText = typeof body.text === "string" ? body.text.trim() : "";
+      const label =
+        typeof body.name === "string" && body.name.trim()
+          ? body.name.trim().slice(0, 80)
+          : "Pasted CV";
+
+      if (pastedText.length < 150) {
+        return NextResponse.json(
+          { error: "Paste more of your CV — at least your skills and recent experience." },
+          { status: 400 },
+        );
+      }
+
+      const cvValidation = isLikelyCVText(pastedText);
+      if (!cvValidation.isValid) {
+        return NextResponse.json(
+          { error: cvValidation.reason || "This text does not look like a CV." },
+          { status: 400 },
+        );
+      }
+
+      const duplicate = await prisma.resume.findFirst({
+        where: { userId: user.id, parsedText: pastedText },
+        select: { id: true },
+      });
+      if (duplicate) {
+        return NextResponse.json(
+          { error: "This CV is already saved on your account." },
+          { status: 409 },
+        );
+      }
+
+      const existingResumes = await prisma.resume.count({ where: { userId: user.id } });
+      const parsedData = parseCVText(pastedText);
+
+      const resume = await prisma.resume.create({
+        data: {
+          userId: user.id,
+          filename: null,
+          originalName: label,
+          fileUrl: null,
+          parsedText: pastedText,
+          versionLabel: existingResumes === 0 ? "Primary" : `Version ${existingResumes + 1}`,
+          isPrimary: existingResumes === 0,
+        },
+      });
+
+      if (parsedData.experience.length > 0) {
+        await prisma.resumeExperience.createMany({
+          data: parsedData.experience.map((exp) => ({
+            resumeId: resume.id,
+            title: exp.title,
+            company: exp.company,
+          })),
+        });
+      }
+      if (parsedData.education.length > 0) {
+        await prisma.resumeEducation.createMany({
+          data: parsedData.education.map((edu) => ({
+            resumeId: resume.id,
+            institution: edu.institution,
+            degree: edu.degree,
+          })),
+        });
+      }
+
+      if (hasAiProviderConfigured()) {
+        await extractProfileWithAI(resume.id, pastedText, {
+          needsExperience: parsedData.experience.length === 0,
+          needsEducation: parsedData.education.length === 0,
+        });
+      } else if (parsedData.skills.length > 0) {
+        await prisma.resumeSkill.createMany({
+          data: parsedData.skills.map((skill) => ({
+            resumeId: resume.id,
+            skillName: skill,
+            source: "parsed",
+          })),
+        });
+      }
+
+      const updatedCounts = await prisma.resume.count({ where: { userId: user.id } });
+
+      return NextResponse.json({
+        success: true,
+        id: resume.id,
+        filename: null,
+        originalName: label,
+        size: pastedText.length,
+        versionLabel: resume.versionLabel,
+        isPrimary: resume.isPrimary,
+        parsed: parsedData,
+        counts: { resumes: updatedCounts },
+      });
+    }
+
     const formData = await request.formData();
     const rawFile = formData.get("file");
 

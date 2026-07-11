@@ -51,6 +51,31 @@ export default function DashboardPage() {
     remaining: number;
     resetAt: string;
   } | null>(null);
+  // Instant-check result carried over from the landing page, if any
+  const [previewCarry, setPreviewCarry] = useState<{
+    fitScore: number;
+    verdict: string;
+    missingCount: number;
+  } | null>(null);
+
+  useEffect(() => {
+    // Deferred to avoid sync setState in effect (and hydration mismatch)
+    const t = setTimeout(() => {
+      try {
+        const raw = localStorage.getItem("careeros_preview");
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        if (typeof parsed.fitScore === "number") {
+          setPreviewCarry({
+            fitScore: parsed.fitScore,
+            verdict: String(parsed.verdict || ""),
+            missingCount: Number(parsed.missingCount) || 0,
+          });
+        }
+      } catch {}
+    }, 0);
+    return () => clearTimeout(t);
+  }, []);
 
   useEffect(() => {
     if (isLoaded && isUserLoaded && userId) {
@@ -365,6 +390,30 @@ export default function DashboardPage() {
             </div>
           ))}
         </div>
+
+        {/* Instant-check carryover: greet with their score, close the loop */}
+        {previewCarry && analytics.resumeCount === 0 && (
+          <div className="animate-fade-up delay-100 rounded-2xl border border-cyan-500/25 bg-gradient-to-br from-cyan-500/[0.08] to-purple-500/[0.05] p-5">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div>
+                <p className="mono text-xs text-cyan-400 uppercase tracking-widest mb-1">
+                  Your instant check: {previewCarry.fitScore}% · {previewCarry.verdict}
+                </p>
+                <p className="text-sm text-zinc-300">
+                  {previewCarry.missingCount > 0
+                    ? `${previewCarry.missingCount} missing requirement${previewCarry.missingCount !== 1 ? "s" : ""} are waiting — add that CV to unlock the full breakdown.`
+                    : "Add that CV to your account to run full analyses on any job."}
+                </p>
+              </div>
+              <Link
+                href="/resumes"
+                className="agent-button-primary px-5 py-2.5 text-sm font-bold press-scale flex-shrink-0"
+              >
+                Finish My Analysis →
+              </Link>
+            </div>
+          </div>
+        )}
 
         {/* Free-tier quota meter (hidden for premium users) */}
         {quota && (
