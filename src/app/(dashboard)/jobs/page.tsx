@@ -2,8 +2,100 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
+
+// Modal for analyzing a job found anywhere — WhatsApp, a company page,
+// an agency list. The user brings the advert; CareerOS scores it.
+function PasteJobPanel({ onClose }: { onClose: () => void }) {
+  const router = useRouter();
+  const [title, setTitle] = useState("");
+  const [company, setCompany] = useState("");
+  const [description, setDescription] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+
+  const submit = async () => {
+    setError("");
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/jobs/paste", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, companyName: company, description }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Could not save this job.");
+        return;
+      }
+      toast.success("Job saved — analyzing your fit…");
+      router.push(`/jobs/${encodeURIComponent(data.jobId)}`);
+    } catch {
+      setError("Something went wrong. Try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center p-0 sm:p-6">
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl border border-white/[0.08] bg-[#0d0d18] p-6 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-1">
+          <h2 className="text-lg font-bold text-white">Analyze a job from anywhere</h2>
+          <button onClick={onClose} className="p-1.5 rounded-lg text-zinc-500 hover:text-white hover:bg-white/5">
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <p className="text-xs text-zinc-500 mb-5">
+          Found a vacancy on WhatsApp, a company site, or an agency list? Paste it here
+          and get your fit score, gaps, and cover letter for it.
+        </p>
+        <div className="space-y-3">
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Job title, e.g. Accounts Officer *"
+            className="agent-input w-full"
+          />
+          <input
+            type="text"
+            value={company}
+            onChange={(e) => setCompany(e.target.value)}
+            placeholder="Company (optional)"
+            className="agent-input w-full"
+          />
+          <textarea
+            value={description}
+            onChange={(e) => { setDescription(e.target.value); if (error) setError(""); }}
+            placeholder="Paste the full job advert here — requirements, responsibilities, everything…"
+            className="w-full h-40 bg-black/40 border border-white/[0.06] rounded-xl p-3 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-purple-500/40 transition-colors resize-none"
+          />
+          {error && <p className="text-xs text-amber-400">{error}</p>}
+          <button
+            onClick={submit}
+            disabled={submitting || title.trim().length < 3 || description.trim().length < 100}
+            className="w-full agent-button-primary justify-center py-3 text-sm font-bold press-scale disabled:opacity-50"
+          >
+            {submitting ? (
+              <>
+                <div className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                Saving…
+              </>
+            ) : (
+              "Save & Analyze My Fit →"
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function stripHtml(html: string): string {
   return html
@@ -118,6 +210,7 @@ function getWorkModeAccentBar(workMode: string): string {
 export default function JobsPage() {
   const { userId, isLoaded } = useAuth();
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [showPaste, setShowPaste] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [search, setSearch] = useState("");
@@ -340,12 +433,25 @@ export default function JobsPage() {
   return (
     <div className="max-w-4xl mx-auto">
       {/* Header */}
-      <div className="mb-5 animate-fade-up">
-        <h1 className="text-2xl font-bold gradient-text">Find Jobs</h1>
-        <p className="text-sm text-zinc-400 mt-0.5">
-          {loading ? "Searching..." : <><span className="text-white font-medium">{totalJobs.toLocaleString()}</span> live opportunities across Africa &amp; globally</>}
-        </p>
+      <div className="mb-5 animate-fade-up flex items-end justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-bold gradient-text">Find Jobs</h1>
+          <p className="text-sm text-zinc-400 mt-0.5">
+            {loading ? "Searching..." : <><span className="text-white font-medium">{totalJobs.toLocaleString()}</span> live opportunities across Africa &amp; globally</>}
+          </p>
+        </div>
+        <button
+          onClick={() => setShowPaste(true)}
+          className="flex items-center gap-2 rounded-xl border border-cyan-500/30 bg-cyan-500/[0.06] px-4 py-2.5 text-sm font-medium text-cyan-300 hover:bg-cyan-500/10 transition-all press-scale"
+        >
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+          </svg>
+          Paste a job from anywhere
+        </button>
       </div>
+
+      {showPaste && <PasteJobPanel onClose={() => setShowPaste(false)} />}
 
       {/* Search bar */}
       <div className="animate-fade-up delay-100 agent-card p-2 mb-3">

@@ -1151,6 +1151,30 @@ export async function GET(request: NextRequest) {
             return getSingleJobResponse(savedJob);
           }
 
+          // DB fallback: employer-posted and user-pasted jobs live in the
+          // Job table and must resolve on deep links even after the
+          // search cache expires.
+          const dbJob = await prisma.job.findUnique({ where: { id: jobId } });
+          if (dbJob && dbJob.status !== "pending_review" && dbJob.status !== "rejected") {
+            return {
+              job: {
+                id: dbJob.id,
+                title: dbJob.title,
+                companyName: dbJob.companyName || "Unknown Company",
+                location: dbJob.location || "Not specified",
+                country: dbJob.country || "GH",
+                workMode: dbJob.workMode || "Not specified",
+                seniorityLevel: dbJob.seniorityLevel || "Not specified",
+                employmentType: dbJob.employmentType || "Not specified",
+                description: dbJob.description || "",
+                applicationUrl: dbJob.applicationUrl || "",
+                postedAt: (dbJob.postedAt || new Date()).toISOString(),
+                source: dbJob.externalSource || "saved",
+                isSaved: false,
+              },
+            };
+          }
+
           return null;
         },
       );
