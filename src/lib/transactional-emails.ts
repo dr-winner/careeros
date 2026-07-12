@@ -5,7 +5,7 @@ const resendApiKey = getOptionalEnv("RESEND_API_KEY");
 const resend = resendApiKey ? new Resend(resendApiKey) : null;
 
 const FROM = getEmailFrom();
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://careeros.live";
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://www.careeros.live";
 
 function isConfigured(): boolean {
   return Boolean(resend);

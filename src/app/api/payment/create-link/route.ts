@@ -8,7 +8,7 @@ const MOOLRE_BASE =
     ? "https://sandbox.moolre.com"
     : "https://api.moolre.com";
 
-const APP_URL = (process.env.NEXT_PUBLIC_APP_URL || "https://careeros.live").replace(/\/+$/, "");
+const APP_URL = (process.env.NEXT_PUBLIC_APP_URL || "https://www.careeros.live").replace(/\/+$/, "");
 
 // Plan amounts in GHS
 const AMOUNTS: Record<string, string> = {
