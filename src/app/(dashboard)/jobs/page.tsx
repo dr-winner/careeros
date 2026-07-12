@@ -342,7 +342,22 @@ export default function JobsPage() {
   );
 
   useEffect(() => {
-    if (userId) fetchJobs(true);
+    if (!userId) return;
+    // The OS knows what you're looking for — the feed defaults to the
+    // role from your profile, not a hardcoded query. Falls back to the
+    // generic feed only when no target role was ever set.
+    (async () => {
+      let q = "";
+      try {
+        const res = await fetch("/api/user/profile");
+        if (res.ok) {
+          const data = await res.json();
+          q = (data.user?.desiredRole || data.user?.roleType || "").trim();
+        }
+      } catch {}
+      if (q) setSearch(q);
+      fetchJobs(true, q ? { search: q } : undefined);
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
@@ -362,14 +377,19 @@ export default function JobsPage() {
   }, [userId]);
 
   const matchFor = useCallback(
-    (job: Job) =>
-      quickMatchScore(userSkills, `${job.title} ${job.description} ${job.requirements || ""}`).score,
+    (job: Job): number | null => {
+      const text = `${job.title} ${job.description || ""} ${job.requirements || ""}`;
+      // Some sources return no description in list mode — a 0% badge
+      // computed from a bare title would be misleading, so show nothing.
+      if (text.trim().length < 60) return null;
+      return quickMatchScore(userSkills, text).score;
+    },
     [userSkills],
   );
 
   const displayedJobs =
     userSkills.length > 0 && sortByMatch
-      ? [...jobs].sort((a, b) => matchFor(b) - matchFor(a))
+      ? [...jobs].sort((a, b) => (matchFor(b) ?? -1) - (matchFor(a) ?? -1))
       : jobs;
 
   const handleSearch = () => {
@@ -653,6 +673,7 @@ export default function JobsPage() {
                       <div className="flex items-start gap-2 flex-wrap">
                         {userSkills.length > 0 && (() => {
                           const m = matchFor(job);
+                          if (m === null) return null;
                           return (
                             <span
                               title="Quick match — your skills found in this advert. Open the job for the full AI analysis."
