@@ -196,7 +196,8 @@ export async function POST(request: NextRequest) {
               .footer-text { color: #6b7280; font-size: 12px; margin: 8px 0; }
             </style>
           </head>
-          <body>
+          <body style="margin:0;padding:0;background-color:#0a0a0f;">
+            <div style="background-color:#0a0a0f;color:#e5e7eb;padding:12px 0;">
             <div class="container">
               <div class="card">
                 <p class="greeting">Hey there 👋</p>
@@ -222,6 +223,7 @@ export async function POST(request: NextRequest) {
                 </p>
               </div>
             </div>
+          </div>
           </body>
           </html>
         `,

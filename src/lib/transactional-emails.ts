@@ -36,7 +36,18 @@ function baseStyles(): string {
 }
 
 function wrapHtml(content: string): string {
-  return "<!DOCTYPE html>\n<html>\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n<style>" + baseStyles() + "</style>\n</head>\n<body>\n" + content + "\n</body>\n</html>";
+  // Gmail ignores <body> backgrounds and some clients strip <style>
+  // entirely — so the dark canvas and a readable default text color are
+  // forced INLINE on a wrapper div. Without this, our light-gray theme
+  // text renders on a white background and becomes unreadable.
+  return (
+    "<!DOCTYPE html>\n<html>\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n<style>" +
+    baseStyles() +
+    "</style>\n</head>\n<body style=\"margin:0;padding:0;background-color:#0a0a0f;\">\n" +
+    '<div style="background-color:#0a0a0f;color:#e5e7eb;padding:12px 0;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif;">\n' +
+    content +
+    "\n</div>\n</body>\n</html>"
+  );
 }
 
 export async function sendWelcomeEmail(
