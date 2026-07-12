@@ -7,6 +7,7 @@ import {
   getWorkMode,
   paginateJobs,
   parseSalary,
+  quickMatchScore,
   type FilterableJob,
 } from "./jobs-utils";
 
@@ -221,5 +222,36 @@ describe("jobs-utils", () => {
       expect(result.pagination.page).toBe(1);
       expect(result.items[0]).toEqual({ id: "job-1" });
     });
+  });
+});
+
+describe("quickMatchScore", () => {
+  it("returns 0 with no skills or empty text", () => {
+    expect(quickMatchScore([], "React developer needed").score).toBe(0);
+    expect(quickMatchScore(["React"], "").score).toBe(0);
+  });
+
+  it("scores overlap between skills and job text", () => {
+    const r = quickMatchScore(
+      ["React", "TypeScript", "Node", "AWS"],
+      "We need a React and TypeScript engineer with AWS experience",
+    );
+    expect(r.matched).toEqual(["react", "typescript", "aws"]);
+    expect(r.score).toBe(75);
+  });
+
+  it("caps the score below 100 and floors the denominator", () => {
+    const one = quickMatchScore(["react"], "react everywhere react");
+    expect(one.score).toBeLessThanOrEqual(25); // 1 hit over floor of 4
+    const many = quickMatchScore(
+      Array.from({ length: 20 }, (_, i) => `skill${i}`),
+      Array.from({ length: 20 }, (_, i) => `skill${i}`).join(" "),
+    );
+    expect(many.score).toBeLessThanOrEqual(95);
+  });
+
+  it("dedupes and case-normalizes skills", () => {
+    const r = quickMatchScore(["React", "react", "REACT"], "react role");
+    expect(r.matched).toHaveLength(1);
   });
 });

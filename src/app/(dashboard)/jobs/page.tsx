@@ -5,6 +5,7 @@ import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
+import { quickMatchScore } from "@/lib/jobs-utils";
 
 // Modal for analyzing a job found anywhere — WhatsApp, a company page,
 // an agency list. The user brings the advert; CareerOS scores it.
@@ -211,6 +212,10 @@ export default function JobsPage() {
   const { userId, isLoaded } = useAuth();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [showPaste, setShowPaste] = useState(false);
+  // The OS layer: user's extracted skills, matched against every listed
+  // job automatically — jobs arrive pre-ranked, no analyze click needed.
+  const [userSkills, setUserSkills] = useState<string[]>([]);
+  const [sortByMatch, setSortByMatch] = useState(true);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [search, setSearch] = useState("");
@@ -340,6 +345,32 @@ export default function JobsPage() {
     if (userId) fetchJobs(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
+
+  // Load the user's extracted skills once so every listed job can be
+  // quick-matched automatically.
+  useEffect(() => {
+    if (!userId) return;
+    fetch("/api/user/resumes")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        const resumes = data?.resumes || [];
+        const primary = resumes.find((r: { isPrimary: boolean }) => r.isPrimary) || resumes[0];
+        const skills = (primary?.skills || []).map((s: { skillName: string }) => s.skillName);
+        setUserSkills(skills);
+      })
+      .catch(() => {});
+  }, [userId]);
+
+  const matchFor = useCallback(
+    (job: Job) =>
+      quickMatchScore(userSkills, `${job.title} ${job.description} ${job.requirements || ""}`).score,
+    [userSkills],
+  );
+
+  const displayedJobs =
+    userSkills.length > 0 && sortByMatch
+      ? [...jobs].sort((a, b) => matchFor(b) - matchFor(a))
+      : jobs;
 
   const handleSearch = () => {
     setCursor(null);
@@ -594,7 +625,24 @@ export default function JobsPage() {
           </div>
 
           <div className="space-y-3">
-            {jobs.map((job) => (
+            {userSkills.length > 0 && (
+              <div className="flex items-center justify-between gap-3 px-1">
+                <p className="mono text-[10px] text-zinc-600">
+                  Quick match: your {userSkills.length} extracted skills vs each advert · full AI analysis on the job page
+                </p>
+                <button
+                  onClick={() => setSortByMatch((v) => !v)}
+                  className={`mono text-[10px] px-2.5 py-1 rounded-md border transition-all flex-shrink-0 ${
+                    sortByMatch
+                      ? "border-purple-500/40 bg-purple-500/10 text-purple-300"
+                      : "border-white/[0.08] text-zinc-500 hover:text-zinc-300"
+                  }`}
+                >
+                  {sortByMatch ? "Sorted: best match" : "Sort by match"}
+                </button>
+              </div>
+            )}
+            {displayedJobs.map((job) => (
               <div
                 key={job.id}
                 className={`rounded-2xl border border-white/[0.08] bg-[#0d0d18] overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:border-purple-500/30 hover:shadow-lg hover:shadow-purple-500/5 ${getWorkModeAccentBar(job.workMode)}`}
@@ -603,6 +651,23 @@ export default function JobsPage() {
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start gap-2 flex-wrap">
+                        {userSkills.length > 0 && (() => {
+                          const m = matchFor(job);
+                          return (
+                            <span
+                              title="Quick match — your skills found in this advert. Open the job for the full AI analysis."
+                              className={`mono text-[10px] font-bold px-1.5 py-0.5 rounded border flex-shrink-0 mt-0.5 ${
+                                m >= 60
+                                  ? "bg-green-500/10 text-green-400 border-green-500/25"
+                                  : m >= 30
+                                    ? "bg-amber-500/10 text-amber-400 border-amber-500/25"
+                                    : "bg-white/[0.04] text-zinc-500 border-white/[0.08]"
+                              }`}
+                            >
+                              {m}%
+                            </span>
+                          );
+                        })()}
                         <h3 className="text-sm font-bold text-white">{job.title}</h3>
                         {userId && (
                           <button

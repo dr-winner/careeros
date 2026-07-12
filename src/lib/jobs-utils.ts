@@ -308,3 +308,28 @@ export function paginateWithCursor<T>(
     },
   };
 }
+
+// ─── Quick match ─────────────────────────────────────────────────────────────
+//
+// Transparent skill-overlap heuristic: what fraction of the user's known
+// skills appear in the job text. It is NOT the AI fit score — the UI must
+// label it "quick match" and the full analysis remains the real number.
+// Kept deliberately simple so it can run instantly over a whole job feed.
+
+export function quickMatchScore(
+  userSkills: string[],
+  jobText: string,
+): { score: number; matched: string[] } {
+  const cleanSkills = [...new Set(userSkills.map((s) => s.trim().toLowerCase()).filter((s) => s.length > 1))];
+  if (cleanSkills.length === 0 || !jobText) return { score: 0, matched: [] };
+
+  const text = jobText.toLowerCase();
+  const matched = cleanSkills.filter((skill) => text.includes(skill));
+
+  // Denominator is capped so users with very long skill lists aren't
+  // punished, and floored so one lucky hit can't read as a strong match.
+  const denominator = Math.max(4, Math.min(cleanSkills.length, 10));
+  const score = Math.min(95, Math.round((matched.length / denominator) * 100));
+
+  return { score, matched };
+}
