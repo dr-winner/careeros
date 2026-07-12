@@ -9,7 +9,12 @@ interface CVUploadProps {
   onAnalysisStart?: (cvId: string) => void;
 }
 
-const MAX_SIZE_BYTES = 10 * 1024 * 1024;
+// Vercel serverless rejects request bodies over ~4.5MB at the platform
+// level (the route never runs), so the client must enforce a limit
+// below that — and route bigger files to the paste-text path instead.
+const MAX_SIZE_BYTES = 4 * 1024 * 1024;
+const OVERSIZE_MESSAGE =
+  "This file is over 4MB (photo-heavy PDFs usually are). Use the Paste text tab instead — copy the text from your CV and paste it; any length works.";
 const ACCEPTED_MIME_TYPES = new Set([
   "application/pdf",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -40,7 +45,7 @@ function validateFile(file: File): string | null {
   }
 
   if (file.size > MAX_SIZE_BYTES) {
-    return "File size must be 10MB or less.";
+    return OVERSIZE_MESSAGE;
   }
 
   return null;
@@ -139,6 +144,10 @@ export default function CVUpload({ onUploadSuccess, onAnalysisStart }: CVUploadP
         setError(validationError);
         clearSelectedFile();
         toast.error(validationError);
+        // Oversized file: the paste tab handles any size — take them there.
+        if (validationError === OVERSIZE_MESSAGE) {
+          setMode("paste");
+        }
         return;
       }
 
@@ -157,9 +166,22 @@ export default function CVUpload({ onUploadSuccess, onAnalysisStart }: CVUploadP
           body: formData,
         });
 
-        const data = await response.json();
+        // Platform-level rejections (413 body-too-large) return non-JSON —
+        // never let the parse throw us into a generic "Upload failed".
+        let data: { error?: string; retryAfter?: number; id?: string } = {};
+        try {
+          data = await response.json();
+        } catch {
+          data = {};
+        }
 
         if (!response.ok) {
+          if (response.status === 413) {
+            setError(OVERSIZE_MESSAGE);
+            toast.error(OVERSIZE_MESSAGE);
+            setMode("paste");
+            return;
+          }
           const message = data.error || "Upload failed";
           
           if (response.status === 401 && data.retryAfter) {
@@ -335,7 +357,15 @@ export default function CVUpload({ onUploadSuccess, onAnalysisStart }: CVUploadP
           </button>
         </p>
         <p className="mt-2 text-xs text-slate-500">
-          PDF or DOCX only, up to 5MB
+          PDF or DOCX, up to 4MB — bigger file? Use{" "}
+          <button
+            type="button"
+            onClick={() => setMode("paste")}
+            className="text-cyan-400 hover:text-cyan-300 transition-colors"
+          >
+            Paste text
+          </button>{" "}
+          instead
         </p>
 
         {selectedFileName && (
