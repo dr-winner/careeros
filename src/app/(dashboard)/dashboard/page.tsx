@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
@@ -13,6 +13,19 @@ export default function DashboardPage() {
   const { isLoaded, userId } = useAuth();
   const { user, isLoaded: isUserLoaded } = useUser();
   const [showUpload, setShowUpload] = useState(false);
+  const uploadPanelRef = useRef<HTMLDivElement>(null);
+
+  // The upload panel renders below the fold; scroll to it when opened
+  // so the button visibly does something on mobile.
+  useEffect(() => {
+    if (showUpload) {
+      const t = setTimeout(
+        () => uploadPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }),
+        60,
+      );
+      return () => clearTimeout(t);
+    }
+  }, [showUpload]);
   const [showAnalysis, setShowAnalysis] = useState(false);
   const [analysisCvId, setAnalysisCvId] = useState<string | null>(null);
   const [stats, setStats] = useState({
@@ -517,7 +530,7 @@ export default function DashboardPage() {
 
         {/* CV Upload Panel */}
         {showUpload && (
-          <div className="animate-fade-up agent-card p-6">
+          <div ref={uploadPanelRef} className="animate-fade-up agent-card p-6 scroll-mt-20">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
                 <div className="h-8 w-8 rounded-lg bg-purple-500/20 flex items-center justify-center">
