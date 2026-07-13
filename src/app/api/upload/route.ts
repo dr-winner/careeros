@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { after } from "next/server";
 import { mkdir, writeFile } from "fs/promises";
 import { existsSync } from "fs";
 import path from "path";
@@ -9,6 +10,12 @@ import { uploadToStorage } from "@/lib/storage";
 import { checkRateLimit, getRateLimitHeaders, RATE_LIMITS } from "@/lib/ratelimit";
 import { generateWithFallback } from "@/lib/ai";
 import { hasAiProviderConfigured, hasVercelBlobConfigured } from "@/lib/env";
+
+// AI skill extraction (5-15s) must not block the upload response, or a
+// slow mobile PDF trips the platform timeout and the user sees
+// "Upload failed". Raise the ceiling AND run extraction after the
+// response (see `after()` below).
+export const maxDuration = 60;
 
 const ALLOWED_TYPES = new Set([
   "application/msword",
@@ -413,19 +420,23 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      if (hasAiProviderConfigured()) {
-        await extractProfileWithAI(resume.id, pastedText, {
-          needsExperience: parsedData.experience.length === 0,
-          needsEducation: parsedData.education.length === 0,
-        });
-      } else if (parsedData.skills.length > 0) {
+      // Fast regex skills now; AI enrichment after the response (see file
+      // branch for rationale — keeps paste-save immune to LLM latency).
+      if (parsedData.skills.length > 0) {
         await prisma.resumeSkill.createMany({
           data: parsedData.skills.map((skill) => ({
             resumeId: resume.id,
             skillName: skill,
             source: "parsed",
           })),
+          skipDuplicates: true,
         });
+      }
+      if (hasAiProviderConfigured()) {
+        const rid = resume.id;
+        const needsExp = parsedData.experience.length === 0;
+        const needsEdu = parsedData.education.length === 0;
+        after(() => extractProfileWithAI(rid, pastedText, { needsExperience: needsExp, needsEducation: needsEdu }));
       }
 
       const updatedCounts = await prisma.resume.count({ where: { userId: user.id } });
@@ -575,21 +586,25 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      if (parsedText && hasAiProviderConfigured()) {
-        // AI extraction: await so skills are ready before the response returns
-        await extractProfileWithAI(resume.id, parsedText, {
-          needsExperience: parsedData.experience.length === 0,
-          needsEducation: parsedData.education.length === 0,
-        });
-      } else if (parsedData.skills.length > 0) {
-        // Keyword fallback when no AI provider is configured
+      // Save fast regex skills synchronously so the resume is never
+      // skill-less, then enrich with AI extraction AFTER the response is
+      // sent — this keeps the upload fast and immune to LLM latency.
+      if (parsedData.skills.length > 0) {
         await prisma.resumeSkill.createMany({
           data: parsedData.skills.map((skill) => ({
             resumeId: resume.id,
             skillName: skill,
             source: "parsed",
           })),
+          skipDuplicates: true,
         });
+      }
+      if (parsedText && hasAiProviderConfigured()) {
+        const rid = resume.id;
+        const txt = parsedText;
+        const needsExp = parsedData.experience.length === 0;
+        const needsEdu = parsedData.education.length === 0;
+        after(() => extractProfileWithAI(rid, txt, { needsExperience: needsExp, needsEducation: needsEdu }));
       }
 
       const profileUpdates: {
