@@ -57,7 +57,7 @@ interface RemotiveJob {
 }
 
 function getBaseUrl(): string {
-  return (process.env.NEXT_PUBLIC_APP_URL || "https://www.careeros.live").replace(/\/+$/, "");
+  return (process.env.NEXT_PUBLIC_APP_URL || "https://careeros.live").replace(/\/+$/, "");
 }
 
 async function fetchJsonWithTimeout(

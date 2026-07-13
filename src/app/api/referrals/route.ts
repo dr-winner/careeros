@@ -8,7 +8,7 @@ import { getEmailFrom } from "@/lib/env";
 import { buildReferralCode } from "@/lib/referral-code";
 import { finalizeProcessingWithdrawals, MIN_WITHDRAWAL_GHS } from "@/lib/referral-reward";
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://www.careeros.live";
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://careeros.live";
 
 function getBaseUrl(): string {
   return APP_URL.replace(/\/+$/, "");

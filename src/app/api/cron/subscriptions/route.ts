@@ -7,7 +7,7 @@ import { readEnv, getEmailFrom } from "@/lib/env";
 const resendApiKey = readEnv("RESEND_API_KEY");
 const resend = resendApiKey ? new Resend(resendApiKey) : null;
 const FROM = getEmailFrom();
-const APP_URL = (readEnv("NEXT_PUBLIC_APP_URL") || "https://www.careeros.live").replace(/\/+$/, "");
+const APP_URL = (readEnv("NEXT_PUBLIC_APP_URL") || "https://careeros.live").replace(/\/+$/, "");
 
 const MOOLRE_BASE =
   process.env.MOOLRE_SANDBOX === "true"
