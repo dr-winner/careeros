@@ -646,7 +646,14 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
+    // Surface the real failure so mobile upload issues are diagnosable
+    // instead of a blind "Upload failed". Message only — no stack/secrets.
+    const detail =
+      error instanceof Error ? `${error.name}: ${error.message}` : String(error);
     console.error("Upload error:", error);
-    return NextResponse.json({ error: "Upload failed" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Upload failed", detail: detail.slice(0, 300) },
+      { status: 500 },
+    );
   }
 }

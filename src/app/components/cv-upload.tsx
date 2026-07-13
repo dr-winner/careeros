@@ -168,7 +168,7 @@ export default function CVUpload({ onUploadSuccess, onAnalysisStart }: CVUploadP
 
         // Platform-level rejections (413 body-too-large) return non-JSON —
         // never let the parse throw us into a generic "Upload failed".
-        let data: { error?: string; retryAfter?: number; id?: string } = {};
+        let data: { error?: string; detail?: string; retryAfter?: number; id?: string } = {};
         try {
           data = await response.json();
         } catch {
@@ -182,8 +182,10 @@ export default function CVUpload({ onUploadSuccess, onAnalysisStart }: CVUploadP
             setMode("paste");
             return;
           }
-          const message = data.error || "Upload failed";
-          
+          const message = data.detail
+            ? `${data.error || "Upload failed"} — ${data.detail}`
+            : data.error || "Upload failed";
+
           if (response.status === 401 && data.retryAfter) {
             toast.info("Initializing your profile...");
             // Small wait and then could potentially auto-retry or just show message
