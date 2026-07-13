@@ -465,6 +465,17 @@ export async function POST(request: NextRequest) {
 
     if (rawName && ALLOWED_TYPES.has(rawType)) {
       const ab = await request.arrayBuffer();
+      // Diagnostic: report bytes actually received so an empty body
+      // (consumed upstream) is distinguishable from a real validation fail.
+      if (ab.byteLength === 0) {
+        return NextResponse.json(
+          {
+            error: "The file didn't reach the server (0 bytes received).",
+            detail: `bodyUsed=${request.bodyUsed} contentLength=${request.headers.get("content-length")} type=${rawType}`,
+          },
+          { status: 400 },
+        );
+      }
       file = new File([ab], rawName, { type: rawType });
     } else {
       const formData = await request.formData();
