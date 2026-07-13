@@ -158,12 +158,16 @@ export default function CVUpload({ onUploadSuccess, onAnalysisStart }: CVUploadP
       isUploadingRef.current = true;
 
       try {
-        const formData = new FormData();
-        formData.append("file", selectedFile);
-
+        // Raw binary body (not multipart) — avoids the undici FormData
+        // parse failure that broke uploads on iOS. Metadata via headers.
         const response = await fetch("/api/upload", {
           method: "POST",
-          body: formData,
+          headers: {
+            "Content-Type": selectedFile.type || "application/octet-stream",
+            "x-file-name": encodeURIComponent(selectedFile.name),
+            "x-file-type": selectedFile.type,
+          },
+          body: selectedFile,
         });
 
         // Platform-level rejections (413 body-too-large) return non-JSON —

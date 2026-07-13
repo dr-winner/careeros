@@ -454,21 +454,34 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const formData = await request.formData();
-    const rawFile = formData.get("file");
+    // Raw binary upload: the client sends the file as the request body
+    // (not multipart FormData) with metadata in headers. This sidesteps
+    // undici's multipart parser, which throws "Failed to parse body as
+    // FormData" on some encodings (notably iOS Safari/Brave) — the exact
+    // mobile upload failure. Falls back to FormData for older clients.
+    let file: File;
+    const rawName = decodeURIComponent(request.headers.get("x-file-name") || "");
+    const rawType = request.headers.get("x-file-type") || "";
 
-    const parsedUpload = uploadSchema.safeParse({
-      file: rawFile,
-    });
+    if (rawName && ALLOWED_TYPES.has(rawType)) {
+      const ab = await request.arrayBuffer();
+      file = new File([ab], rawName, { type: rawType });
+    } else {
+      const formData = await request.formData();
+      const rawFile = formData.get("file");
+      if (!(rawFile instanceof File)) {
+        return NextResponse.json({ error: "No file received." }, { status: 400 });
+      }
+      file = rawFile;
+    }
 
+    const parsedUpload = uploadSchema.safeParse({ file });
     if (!parsedUpload.success) {
       return NextResponse.json(
         { error: parsedUpload.error.issues[0]?.message || "Invalid upload" },
         { status: 400 },
       );
     }
-
-    const { file } = parsedUpload.data;
 
     const ext = getSafeExtension(file);
     const baseName = sanitizeFilenamePart(

@@ -104,9 +104,18 @@ export default function GuidedOnboarding() {
 
     if (currentStep === 2) {
       if (file) {
-        const formData = new FormData();
-        formData.append("file", file);
-        try { await fetch("/api/upload", { method: "POST", body: formData }); } catch { /* non-blocking */ }
+        // Raw binary (not multipart) — avoids the iOS FormData parse bug.
+        try {
+          await fetch("/api/upload", {
+            method: "POST",
+            headers: {
+              "Content-Type": file.type || "application/octet-stream",
+              "x-file-name": encodeURIComponent(file.name),
+              "x-file-type": file.type,
+            },
+            body: file,
+          });
+        } catch { /* non-blocking */ }
       }
       setCurrentStep(3);
       return;
