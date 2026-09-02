@@ -10,6 +10,7 @@ import { uploadToStorage } from "@/lib/storage";
 import { checkRateLimit, getRateLimitHeaders, RATE_LIMITS } from "@/lib/ratelimit";
 import { generateWithFallback } from "@/lib/ai";
 import { hasAiProviderConfigured, hasVercelBlobConfigured } from "@/lib/env";
+import { canonicalizeSkill, extractSkills } from "@/lib/skills";
 
 // AI skill extraction (5-15s) must not block the upload response, or a
 // slow mobile PDF trips the platform timeout and the user sees

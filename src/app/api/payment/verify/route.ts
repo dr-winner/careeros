@@ -7,7 +7,7 @@ import {
   expectedPlanAmount,
 } from "@/lib/subscription";
 import { verifyCollectionPayment } from "@/lib/moolre";
-import { checkRateLimit, getRateLimitHeaders, RATE_LIMITS } from "@/lib/ratelimit";
+import { checkRateLimit, getRateLimitHeaders } from "@/lib/ratelimit";
 
 // Backstop for the webhook: the success page calls this with the
 // externalref from the redirect so a paying user gets Premium even when
