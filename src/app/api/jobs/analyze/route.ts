@@ -8,7 +8,7 @@ import { checkRateLimit, getRateLimitHeaders, RATE_LIMITS } from "@/lib/ratelimi
 import { ensureJobRecord } from "@/lib/jobs";
 import { checkQuota, claimQuota, releaseQuota } from "@/lib/quota";
 import { sendReferralConvertedEmail } from "@/lib/transactional-emails";
-import { SOFT_SKILLS, canonicalizeSkill, extractSkills } from "@/lib/skills";
+import { SOFT_SKILLS, extractSkills, sanitizeSkillList } from "@/lib/skills";
 
 // Below this the "description" is a category label or a stub, not an advert.
 const MIN_DESCRIPTION_CHARS = 80;
@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
     // CV skills arrive as raw parser output ("React and Next.js", "and Python",
     // "richard · github.com"). Map them onto the dictionary so they compare
     // like-for-like with the advert, and drop fragments that aren't skills.
-    const resumeSkills = rawResumeSkills.flatMap((s: string) => canonicalizeSkill(s));
+    const resumeSkills = sanitizeSkillList(rawResumeSkills);
     const experiences = user?.resumes[0]?.experiences || [];
     const education = user?.resumes[0]?.education || [];
     const allUserSkills = [...new Set([...profileSkills, ...resumeSkills])];

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
 import { quickMatchScore, roleRelevanceBoost } from "@/lib/jobs-utils";
+import { sanitizeSkillList } from "@/lib/skills";
 
 // Modal for analyzing a job found anywhere — WhatsApp, a company page,
 // an agency list. The user brings the advert; CareerOS scores it.
@@ -390,7 +391,9 @@ export default function JobsPage() {
       .then((data) => {
         const resumes = data?.resumes || [];
         const primary = resumes.find((r: { isPrimary: boolean }) => r.isPrimary) || resumes[0];
-        const skills = (primary?.skills || []).map((s: { skillName: string }) => s.skillName);
+        const skills = sanitizeSkillList(
+          (primary?.skills || []).map((s: { skillName: string }) => s.skillName),
+        );
         setUserSkills(skills);
       })
       .catch(() => {});

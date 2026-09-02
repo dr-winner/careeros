@@ -160,11 +160,27 @@ export function extractSkills(text: string): string[] {
  * the dictionary matches but the string still looks like a skill.
  */
 export function canonicalizeSkill(raw: string): string[] {
+  if (isJunkSkillFragment(raw)) return [];
   const cleaned = cleanSkillLabel(raw);
   if (!cleaned) return [];
   const canonical = extractSkills(cleaned);
   if (canonical.length > 0) return canonical;
   return isPlausibleSkillLabel(cleaned) ? [cleaned] : [];
+}
+
+export function sanitizeSkillList(raw: string[]): string[] {
+  return [
+    ...new Set(
+      raw
+        .filter((s): s is string => typeof s === "string")
+        .flatMap((s) => canonicalizeSkill(s)),
+    ),
+  ];
+}
+
+/** Whole CV-parser lines that must never be scanned for dictionary hits. */
+function isJunkSkillFragment(raw: string): boolean {
+  return /[@]|https?:|www\.|github\.com|linkedin\.com|\.com\b|\.io\b|\(remote\)/i.test(raw);
 }
 
 const LEADING_JUNK = /^(?:and|or|with|using|in|of|the|a|an|plus|also|including|•|-|–|—|·|\*)\s+/i;
@@ -183,12 +199,13 @@ export function cleanSkillLabel(raw: string): string {
  */
 export function isPlausibleSkillLabel(s: string): boolean {
   if (s.length < 2 || s.length > 40) return false;
-  if (/[@]|https?:|www\.|\.com\b|\.io\b|github|linkedin|\(remote\)/i.test(s)) return false;
+  if (/[@]|https?:|www\.|\.com\b|\.io\b|github|linkedin|\(remote\)|·|•/i.test(s)) return false;
   if (/\d{7,}/.test(s)) return false;
   const words = s.split(/\s+/);
-  if (words.length > 4) return false;
+  if (words.length > 3) return false;
   if (/^(?:and|or|with|using|the|of|in|work|working|labeled|labelled|uptime|etc)$/i.test(s)) return false;
-  // Sentence fragments: starts lowercase verb-ish and contains a verb marker
+  // Bare handles / slug lines the PDF parser treated as skills
+  if (words.length === 1 && /^[a-z0-9._-]{8,}$/i.test(s) && !/[A-Z]/.test(s[0])) return false;
   if (/^(?:build|built|work|worked|develop|developed|manage|managed|maintain|maintained|create|created)\b/i.test(s) && words.length > 1) return false;
   return true;
 }

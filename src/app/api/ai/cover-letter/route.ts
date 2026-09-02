@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { generateWithFallback } from "@/lib/ai";
 import { coverLetterRequestSchema, getZodErrorMessage } from "@/lib/validation";
 import { checkRateLimit, getRateLimitHeaders, RATE_LIMITS } from "@/lib/ratelimit";
+import { sanitizeSkillList } from "@/lib/skills";
 import { hasAiProviderConfigured } from "@/lib/env";
 import { claimQuota, releaseQuota } from "@/lib/quota";
 
@@ -104,10 +105,9 @@ export async function POST(request: NextRequest) {
     const userHeadline = user.headline?.trim() || "";
     const parsedResume = selectedResume?.parsedText?.trim() || "";
 
-    const resumeSkills = (selectedResume?.skills ?? [])
-      .map((skill) => skill.skillName?.trim())
-      .filter((skill): skill is string => !!skill)
-      .join(", ");
+    const resumeSkills = sanitizeSkillList(
+      (selectedResume?.skills ?? []).map((skill) => skill.skillName?.trim() || ""),
+    ).join(", ");
 
     const recentRole = selectedResume?.experiences?.[0];
     const experienceSummary =

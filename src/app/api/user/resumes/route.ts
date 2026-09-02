@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
+import { sanitizeSkillList } from "@/lib/skills";
 
 export async function GET() {
   try {
@@ -22,7 +23,7 @@ export async function GET() {
       where: { userId: dbUser.id },
       include: {
         skills: {
-          select: { skillName: true },
+          select: { id: true, skillName: true },
         },
         experiences: {
           select: { title: true, company: true },
@@ -34,10 +35,37 @@ export async function GET() {
       orderBy: { createdAt: "desc" },
     });
 
-    const resumesWithText = resumes.map(resume => ({
-      ...resume,
-      parsedText: resume.parsedText || "",
-    }));
+    const resumesWithText = [];
+    for (const resume of resumes) {
+      const raw = resume.skills.map((s) => s.skillName);
+      const clean = sanitizeSkillList(raw);
+      const same =
+        raw.length === clean.length &&
+        raw.every((name, i) => name === clean[i]);
+
+      if (!same) {
+        await prisma.$transaction([
+          prisma.resumeSkill.deleteMany({ where: { resumeId: resume.id } }),
+          ...(clean.length > 0
+            ? [
+                prisma.resumeSkill.createMany({
+                  data: clean.map((skillName) => ({
+                    resumeId: resume.id,
+                    skillName,
+                    source: "canonical",
+                  })),
+                }),
+              ]
+            : []),
+        ]);
+      }
+
+      resumesWithText.push({
+        ...resume,
+        skills: (same ? raw : clean).map((skillName) => ({ skillName })),
+        parsedText: resume.parsedText || "",
+      });
+    }
 
     return NextResponse.json({ resumes: resumesWithText });
   } catch (error) {

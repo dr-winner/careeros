@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { SOFT_SKILLS, canonicalizeSkill, extractSkills, skillMentioned } from "./skills";
+import { SOFT_SKILLS, canonicalizeSkill, extractSkills, sanitizeSkillList, skillMentioned } from "./skills";
 
 describe("extractSkills", () => {
   it("does not read tech skills into an accountant advert", () => {
@@ -53,6 +53,28 @@ describe("canonicalizeSkill", () => {
     expect(canonicalizeSkill("richard@example.com")).toEqual([]);
     expect(canonicalizeSkill("https://linkedin.com/in/x")).toEqual([]);
     expect(canonicalizeSkill("C")).toEqual([]);
+  });
+
+  it("drops the live CV parser junk that was shown as 43 skills", () => {
+    expect(canonicalizeSkill("Ghana (Remote) duvorrichardwinner")).toEqual([]);
+    expect(canonicalizeSkill("richard-winner-duvor · github.com")).toEqual([]);
+    expect(canonicalizeSkill("responsive interfaces using HTML")).toEqual([]);
+    expect(canonicalizeSkill("labeled")).toEqual([]);
+    expect(canonicalizeSkill("uptime")).toEqual([]);
+    expect(canonicalizeSkill("duvorrichardwinner")).toEqual([]);
+  });
+});
+
+describe("sanitizeSkillList", () => {
+  it("dedupes dictionary hits and drops fragments", () => {
+    expect(
+      sanitizeSkillList([
+        "React and Next.js",
+        "and Python",
+        "richard-winner-duvor · github.com",
+        "React",
+      ]),
+    ).toEqual(["JavaScript", "React", "Python"]);
   });
 });
 
