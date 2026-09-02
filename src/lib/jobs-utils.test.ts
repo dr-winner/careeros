@@ -372,6 +372,8 @@ describe("jobs-utils", () => {
         "Cloud Engineer",
       ]);
     });
+
+    it("drops a Hyderabad office even if it is stored as GH", () => {
       const mistagged: FilterableJob = {
         title: "Cloud Security",
         companyName: "QualiZeal",
@@ -525,12 +527,6 @@ describe("jobsListHref", () => {
 });
 
 describe("roleRelevanceBoost", () => {
-  it("scores exact and partial title overlap with the target role", () => {
-    expect(roleRelevanceBoost("Cloud Security Engineer", "Cloud Security")).toBe(40);
-    expect(roleRelevanceBoost("Cloud Engineer", "Cloud Security")).toBe(15);
-    expect(roleRelevanceBoost("Sales Executive", "Cloud Security")).toBe(0);
-  });
-});
   it("scores exact and partial title overlap with the target role", () => {
     expect(roleRelevanceBoost("Cloud Security Engineer", "Cloud Security")).toBe(40);
     expect(roleRelevanceBoost("Cloud Engineer", "Cloud Security")).toBe(15);

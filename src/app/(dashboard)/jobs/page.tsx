@@ -347,6 +347,20 @@ export default function JobsPage() {
     [search, location, workMode, seniority, country, employmentType, datePosted, cursor, persistJobs, loadListCache, saveListCache],
   );
 
+  const syncJobsUrl = (nextSearch: string, nextCountry: string) => {
+    const params = new URLSearchParams();
+    if (nextSearch.trim()) params.set("search", nextSearch.trim());
+    if (nextCountry) params.set("country", nextCountry);
+    const qs = params.toString();
+    const href = qs ? `/jobs?${qs}` : "/jobs";
+    window.history.replaceState(null, "", href);
+    try {
+      sessionStorage.setItem(JOBS_LIST_STORAGE_KEY, href);
+    } catch {
+      // private mode
+    }
+  };
+
   useEffect(() => {
     if (!userId || !clerkUser) return;
     const url = new URLSearchParams(window.location.search);
@@ -422,20 +436,6 @@ export default function JobsPage() {
           return (matchFor(b) ?? 0) - (matchFor(a) ?? 0);
         })
       : jobs;
-
-  const syncJobsUrl = (nextSearch: string, nextCountry: string) => {
-    const params = new URLSearchParams();
-    if (nextSearch.trim()) params.set("search", nextSearch.trim());
-    if (nextCountry) params.set("country", nextCountry);
-    const qs = params.toString();
-    const href = qs ? `/jobs?${qs}` : "/jobs";
-    window.history.replaceState(null, "", href);
-    try {
-      sessionStorage.setItem(JOBS_LIST_STORAGE_KEY, href);
-    } catch {
-      // private mode
-    }
-  };
 
   const handleSearch = () => {
     const q = search.trim();
