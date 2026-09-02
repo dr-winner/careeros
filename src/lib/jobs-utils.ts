@@ -146,10 +146,19 @@ const US_LOCATION_NEEDLES = [
   "miami", "los angeles", "washington", "herndon", "arlington", "longmont",
   "tempe", "fairfax", "boulder", ", tx", ", ca", ", ny", ", va", ", il",
   ", co", ", ma", ", ga", ", az", ", pa", ", fl", ", wa",
+  "pennsylvania", "eastern united states",
 ];
 const GB_LOCATION_NEEDLES = [
   "united kingdom", "london", "manchester", "birmingham", "leeds",
-  "bournemouth", "knutsford", ", uk", "england", "scotland", "wales",
+  "bournemouth", "knutsford", ", uk", "england", "scotland", "wales", "uk",
+];
+const MX_LOCATION_NEEDLES = ["mexico", "mexico city", "guadalajara", "monterrey", "latam", "latin america"];
+const ES_LOCATION_NEEDLES = ["spain", "madrid", "barcelona"];
+const SE_LOCATION_NEEDLES = ["sweden", "stockholm", "gothenburg"];
+const TH_LOCATION_NEEDLES = ["thailand", "bangkok"];
+const EU_LOCATION_NEEDLES = [
+  "europe", "emea", "eu-wide", "netherlands", "amsterdam", "germany", "berlin",
+  "munich", "france", "paris",
 ];
 const IN_LOCATION_NEEDLES = [
   "india", "bangalore", "bengaluru", "mumbai", "delhi", "hyderabad", "chennai",
@@ -208,26 +217,74 @@ export function getCountry(source: string, location: unknown): string {
   if (locHasAny(loc, KE_LOCATION_NEEDLES)) return "KE";
   if (locHasAny(loc, ZA_LOCATION_NEEDLES)) return "ZA";
 
-  if (loc.includes("west africa")) return "AF";
-  if (locHas(loc, "africa")) return "AF";
-
+  // Pin a specific country before the generic "Africa" token. "Africa, PA"
+  // is Pennsylvania; "Remote - Mexico" is Mexico — not a Ghana listing.
   if (locHasAny(loc, CA_LOCATION_NEEDLES)) return "CA";
   if (locHasAny(loc, US_LOCATION_NEEDLES)) return "US";
-
   if (locHasAny(loc, GB_LOCATION_NEEDLES)) return "GB";
+  if (locHasAny(loc, MX_LOCATION_NEEDLES)) return "MX";
+  if (locHasAny(loc, ES_LOCATION_NEEDLES)) return "ES";
+  if (locHasAny(loc, SE_LOCATION_NEEDLES)) return "SE";
+  if (locHasAny(loc, TH_LOCATION_NEEDLES)) return "TH";
   if (locHasAny(loc, ["germany", "berlin", "munich"])) return "DE";
   if (locHasAny(loc, ["france", "paris"])) return "FR";
-  if (locHasAny(loc, ["europe", "netherlands", "amsterdam"])) return "EU";
-
+  if (locHasAny(loc, EU_LOCATION_NEEDLES)) return "EU";
   if (locHasAny(loc, AU_LOCATION_NEEDLES)) return "AU";
   if (locHasAny(loc, IN_LOCATION_NEEDLES)) return "IN";
   if (locHas(loc, "singapore")) return "SG";
+
+  if (loc.includes("west africa")) return "AF";
+  if (locHas(loc, "africa")) return "AF";
 
   if (source === "remotive" || source === "remoteok" || source === "jobicy") return "GLOBAL";
   if (source === "arbeitnow") return "EU";
   if (source === "themuse") return "US";
 
   return "GLOBAL";
+}
+
+export const COUNTRY_NAME_TO_CODE: Record<string, string> = {
+  ghana: "GH",
+  nigeria: "NG",
+  kenya: "KE",
+  "south africa": "ZA",
+};
+
+/** Map a profile country string ("Ghana") or code ("GH") to a jobs filter code. */
+export function countryNameToCode(name?: string | null): string {
+  const n = (name || "").trim();
+  if (!n) return "";
+  const upper = n.toUpperCase();
+  if (["GH", "NG", "KE", "ZA", "GB", "US", "CA", "AU", "IN", "REMOTE"].includes(upper)) {
+    return upper;
+  }
+  return COUNTRY_NAME_TO_CODE[n.toLowerCase()] || "";
+}
+
+export const JOBS_LIST_STORAGE_KEY = "careeros:jobs-list";
+
+/** Build /jobs?... from an alert or the last list view so Back/Search keep Ghana. */
+export function jobsListHref(opts: {
+  search?: string | null;
+  location?: string | null;
+  country?: string | null;
+  workMode?: string | null;
+}): string {
+  const params = new URLSearchParams();
+  const search = (opts.search || "").trim();
+  if (search) params.set("search", search);
+  const fromLocation = getCountry("", opts.location || "");
+  const country =
+    countryNameToCode(opts.country) ||
+    (fromLocation !== "GLOBAL" && fromLocation !== "AF" && fromLocation !== "EU"
+      ? fromLocation
+      : "") ||
+    countryNameToCode(opts.location);
+  if (country) params.set("country", country);
+  const wm = (opts.workMode || "").trim();
+  if (wm) params.set("workMode", wm);
+  const qs = params.toString();
+  return qs ? `/jobs?${qs}` : "/jobs";
 }
 
 const SEARCH_STOPWORDS = new Set([
@@ -320,8 +377,11 @@ export function pinnedCountryCode(job: FilterableJob): string | null {
   const fromLoc = getCountry("", job.location);
   if (fromLoc !== "GLOBAL") return fromLoc;
 
+  const fromTitle = getCountry("", job.title);
+  if (fromTitle !== "GLOBAL") return fromTitle;
+
   const stored = (job.country || "").trim().toUpperCase();
-  if (stored && stored !== "GLOBAL" && stored !== "REMOTE") return stored;
+  if (stored && stored !== "GLOBAL" && stored !== "REMOTE" && stored !== "AF") return stored;
 
   if (isWorldwideLocation(job.location)) return null;
   if (looksLikeSpecificPlace(job.location)) return "UNKNOWN";
@@ -354,7 +414,8 @@ export function jobMatchesCountry(job: FilterableJob, country: string): boolean 
   if (job.country === country && !locationContradicts) return true;
 
   if (AFRICAN_MARKET_CODES.has(country)) {
-    if (!locationContradicts && (job.country === "AF" || locCountry === "AF")) return true;
+    // Bare "Africa" / West Africa — not "Africa, PA" (already US) and not EMEA.
+    if (locCountry === "AF" && !locationContradicts) return true;
     if (isRemoteWork(job)) {
       const pinned = pinnedCountryCode(job);
       if (pinned === null || pinned === country || pinned === "AF") return true;
@@ -369,9 +430,24 @@ export function jobMatchesCountry(job: FilterableJob, country: string): boolean 
  * GH-first ranking fills page 1 with local admin/sales listings and the
  * remote engineering roles never appear. Interleave 1 local : 2 others.
  */
+function sortByRoleThenTime<T extends FilterableJob & { postedAt?: string }>(
+  jobs: T[],
+  desiredRole: string,
+): T[] {
+  if (!desiredRole.trim()) return jobs;
+  return [...jobs].sort((a, b) => {
+    const role = roleRelevanceBoost(b.title, desiredRole) - roleRelevanceBoost(a.title, desiredRole);
+    if (role !== 0) return role;
+    const ta = new Date(a.postedAt || 0).getTime();
+    const tb = new Date(b.postedAt || 0).getTime();
+    return (Number.isNaN(tb) ? 0 : tb) - (Number.isNaN(ta) ? 0 : ta);
+  });
+}
+
 export function interleaveHomeAndRemote<T extends FilterableJob>(
   jobs: T[],
   homeCountry: string,
+  desiredRole = "",
 ): T[] {
   const home: T[] = [];
   const rest: T[] = [];
@@ -387,13 +463,16 @@ export function interleaveHomeAndRemote<T extends FilterableJob>(
     else rest.push(job);
   }
 
+  const homeRanked = sortByRoleThenTime(home, desiredRole);
+  const restRanked = sortByRoleThenTime(rest, desiredRole);
+
   const out: T[] = [];
   let i = 0;
   let j = 0;
-  while (i < home.length || j < rest.length) {
-    if (i < home.length) out.push(home[i++]);
-    if (j < rest.length) out.push(rest[j++]);
-    if (j < rest.length) out.push(rest[j++]);
+  while (i < homeRanked.length || j < restRanked.length) {
+    if (i < homeRanked.length) out.push(homeRanked[i++]);
+    if (j < restRanked.length) out.push(restRanked[j++]);
+    if (j < restRanked.length) out.push(restRanked[j++]);
   }
   return out;
 }

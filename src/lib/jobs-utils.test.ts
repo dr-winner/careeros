@@ -10,6 +10,7 @@ import {
   parseSalary,
   quickMatchScore,
   roleRelevanceBoost,
+  jobsListHref,
   type FilterableJob,
 } from "./jobs-utils";
 
@@ -120,6 +121,15 @@ describe("jobs-utils", () => {
 
     it("does not classify Indiana as India", () => {
       expect(getCountry("adzuna", "Indianapolis, IN")).not.toBe("IN");
+    });
+
+    it("does not treat Africa, PA as Africa or Ghana", () => {
+      expect(getCountry("adzuna", "Africa, PA")).toBe("US");
+      expect(getCountry("", "Mexico")).toBe("MX");
+      expect(getCountry("", "EMEA")).toBe("EU");
+      expect(getCountry("", "UK")).toBe("GB");
+      expect(getCountry("", "Bangkok")).toBe("TH");
+      expect(getCountry("", "Spain")).toBe("ES");
     });
   });
 
@@ -304,7 +314,64 @@ describe("jobs-utils", () => {
       ]);
     });
 
-    it("does not keep a Ghana country code when the location is another country", () => {
+    it("does not treat Africa, PA, Mexico, EMEA, or UK remotes as Ghana", () => {
+      const accra: FilterableJob = {
+        title: "Programs Manager",
+        companyName: "NGO",
+        location: "Accra & Tema Region",
+        country: "GH",
+        workMode: "On-site",
+        seniorityLevel: "Senior",
+      };
+      const africaPa: FilterableJob = {
+        title: "Junior Data Analyst",
+        companyName: "Hirehangar",
+        location: "Africa, PA",
+        country: "GLOBAL",
+        workMode: "Remote",
+        seniorityLevel: "Entry-Level",
+      };
+      const mexico: FilterableJob = {
+        title: "Senior Full-stack Engineer (Remote - Mexico)",
+        companyName: "Truelogic",
+        location: "Mexico",
+        country: "GLOBAL",
+        workMode: "Remote",
+        seniorityLevel: "Senior",
+      };
+      const emea: FilterableJob = {
+        title: "Payments Solutions Architect (US or EMEA)",
+        companyName: "Testlio",
+        location: "EMEA",
+        country: "GLOBAL",
+        workMode: "Remote",
+        seniorityLevel: "Mid-Level",
+      };
+      const ukRemote: FilterableJob = {
+        title: "Principal Cloud Security Engineer",
+        companyName: "LastPass",
+        location: "UK",
+        country: "GLOBAL",
+        workMode: "Remote",
+        seniorityLevel: "Senior",
+      };
+      const worldwide: FilterableJob = {
+        title: "Cloud Engineer",
+        companyName: "Canonical",
+        location: "Anywhere",
+        country: "GLOBAL",
+        workMode: "Remote",
+        seniorityLevel: "Mid-Level",
+      };
+      const matched = filterJobs(
+        [accra, africaPa, mexico, emea, ukRemote, worldwide],
+        { country: "GH" },
+      );
+      expect(matched.map((j) => j.title)).toEqual([
+        "Programs Manager",
+        "Cloud Engineer",
+      ]);
+    });
       const mistagged: FilterableJob = {
         title: "Cloud Security",
         companyName: "QualiZeal",
@@ -449,7 +516,21 @@ describe("quickMatchScore", () => {
   });
 });
 
+describe("jobsListHref", () => {
+  it("keeps Ghana on an Accra alert", () => {
+    expect(jobsListHref({ search: "cloud security engineer", location: "Accra, Ghana" })).toMatch(
+      /\/jobs\?search=cloud(\+|%20)security(\+|%20)engineer&country=GH/,
+    );
+  });
+});
+
 describe("roleRelevanceBoost", () => {
+  it("scores exact and partial title overlap with the target role", () => {
+    expect(roleRelevanceBoost("Cloud Security Engineer", "Cloud Security")).toBe(40);
+    expect(roleRelevanceBoost("Cloud Engineer", "Cloud Security")).toBe(15);
+    expect(roleRelevanceBoost("Sales Executive", "Cloud Security")).toBe(0);
+  });
+});
   it("scores exact and partial title overlap with the target role", () => {
     expect(roleRelevanceBoost("Cloud Security Engineer", "Cloud Security")).toBe(40);
     expect(roleRelevanceBoost("Cloud Engineer", "Cloud Security")).toBe(15);

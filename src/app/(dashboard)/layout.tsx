@@ -18,6 +18,7 @@ const navItems = [
   { href: "/cover-letter", label: "Cover Letters", icon: "M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z", color: "purple" },
   { href: "/alerts", label: "Job Alerts", icon: "M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9", color: "cyan" },
   { href: "/referrals", label: "Referrals", icon: "M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z", color: "purple" },
+  { href: "/analytics", label: "Analytics", icon: "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z", color: "cyan" },
   { href: "/profile", label: "Profile", icon: "M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z", color: "purple" },
 ];
 
@@ -166,9 +167,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
         )}
         {isPremium === true && (
-          <div className="px-6 py-2 flex items-center gap-2">
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 mono">PREMIUM</span>
-            <span className="mono text-[10px] text-zinc-600">All features unlocked</span>
+          <div className="px-4 py-2 flex items-center gap-2 min-w-0">
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 mono flex-shrink-0">PREMIUM</span>
+            <span className="mono text-[10px] text-zinc-600 truncate">Unlocked</span>
           </div>
         )}
 

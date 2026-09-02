@@ -6,7 +6,7 @@ import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 import { toast } from "sonner";
 import PaywallModal from "@/components/paywall-modal";
-import { useAnalytics } from "@/lib/analytics";
+import { JOBS_LIST_STORAGE_KEY } from "@/lib/jobs-utils";
 
 function decodeHtmlEntities(html: string): string {
   return html
@@ -67,6 +67,7 @@ export default function JobDetailPage() {
   const [analyzedAt, setAnalyzedAt] = useState<string | null>(null);
   const [needsDescription, setNeedsDescription] = useState(false);
   const [pastedDescription, setPastedDescription] = useState("");
+  const [jobsBackHref, setJobsBackHref] = useState("/jobs");
   const [cvOptimization, setCvOptimization] = useState<{
     content: string[];
     format: string[];
@@ -91,6 +92,15 @@ export default function JobDetailPage() {
       .then((r) => r.ok ? r.json() : null)
       .then((d) => { if (d?.isPremium !== undefined) setIsPremium(d.isPremium); })
       .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    try {
+      const stored = sessionStorage.getItem(JOBS_LIST_STORAGE_KEY);
+      if (stored?.startsWith("/jobs")) setJobsBackHref(stored);
+    } catch {
+      // private mode
+    }
   }, []);
 
   const handleOptimizeClick = () => {
@@ -406,7 +416,7 @@ export default function JobDetailPage() {
           <p className="mono text-sm text-zinc-500 mb-6">
             This job may have expired or been removed.
           </p>
-          <Link href="/jobs" className="agent-button inline-flex">
+          <Link href={jobsBackHref} className="agent-button inline-flex">
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
@@ -422,7 +432,7 @@ export default function JobDetailPage() {
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <Link
-        href="/jobs"
+        href={jobsBackHref}
         className="inline-flex items-center gap-2 mono text-sm text-zinc-500 hover:text-purple-400 transition-colors"
       >
         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -594,7 +604,7 @@ export default function JobDetailPage() {
                 </svg>
               </div>
               <div>
-                <span className="text-xs text-zinc-500">Fit Score</span>
+                <span className="text-xs text-zinc-500">{aiEnabled ? "Fit Score" : "Keyword estimate"}</span>
                 <div className="text-lg font-bold text-white">{getFitVerdict(fitScore)}</div>
               </div>
             </div>
@@ -830,7 +840,7 @@ export default function JobDetailPage() {
           </div>
         ) : (
           <p className="mono text-xs text-zinc-500 leading-relaxed">
-            {job.source || "This source"} didn&apos;t include the advert text in its feed. The full description, requirements and salary are on the original posting.
+            {`${(job.source || "This source").replace(/^./, (c) => c.toUpperCase())} didn't include the advert text in its feed. The full description, requirements and salary are on the original posting.`}
           </p>
         )}
       </div>

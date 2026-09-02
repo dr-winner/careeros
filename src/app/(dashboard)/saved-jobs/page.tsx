@@ -185,7 +185,7 @@ export default function SavedPage() {
         <div>
           <h1 className="text-2xl font-bold gradient-text">Saved</h1>
           <p className="text-sm text-zinc-400 mt-0.5">
-            {!loading && `${savedJobs.length} bookmarked · ${searches.length} alerts`}
+            {!loading && `${savedJobs.length} bookmarked · ${searches.length} alert${searches.length === 1 ? "" : "s"}`}
           </p>
         </div>
         {activeTab === "bookmarks" ? (
@@ -219,7 +219,7 @@ export default function SavedPage() {
             >
               {t.label}
               {!loading && t.count > 0 && (
-                <span className="ml-1.5 opacity-60">{t.count}</span>
+                <span className="ml-1.5 opacity-60"> {t.count}</span>
               )}
             </button>
           ))}
@@ -284,6 +284,12 @@ export default function SavedPage() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0">
+                        <Link
+                          href={`/jobs/${job.externalJobId}`}
+                          className="agent-button text-xs px-3 py-1.5 press-scale"
+                        >
+                          View Details
+                        </Link>
                         {job.applicationUrl && (
                           <a
                             href={
@@ -476,7 +482,7 @@ export default function SavedPage() {
                 <ul className="space-y-2">
                   {[
                     "Daily checks for matching jobs",
-                    "Email notification when found",
+                    "Email when found — SMS too if enabled on your profile",
                     "Toggle on/off without losing search",
                   ].map((item, i) => (
                     <li key={i} className="text-xs text-zinc-500 flex items-center gap-2">

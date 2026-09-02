@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { toast } from "sonner";
 import Link from "next/link";
+import { jobsListHref } from "@/lib/jobs-utils";
 
 interface SavedSearch {
   id: string;
@@ -300,7 +301,11 @@ export default function AlertsPage() {
                         <div className="peer h-5 w-9 rounded-full bg-zinc-800 after:absolute after:left-0.5 after:top-0.5 after:h-4 after:w-4 after:rounded-full after:border after:border-zinc-600 after:bg-zinc-500 after:transition-all peer-checked:bg-purple-600 peer-checked:after:translate-x-full peer-checked:after:border-white" />
                       </label>
                       <Link
-                        href={`/jobs?search=${encodeURIComponent(search.searchQuery)}`}
+                        href={jobsListHref({
+                          search: search.searchQuery,
+                          location: search.location,
+                          workMode: search.workMode,
+                        })}
                         className="agent-button text-xs px-2 py-1.5"
                       >
                         Search
@@ -324,7 +329,7 @@ export default function AlertsPage() {
             <ul className="space-y-2">
               {[
                 "Daily or weekly checks for matching jobs",
-                "Email notification when matching jobs are found",
+                "Email when matching jobs are found — and SMS if you turned that on in Profile",
                 "Toggle alerts on/off without losing your search",
               ].map((item, i) => (
                 <li key={i} className="text-xs text-zinc-500 flex items-center gap-2">

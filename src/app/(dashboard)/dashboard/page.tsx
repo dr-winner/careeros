@@ -363,6 +363,7 @@ export default function DashboardPage() {
               label: "Applications",
               value: stats.applications,
               sublabel: "tracked",
+              href: "/applications",
               cardClass: "stat-card stat-card-purple",
               iconPath: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2",
               iconClass: "text-purple-400",
@@ -372,6 +373,7 @@ export default function DashboardPage() {
               label: "Saved Jobs",
               value: stats.savedJobs,
               sublabel: "bookmarked",
+              href: "/saved-jobs",
               cardClass: "stat-card stat-card-cyan",
               iconPath: "M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z",
               iconClass: "text-cyan-400",
@@ -380,7 +382,8 @@ export default function DashboardPage() {
             {
               label: "Interviews",
               value: stats.interviews,
-              sublabel: "scheduled",
+              sublabel: "in pipeline",
+              href: "/applications",
               cardClass: "stat-card stat-card-green",
               iconPath: "M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z",
               iconClass: "text-green-400",
@@ -390,13 +393,14 @@ export default function DashboardPage() {
               label: "Active Alerts",
               value: analytics.alertCount,
               sublabel: "monitoring",
+              href: "/alerts",
               cardClass: "stat-card stat-card-amber",
               iconPath: "M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9",
               iconClass: "text-amber-400",
               iconBg: "bg-amber-500/20",
             },
-          ].map((stat, i) => (
-            <div key={i} className={stat.cardClass}>
+          ].map((stat) => (
+            <Link key={stat.label} href={stat.href} className={stat.cardClass}>
               <div className="flex items-center justify-between mb-3">
                 <span className="section-label mb-0">{stat.label}</span>
                 <div className={`h-7 w-7 rounded-lg flex items-center justify-center ${stat.iconBg}`}>
@@ -407,7 +411,7 @@ export default function DashboardPage() {
               </div>
               <div className="text-3xl font-bold text-white">{stat.value}</div>
               <div className="mono text-xs text-zinc-600 mt-0.5">{stat.sublabel}</div>
-            </div>
+            </Link>
           ))}
         </div>
 
@@ -503,7 +507,7 @@ export default function DashboardPage() {
               {[
                 { step: "1", label: "Upload your CV", desc: "Lets AI extract your skills for matching", href: "/resumes", done: analytics.resumeCount > 0 },
                 { step: "2", label: "Browse jobs", desc: "Find roles and see your fit score", href: "/jobs", done: false },
-                { step: "3", label: "Apply with confidence", desc: "Generate a cover letter, prep for interviews", href: "/resumes?tab=cover-letter", done: false },
+                { step: "3", label: "Apply with confidence", desc: "Generate a cover letter, prep for interviews", href: "/cover-letter", done: false },
               ].map((item) => (
                 <a
                   key={item.step}
@@ -631,7 +635,7 @@ export default function DashboardPage() {
             <div className="grid grid-cols-2 lg:grid-cols-1 gap-2">
               {[
                 { href: "/interview", label: "Interview Prep", icon: "M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z", color: "purple" },
-                { href: "/resumes?tab=cover-letter", label: "Cover Letter", icon: "M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z", color: "cyan" },
+                { href: "/cover-letter", label: "Cover Letter", icon: "M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z", color: "cyan" },
                 { href: "/applications", label: "Applications", icon: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2", color: "amber" },
                 { href: "/referrals", label: "Refer & Earn", icon: "M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z", color: "green" },
               ].map((action, i) => (

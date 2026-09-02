@@ -5,7 +5,7 @@ import { useAuth, useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { quickMatchScore, roleRelevanceBoost } from "@/lib/jobs-utils";
+import { quickMatchScore, roleRelevanceBoost, countryNameToCode, JOBS_LIST_STORAGE_KEY } from "@/lib/jobs-utils";
 import { sanitizeSkillList } from "@/lib/skills";
 
 // Modal for analyzing a job found anywhere — WhatsApp, a company page,
@@ -139,7 +139,6 @@ const COUNTRY_OPTIONS = [
 const WORK_MODE_OPTIONS = [
   { value: "",           label: "Any Mode" },
   { value: "Remote",     label: "Remote" },
-  { value: "Full-time",  label: "Full-time" },
   { value: "Hybrid",     label: "Hybrid" },
   { value: "Contract",   label: "Contract" },
   { value: "On-site",    label: "On-site" },
@@ -350,15 +349,10 @@ export default function JobsPage() {
 
   useEffect(() => {
     if (!userId || !clerkUser) return;
-    // Browse by default. The profile target role used to be stuffed into
-    // the search box (so every visit was "Cloud Security") and then required
-    // as an exact title match — Ghana has almost none of those titles.
-    // Rank by that role instead. An explicit ?search= from alerts still wins.
     const url = new URLSearchParams(window.location.search);
     const urlSearch = (url.get("search") || "").trim();
     const urlCountry = url.get("country") || "";
     if (urlSearch) setSearch(urlSearch);
-    if (urlCountry) setCountry(urlCountry);
 
     const prefs = (clerkUser.publicMetadata?.onboardingJobPreferences ?? null) as
       | OnboardingJobPreferences
@@ -366,19 +360,28 @@ export default function JobsPage() {
     const wm = prefs?.remoteOnly ? "Remote" : "";
     if (wm) setWorkMode(wm);
 
-    fetchJobs(true, {
-      search: urlSearch,
-      ...(urlCountry ? { country: urlCountry } : {}),
-      ...(wm ? { workMode: wm } : {}),
-    });
-
     fetch("/api/user/profile")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         const role = (data?.user?.desiredRole || data?.user?.roleType || "").trim();
         if (role) setTargetRole(role);
+        const profileCountry = countryNameToCode(data?.user?.country);
+        const ct = urlCountry || profileCountry;
+        if (ct) setCountry(ct);
+        fetchJobs(true, {
+          search: urlSearch,
+          ...(ct ? { country: ct } : {}),
+          ...(wm ? { workMode: wm } : {}),
+        });
+        if (ct || urlSearch) syncJobsUrl(urlSearch, ct);
       })
-      .catch(() => {});
+      .catch(() => {
+        fetchJobs(true, {
+          search: urlSearch,
+          ...(urlCountry ? { country: urlCountry } : {}),
+          ...(wm ? { workMode: wm } : {}),
+        });
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, clerkUser?.id]);
 
@@ -413,9 +416,10 @@ export default function JobsPage() {
   const displayedJobs =
     sortByMatch && (userSkills.length > 0 || !!targetRole)
       ? [...jobs].sort((a, b) => {
-          const scoreB = (matchFor(b) ?? 0) + roleRelevanceBoost(b.title, targetRole);
-          const scoreA = (matchFor(a) ?? 0) + roleRelevanceBoost(a.title, targetRole);
-          return scoreB - scoreA;
+          const roleB = roleRelevanceBoost(b.title, targetRole);
+          const roleA = roleRelevanceBoost(a.title, targetRole);
+          if (roleB !== roleA) return roleB - roleA;
+          return (matchFor(b) ?? 0) - (matchFor(a) ?? 0);
         })
       : jobs;
 
@@ -424,7 +428,13 @@ export default function JobsPage() {
     if (nextSearch.trim()) params.set("search", nextSearch.trim());
     if (nextCountry) params.set("country", nextCountry);
     const qs = params.toString();
-    window.history.replaceState(null, "", qs ? `/jobs?${qs}` : "/jobs");
+    const href = qs ? `/jobs?${qs}` : "/jobs";
+    window.history.replaceState(null, "", href);
+    try {
+      sessionStorage.setItem(JOBS_LIST_STORAGE_KEY, href);
+    } catch {
+      // private mode
+    }
   };
 
   const handleSearch = () => {
@@ -535,7 +545,22 @@ export default function JobsPage() {
         <div>
           <h1 className="text-2xl font-bold gradient-text">Find Jobs</h1>
           <p className="text-sm text-zinc-400 mt-0.5">
-            {loading ? "Searching..." : <><span className="text-white font-medium">{totalJobs.toLocaleString()}</span> live opportunities across Africa &amp; globally</>}
+            {loading ? "Searching..." : (
+              <>
+                <span className="text-white font-medium">{totalJobs.toLocaleString()}</span>
+                {country === "GH"
+                  ? " live opportunities in Ghana and worldwide remote"
+                  : country === "NG"
+                    ? " live opportunities in Nigeria and worldwide remote"
+                    : country === "KE"
+                      ? " live opportunities in Kenya and worldwide remote"
+                      : country === "ZA"
+                        ? " live opportunities in South Africa and worldwide remote"
+                        : country === "REMOTE"
+                          ? " remote roles worldwide"
+                          : " live opportunities across Africa & globally"}
+              </>
+            )}
           </p>
         </div>
         <button
@@ -591,7 +616,7 @@ export default function JobsPage() {
             Search
           </button>
         </div>
-        {targetRole && !search && (
+        {targetRole && !search && jobs.some((j) => roleRelevanceBoost(j.title, targetRole) > 0) && (
           <p className="px-4 pb-2 mono text-[10px] text-zinc-600">
             Browsing all roles · {targetRole} ranked first
           </p>

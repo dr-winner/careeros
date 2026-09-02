@@ -18,6 +18,8 @@ import {
   paginateJobs,
   paginateWithCursor,
   parseSalary,
+  countryNameToCode,
+  roleRelevanceBoost,
 } from "@/lib/jobs-utils";
 import { checkRateLimit, getRateLimitHeaders, RATE_LIMITS } from "@/lib/ratelimit";
 
@@ -954,7 +956,12 @@ async function fetchFromJobberman(savedJobIds: string[]): Promise<Job[]> {
       jobs.push({
         id,
         title: item.item_name,
-        companyName: item.affiliation === "Anonymous Employer" ? "Confidential Company" : item.affiliation || "Unknown Company",
+        companyName:
+          item.affiliation === "Anonymous Employer" ||
+          /third party/i.test(item.affiliation || "") ||
+          /^jobberman$/i.test(item.affiliation || "")
+            ? "Confidential Company"
+            : item.affiliation || "Unknown Company",
         location: item.location_id || "Ghana",
         country: "GH",
         workMode: "On-site",
@@ -993,13 +1000,6 @@ function hasUsableApplyUrl(job: Job): boolean {
   return /^https?:\/\/\S+/i.test(url) || url.startsWith("mailto:");
 }
 
-const COUNTRY_NAME_TO_CODE: Record<string, string> = {
-  ghana: "GH",
-  nigeria: "NG",
-  kenya: "KE",
-  "south africa": "ZA",
-};
-
 const AFRICAN_CODES = new Set(["GH", "NG", "KE", "ZA", "AF"]);
 
 // Ghana-first ordering. Providers are concatenated in fetch order, which
@@ -1008,7 +1008,11 @@ const AFRICAN_CODES = new Set(["GH", "NG", "KE", "ZA", "AF"]);
 // global roles they can apply to, then everything else. Within a tier,
 // newest first. The result is deterministic, which cursor pagination
 // depends on.
-function rankJobsForUser<T extends Job>(jobs: T[], userCountryCode: string): T[] {
+function rankJobsForUser<T extends Job>(
+  jobs: T[],
+  userCountryCode: string,
+  desiredRole = "",
+): T[] {
   const resolvedCountry = (job: T): string => {
     const fromLoc = getCountry("", job.location);
     if (fromLoc !== "GLOBAL") return fromLoc;
@@ -1029,6 +1033,8 @@ function rankJobsForUser<T extends Job>(jobs: T[], userCountryCode: string): T[]
     return Number.isNaN(t) ? 0 : t;
   };
   return [...jobs].sort((a, b) => {
+    const role = roleRelevanceBoost(b.title, desiredRole) - roleRelevanceBoost(a.title, desiredRole);
+    if (role !== 0) return role;
     const ta = tierOf(a);
     const tb = tierOf(b);
     if (ta !== tb) return ta - tb;
@@ -1202,17 +1208,21 @@ export async function GET(request: NextRequest) {
     let savedJobIds: string[] = [];
     let savedJobsMap: Record<string, SavedJobRecord> = {};
     let userCountryCode = "GH";
+    let desiredRole = "";
 
     if (userId) {
       const [saved, dbUser] = await Promise.all([
         prisma.savedJob.findMany({ where: { userId } }),
-        prisma.user.findUnique({ where: { id: userId }, select: { country: true } }),
+        prisma.user.findUnique({
+          where: { id: userId },
+          select: { country: true, desiredRole: true },
+        }),
       ]);
       savedJobs = saved;
       savedJobIds = savedJobs.map((job) => job.externalJobId);
       savedJobsMap = buildSavedJobMap(savedJobs);
-      const name = (dbUser?.country || "Ghana").trim().toLowerCase();
-      userCountryCode = COUNTRY_NAME_TO_CODE[name] || "GH";
+      userCountryCode = countryNameToCode(dbUser?.country) || "GH";
+      desiredRole = (dbUser?.desiredRole || "").trim();
     }
     const savedIdSet = new Set(savedJobIds);
 
@@ -1316,8 +1326,8 @@ export async function GET(request: NextRequest) {
     });
 
     const uniqueJobs = AFRICAN_CODES.has(country)
-      ? interleaveHomeAndRemote(dedupeJobsByTitleAndCompany(filteredJobs), country)
-      : rankJobsForUser(dedupeJobsByTitleAndCompany(filteredJobs), userCountryCode);
+      ? interleaveHomeAndRemote(dedupeJobsByTitleAndCompany(filteredJobs), country, desiredRole)
+      : rankJobsForUser(dedupeJobsByTitleAndCompany(filteredJobs), userCountryCode, desiredRole);
 
     let pagination;
     let jobs;

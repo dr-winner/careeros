@@ -26,6 +26,12 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  async redirects() {
+    return [
+      { source: "/saved", destination: "/saved-jobs", permanent: false },
+      { source: "/manifest.webmanifest", destination: "/site.webmanifest", permanent: false },
+    ];
+  },
   async headers() {
     return [
       {

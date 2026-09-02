@@ -48,6 +48,10 @@ export default function CoverLetterPage() {
       if (response.ok) {
         const data = await response.json();
         setProfile(data.user);
+        const role = (data.user?.desiredRole || data.user?.headline || "").trim();
+        if (role) {
+          setFormData((prev) => (prev.jobTitle ? prev : { ...prev, jobTitle: role }));
+        }
       }
     } catch (error) {
       console.error("Error fetching profile:", error);
@@ -220,7 +224,7 @@ ${name}`;
                   </label>
                   <input
                     type="text"
-                    placeholder="Acme Corporation"
+                    placeholder="Company you're applying to"
                     value={formData.companyName}
                     onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
                     className="agent-input w-full"
@@ -232,7 +236,7 @@ ${name}`;
                   </label>
                   <input
                     type="text"
-                    placeholder="Software Engineer"
+                    placeholder={profile?.desiredRole || profile?.headline || "Role you're applying for"}
                     value={formData.jobTitle}
                     onChange={(e) => setFormData({ ...formData, jobTitle: e.target.value })}
                     className="agent-input w-full"
