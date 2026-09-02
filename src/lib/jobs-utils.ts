@@ -156,6 +156,10 @@ const MX_LOCATION_NEEDLES = ["mexico", "mexico city", "guadalajara", "monterrey"
 const ES_LOCATION_NEEDLES = ["spain", "madrid", "barcelona"];
 const SE_LOCATION_NEEDLES = ["sweden", "stockholm", "gothenburg"];
 const TH_LOCATION_NEEDLES = ["thailand", "bangkok"];
+const BR_LOCATION_NEEDLES = ["brazil", "brasil", "sao paulo", "rio de janeiro"];
+const PL_LOCATION_NEEDLES = ["poland", "warsaw", "krakow", "wroclaw"];
+const TR_LOCATION_NEEDLES = ["turkey", "turkiye", "istanbul", "ankara"];
+const APAC_LOCATION_NEEDLES = ["apac", "asia-pacific", "asia pacific", "southeast asia"];
 const EU_LOCATION_NEEDLES = [
   "europe", "emea", "eu-wide", "netherlands", "amsterdam", "germany", "berlin",
   "munich", "france", "paris",
@@ -226,6 +230,10 @@ export function getCountry(source: string, location: unknown): string {
   if (locHasAny(loc, ES_LOCATION_NEEDLES)) return "ES";
   if (locHasAny(loc, SE_LOCATION_NEEDLES)) return "SE";
   if (locHasAny(loc, TH_LOCATION_NEEDLES)) return "TH";
+  if (locHasAny(loc, BR_LOCATION_NEEDLES)) return "BR";
+  if (locHasAny(loc, PL_LOCATION_NEEDLES)) return "PL";
+  if (locHasAny(loc, TR_LOCATION_NEEDLES)) return "TR";
+  if (locHasAny(loc, APAC_LOCATION_NEEDLES)) return "APAC";
   if (locHasAny(loc, ["germany", "berlin", "munich"])) return "DE";
   if (locHasAny(loc, ["france", "paris"])) return "FR";
   if (locHasAny(loc, EU_LOCATION_NEEDLES)) return "EU";

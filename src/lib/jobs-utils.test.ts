@@ -130,6 +130,10 @@ describe("jobs-utils", () => {
       expect(getCountry("", "UK")).toBe("GB");
       expect(getCountry("", "Bangkok")).toBe("TH");
       expect(getCountry("", "Spain")).toBe("ES");
+      expect(getCountry("", "Brazil")).toBe("BR");
+      expect(getCountry("", "Poland")).toBe("PL");
+      expect(getCountry("", "Türkiye")).toBe("TR");
+      expect(getCountry("", "APAC")).toBe("APAC");
     });
   });
 
@@ -363,8 +367,40 @@ describe("jobs-utils", () => {
         workMode: "Remote",
         seniorityLevel: "Mid-Level",
       };
+      const brazil: FilterableJob = {
+        title: "Senior Full-stack Engineer (Remote - Brazil)",
+        companyName: "Truelogic",
+        location: "Brazil",
+        country: "GLOBAL",
+        workMode: "Remote",
+        seniorityLevel: "Senior",
+      };
+      const poland: FilterableJob = {
+        title: "Junior Customer Service Specialist",
+        companyName: "SWAROVSKI",
+        location: "Poland",
+        country: "GLOBAL",
+        workMode: "Remote",
+        seniorityLevel: "Entry-Level",
+      };
+      const turkey: FilterableJob = {
+        title: "Apparel - Sourcing Manager (EUR)",
+        companyName: "Quince",
+        location: "Türkiye",
+        country: "GLOBAL",
+        workMode: "Remote",
+        seniorityLevel: "Mid-Level",
+      };
+      const apac: FilterableJob = {
+        title: "Developer Relations Engineer",
+        companyName: "Canonical",
+        location: "APAC",
+        country: "GLOBAL",
+        workMode: "Remote",
+        seniorityLevel: "Mid-Level",
+      };
       const matched = filterJobs(
-        [accra, africaPa, mexico, emea, ukRemote, worldwide],
+        [accra, africaPa, mexico, emea, ukRemote, worldwide, brazil, poland, turkey, apac],
         { country: "GH" },
       );
       expect(matched.map((j) => j.title)).toEqual([
