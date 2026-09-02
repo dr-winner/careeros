@@ -5,9 +5,11 @@ import {
   filterJobs,
   getCountry,
   getWorkMode,
+  interleaveHomeAndRemote,
   paginateJobs,
   parseSalary,
   quickMatchScore,
+  roleRelevanceBoost,
   type FilterableJob,
 } from "./jobs-utils";
 
@@ -152,6 +154,72 @@ describe("jobs-utils", () => {
       expect(filterJobs(jobs, { workMode: "Hybrid" })).toEqual([jobs[2]]);
     });
 
+    it("matches Cloud Security to related titles, not security guards", () => {
+      const cloud: FilterableJob = {
+        title: "Cloud Engineer",
+        companyName: "Andela",
+        location: "Remote",
+        country: "GLOBAL",
+        workMode: "Remote",
+        seniorityLevel: "Mid-Level",
+      };
+      const itSec: FilterableJob = {
+        title: "IT Security Officer",
+        companyName: "GCB",
+        location: "Accra, Ghana",
+        country: "GH",
+        workMode: "On-site",
+        seniorityLevel: "Mid-Level",
+      };
+      const guard: FilterableJob = {
+        title: "Security Guard",
+        companyName: "G4S",
+        location: "Accra, Ghana",
+        country: "GH",
+        workMode: "On-site",
+        seniorityLevel: "Entry-Level",
+      };
+      const sales: FilterableJob = {
+        title: "Sales Executive",
+        companyName: "MTN",
+        location: "Accra, Ghana",
+        country: "GH",
+        workMode: "On-site",
+        seniorityLevel: "Entry-Level",
+      };
+      const matched = filterJobs([cloud, itSec, guard, sales], { search: "Cloud Security" });
+      expect(matched).toEqual([cloud, itSec]);
+    });
+
+    it("treats Ghana as local plus remote, not Accra-only", () => {
+      const accra: FilterableJob = {
+        title: "Frontend Developer",
+        companyName: "Hubtel",
+        location: "Accra, Ghana",
+        country: "GH",
+        workMode: "On-site",
+        seniorityLevel: "Mid-Level",
+      };
+      const remoteCloud: FilterableJob = {
+        title: "Cloud Security Engineer",
+        companyName: "Remote Co",
+        location: "Worldwide",
+        country: "GLOBAL",
+        workMode: "Remote",
+        seniorityLevel: "Senior",
+      };
+      const nycOnsite: FilterableJob = {
+        title: "Staff Engineer",
+        companyName: "US Bank",
+        location: "New York, NY",
+        country: "US",
+        workMode: "On-site",
+        seniorityLevel: "Senior",
+      };
+      const matched = filterJobs([accra, remoteCloud, nycOnsite], { country: "GH" });
+      expect(matched).toEqual([accra, remoteCloud]);
+    });
+
     it("supports combining filters", () => {
       expect(
         filterJobs(jobs, {
@@ -253,5 +321,54 @@ describe("quickMatchScore", () => {
   it("dedupes and case-normalizes skills", () => {
     const r = quickMatchScore(["React", "react", "REACT"], "react role");
     expect(r.matched).toHaveLength(1);
+  });
+});
+
+describe("roleRelevanceBoost", () => {
+  it("scores exact and partial title overlap with the target role", () => {
+    expect(roleRelevanceBoost("Cloud Security Engineer", "Cloud Security")).toBe(40);
+    expect(roleRelevanceBoost("Cloud Engineer", "Cloud Security")).toBe(15);
+    expect(roleRelevanceBoost("Sales Executive", "Cloud Security")).toBe(0);
+  });
+});
+
+describe("interleaveHomeAndRemote", () => {
+  it("does not bury remote roles under a page of local listings", () => {
+    const jobs: FilterableJob[] = [
+      {
+        title: "Sales 1",
+        companyName: "A",
+        location: "Accra",
+        country: "GH",
+        workMode: "On-site",
+        seniorityLevel: "Entry-Level",
+      },
+      {
+        title: "Sales 2",
+        companyName: "B",
+        location: "Accra",
+        country: "GH",
+        workMode: "On-site",
+        seniorityLevel: "Entry-Level",
+      },
+      {
+        title: "Cloud Engineer",
+        companyName: "C",
+        location: "Remote",
+        country: "GLOBAL",
+        workMode: "Remote",
+        seniorityLevel: "Mid-Level",
+      },
+      {
+        title: "Backend Engineer",
+        companyName: "D",
+        location: "Remote",
+        country: "GLOBAL",
+        workMode: "Remote",
+        seniorityLevel: "Mid-Level",
+      },
+    ];
+    const ordered = interleaveHomeAndRemote(jobs, "GH").map((j) => j.title);
+    expect(ordered).toEqual(["Sales 1", "Cloud Engineer", "Backend Engineer", "Sales 2"]);
   });
 });

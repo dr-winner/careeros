@@ -13,6 +13,7 @@ import {
   filterJobs,
   getCountry,
   getWorkMode,
+  interleaveHomeAndRemote,
   paginateJobs,
   paginateWithCursor,
   parseSalary,
@@ -1305,7 +1306,9 @@ export async function GET(request: NextRequest) {
       datePosted,
     });
 
-    const uniqueJobs = rankJobsForUser(dedupeJobsByTitleAndCompany(filteredJobs), userCountryCode);
+    const uniqueJobs = AFRICAN_CODES.has(country)
+      ? interleaveHomeAndRemote(dedupeJobsByTitleAndCompany(filteredJobs), country)
+      : rankJobsForUser(dedupeJobsByTitleAndCompany(filteredJobs), userCountryCode);
 
     let pagination;
     let jobs;

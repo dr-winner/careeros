@@ -19,6 +19,8 @@ export interface FilterableJob {
   seniorityLevel: string;
   employmentType?: string;
   postedAt?: string;
+  description?: string;
+  requirements?: string;
 }
 
 export function detectSeniority(title: string): string {
@@ -148,6 +150,142 @@ export function getCountry(source: string, location: unknown): string {
   return "GLOBAL";
 }
 
+const SEARCH_STOPWORDS = new Set([
+  "the", "a", "an", "and", "or", "of", "for", "in", "to", "at", "on",
+]);
+
+// Local boards in GH/NG/KE are heavy on admin/sales. A "Ghana" filter that
+// only keeps country===GH therefore hides every programming role a Ghana-based
+// person can actually do (remote / worldwide). Same for the other African
+// markets we treat as home.
+const AFRICAN_MARKET_CODES = new Set(["GH", "NG", "KE", "ZA", "AF"]);
+
+const COUNTRY_LOCATION_HINTS: Record<string, string[]> = {
+  GH: ["ghana", "accra", "kumasi", "tema", "takoradi"],
+  NG: ["nigeria", "lagos", "abuja"],
+  KE: ["kenya", "nairobi"],
+  ZA: ["south africa", "johannesburg", "cape town", "durban", "pretoria"],
+  GB: ["united kingdom", "london", "manchester", ", uk"],
+  US: ["united states", "new york", "san francisco"],
+};
+
+// Titles that share a token with a real search ("security") but are not
+// professional roles the searcher meant.
+const NOISE_ROLE_TITLE = /\b(guard|watchman|driver|cleaner|cook|waiter|cashier|hawker|nanny|househelp)\b/i;
+
+export function tokenizeSearch(query: string): string[] {
+  return query
+    .toLowerCase()
+    .split(/[^a-z0-9+#]+/)
+    .filter((t) => t.length >= 2 && !SEARCH_STOPWORDS.has(t));
+}
+
+function jobHaystack(job: FilterableJob): string {
+  return [
+    job.title,
+    job.companyName,
+    job.location,
+    job.description || "",
+    job.requirements || "",
+  ]
+    .join(" ")
+    .toLowerCase();
+}
+
+/**
+ * Phrase match first; otherwise any token in the title/company (so
+ * "Cloud Security" hits "Cloud Engineer" and "IT Security Officer").
+ * Description-only hits require every token, to avoid "we use the cloud"
+ * matching a security search.
+ */
+export function jobMatchesSearch(job: FilterableJob, rawQuery: string): boolean {
+  const query = rawQuery.trim().toLowerCase();
+  if (!query) return true;
+
+  const title = job.title.toLowerCase();
+  const company = job.companyName.toLowerCase();
+  const hay = jobHaystack(job);
+
+  if (title.includes(query) || company.includes(query) || hay.includes(query)) {
+    return !NOISE_ROLE_TITLE.test(job.title);
+  }
+
+  const tokens = tokenizeSearch(query);
+  if (tokens.length === 0) return false;
+
+  if (tokens.some((t) => title.includes(t) || company.includes(t))) {
+    return !NOISE_ROLE_TITLE.test(job.title);
+  }
+
+  return tokens.every((t) => hay.includes(t));
+}
+
+export function jobMatchesCountry(job: FilterableJob, country: string): boolean {
+  if (!country) return true;
+
+  if (country === "REMOTE") {
+    return job.workMode.toLowerCase().includes("remote") || job.country === "GLOBAL";
+  }
+
+  if (job.country === country) return true;
+
+  const loc = job.location.toLowerCase();
+  const hints = COUNTRY_LOCATION_HINTS[country];
+  if (hints?.some((h) => loc.includes(h))) return true;
+
+  if (AFRICAN_MARKET_CODES.has(country)) {
+    if (job.country === "GLOBAL" || job.country === "AF") return true;
+    if (job.workMode.toLowerCase().includes("remote")) return true;
+  }
+
+  return false;
+}
+
+/**
+ * When the user already filtered to Ghana (or another African market),
+ * GH-first ranking fills page 1 with local admin/sales listings and the
+ * remote engineering roles never appear. Interleave 1 local : 2 others.
+ */
+export function interleaveHomeAndRemote<T extends FilterableJob>(
+  jobs: T[],
+  homeCountry: string,
+): T[] {
+  const home: T[] = [];
+  const rest: T[] = [];
+  const hints = COUNTRY_LOCATION_HINTS[homeCountry] || [];
+
+  for (const job of jobs) {
+    const loc = job.location.toLowerCase();
+    const isHome = job.country === homeCountry || hints.some((h) => loc.includes(h));
+    if (isHome) home.push(job);
+    else rest.push(job);
+  }
+
+  const out: T[] = [];
+  let i = 0;
+  let j = 0;
+  while (i < home.length || j < rest.length) {
+    if (i < home.length) out.push(home[i++]);
+    if (j < rest.length) out.push(rest[j++]);
+    if (j < rest.length) out.push(rest[j++]);
+  }
+  return out;
+}
+
+/** Boost jobs whose title overlaps the user's target role. Used to rank, not filter. */
+export function roleRelevanceBoost(jobTitle: string, desiredRole: string): number {
+  const role = desiredRole.trim().toLowerCase();
+  if (!role) return 0;
+  const title = jobTitle.toLowerCase();
+  if (title.includes(role)) return 40;
+  const tokens = tokenizeSearch(role);
+  if (tokens.length === 0) return 0;
+  const hits = tokens.filter((t) => title.includes(t)).length;
+  if (hits === 0) return 0;
+  if (hits === tokens.length) return 30;
+  return 15;
+}
+
 export function filterJobs<T extends FilterableJob>(
   jobs: T[],
   filters: JobFilters,
@@ -193,23 +331,12 @@ export function filterJobs<T extends FilterableJob>(
       }
     }
 
-    if (filters.search && filters.search !== "") {
-      const search = filters.search.toLowerCase();
-
-      if (
-        !job.title.toLowerCase().includes(search) &&
-        !job.companyName.toLowerCase().includes(search)
-      ) {
-        return false;
-      }
+    if (filters.search && filters.search !== "" && !jobMatchesSearch(job, filters.search)) {
+      return false;
     }
 
-    if (filters.country && filters.country !== "") {
-      if (filters.country === "REMOTE") {
-        if (job.workMode !== "Remote" && job.country !== "GLOBAL") return false;
-      } else {
-        if (job.country !== filters.country) return false;
-      }
+    if (filters.country && filters.country !== "" && !jobMatchesCountry(job, filters.country)) {
+      return false;
     }
 
     if (filters.employmentType && filters.employmentType !== "") {

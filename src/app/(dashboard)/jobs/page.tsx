@@ -5,7 +5,7 @@ import { useAuth, useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { quickMatchScore } from "@/lib/jobs-utils";
+import { quickMatchScore, roleRelevanceBoost } from "@/lib/jobs-utils";
 
 // Modal for analyzing a job found anywhere — WhatsApp, a company page,
 // an agency list. The user brings the advert; CareerOS scores it.
@@ -123,10 +123,10 @@ interface Job {
 
 const COUNTRY_OPTIONS = [
   { value: "",       label: "All Countries" },
-  { value: "GH",    label: "Ghana" },
-  { value: "NG",    label: "Nigeria" },
-  { value: "KE",    label: "Kenya" },
-  { value: "ZA",    label: "South Africa" },
+  { value: "GH",    label: "Ghana + remote" },
+  { value: "NG",    label: "Nigeria + remote" },
+  { value: "KE",    label: "Kenya + remote" },
+  { value: "ZA",    label: "South Africa + remote" },
   { value: "REMOTE",label: "Remote / Global" },
   { value: "GB",    label: "United Kingdom" },
   { value: "US",    label: "United States" },
@@ -224,6 +224,7 @@ export default function JobsPage() {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [search, setSearch] = useState("");
+  const [targetRole, setTargetRole] = useState("");
   const [location, setLocation] = useState("");
   const [workMode, setWorkMode] = useState("");
   const [seniority, setSeniority] = useState("");
@@ -348,36 +349,35 @@ export default function JobsPage() {
 
   useEffect(() => {
     if (!userId || !clerkUser) return;
-    // The OS knows what you're looking for — the feed defaults to the
-    // role from your profile and the work-mode preference you gave during
-    // onboarding, not a hardcoded query. Falls back to the browse feed
-    // only when nothing was ever set.
-    (async () => {
-      let q = "";
-      try {
-        const res = await fetch("/api/user/profile");
-        if (res.ok) {
-          const data = await res.json();
-          q = (data.user?.desiredRole || data.user?.roleType || "").trim();
-        }
-      } catch {}
+    // Browse by default. The profile target role used to be stuffed into
+    // the search box (so every visit was "Cloud Security") and then required
+    // as an exact title match — Ghana has almost none of those titles.
+    // Rank by that role instead. An explicit ?search= from alerts still wins.
+    const url = new URLSearchParams(window.location.search);
+    const urlSearch = (url.get("search") || "").trim();
+    const urlCountry = url.get("country") || "";
+    if (urlSearch) setSearch(urlSearch);
+    if (urlCountry) setCountry(urlCountry);
 
-      // Only the explicit "remote only" toggle is a trustworthy signal —
-      // workModes/jobTypes have pre-selected defaults that users who skip
-      // onboarding never touched, so filtering on them would hide most of
-      // the feed from people who never asked for that.
-      const prefs = (clerkUser.publicMetadata?.onboardingJobPreferences ?? null) as
-        | OnboardingJobPreferences
-        | null;
-      const wm = prefs?.remoteOnly ? "Remote" : "";
+    const prefs = (clerkUser.publicMetadata?.onboardingJobPreferences ?? null) as
+      | OnboardingJobPreferences
+      | null;
+    const wm = prefs?.remoteOnly ? "Remote" : "";
+    if (wm) setWorkMode(wm);
 
-      if (q) setSearch(q);
-      if (wm) setWorkMode(wm);
-      fetchJobs(true, {
-        ...(q ? { search: q } : {}),
-        ...(wm ? { workMode: wm } : {}),
-      });
-    })();
+    fetchJobs(true, {
+      search: urlSearch,
+      ...(urlCountry ? { country: urlCountry } : {}),
+      ...(wm ? { workMode: wm } : {}),
+    });
+
+    fetch("/api/user/profile")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        const role = (data?.user?.desiredRole || data?.user?.roleType || "").trim();
+        if (role) setTargetRole(role);
+      })
+      .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, clerkUser?.id]);
 
@@ -408,13 +408,35 @@ export default function JobsPage() {
   );
 
   const displayedJobs =
-    userSkills.length > 0 && sortByMatch
-      ? [...jobs].sort((a, b) => (matchFor(b) ?? -1) - (matchFor(a) ?? -1))
+    sortByMatch && (userSkills.length > 0 || !!targetRole)
+      ? [...jobs].sort((a, b) => {
+          const scoreB = (matchFor(b) ?? 0) + roleRelevanceBoost(b.title, targetRole);
+          const scoreA = (matchFor(a) ?? 0) + roleRelevanceBoost(a.title, targetRole);
+          return scoreB - scoreA;
+        })
       : jobs;
 
+  const syncJobsUrl = (nextSearch: string, nextCountry: string) => {
+    const params = new URLSearchParams();
+    if (nextSearch.trim()) params.set("search", nextSearch.trim());
+    if (nextCountry) params.set("country", nextCountry);
+    const qs = params.toString();
+    window.history.replaceState(null, "", qs ? `/jobs?${qs}` : "/jobs");
+  };
+
   const handleSearch = () => {
+    const q = search.trim();
+    setSearch(q);
     setCursor(null);
-    fetchJobs(true);
+    syncJobsUrl(q, country);
+    fetchJobs(true, { search: q });
+  };
+
+  const clearSearch = () => {
+    setSearch("");
+    setCursor(null);
+    syncJobsUrl("", country);
+    fetchJobs(true, { search: "" });
   };
 
   const handleFilterChange = <K extends string>(
@@ -424,6 +446,7 @@ export default function JobsPage() {
   ) => {
     setter(value);
     setCursor(null);
+    if (field === "country") syncJobsUrl(search, value);
     fetchJobs(true, { [field]: value });
   };
 
@@ -436,6 +459,7 @@ export default function JobsPage() {
     setEmploymentType("");
     setDatePosted("");
     setCursor(null);
+    syncJobsUrl("", "");
     fetchJobs(true, {
       search: "", location: "", workMode: "", seniority: "",
       country: "", employmentType: "", datePosted: "", cursor: null,
@@ -491,7 +515,7 @@ export default function JobsPage() {
     return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   };
 
-  const activeFilterCount = [workMode, seniority, country, employmentType, datePosted, location].filter(Boolean).length;
+  const activeFilterCount = [search, workMode, seniority, country, employmentType, datePosted, location].filter(Boolean).length;
 
   if (!isLoaded) {
     return (
@@ -534,12 +558,28 @@ export default function JobsPage() {
             <input
               ref={searchInputRef}
               type="text"
-              placeholder="Job title, skill, or company..."
+              placeholder={
+                targetRole
+                  ? `Search “${targetRole}”, or leave empty to browse`
+                  : "Job title, skill, or company..."
+              }
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-              className="w-full bg-transparent pl-11 pr-4 py-3 text-sm text-white placeholder:text-zinc-500 focus:outline-none"
+              className="w-full bg-transparent pl-11 pr-10 py-3 text-sm text-white placeholder:text-zinc-500 focus:outline-none"
             />
+            {search && (
+              <button
+                type="button"
+                onClick={clearSearch}
+                aria-label="Clear search"
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-md text-zinc-500 hover:text-white"
+              >
+                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
           </div>
           <button
             onClick={handleSearch}
@@ -548,6 +588,11 @@ export default function JobsPage() {
             Search
           </button>
         </div>
+        {targetRole && !search && (
+          <p className="px-4 pb-2 mono text-[10px] text-zinc-600">
+            Browsing all roles · {targetRole} ranked first
+          </p>
+        )}
       </div>
 
       {/* Filter bar */}
@@ -644,7 +689,14 @@ export default function JobsPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
             </svg>
           </div>
-          <p className="text-zinc-400 mb-4">No jobs match your filters</p>
+          <p className="text-zinc-400 mb-1">No jobs match these filters</p>
+          <p className="text-xs text-zinc-600 mb-4 max-w-sm mx-auto">
+            {search && country === "GH"
+              ? `Local Ghana boards rarely list “${search}” as a title. Clear the search to browse Ghana + remote roles.`
+              : search
+                ? `No titles matched “${search}”. Clear the search to browse, or try a broader term like “security” or “engineer”.`
+                : "Try All Countries, or paste a job you found on WhatsApp / a company site."}
+          </p>
           {activeFilterCount > 0 && (
             <button onClick={clearAllFilters} className="text-sm text-purple-400 hover:text-purple-300 transition-colors">
               Clear all filters
@@ -665,10 +717,12 @@ export default function JobsPage() {
           </div>
 
           <div className="space-y-3">
-            {userSkills.length > 0 && (
+            {(userSkills.length > 0 || targetRole) && (
               <div className="flex items-center justify-between gap-3 px-1">
                 <p className="mono text-[10px] text-zinc-600">
-                  Quick match: your {userSkills.length} extracted skills vs each advert · full AI analysis on the job page
+                  {userSkills.length > 0
+                    ? `Quick match: your ${userSkills.length} extracted skills vs each advert · full AI analysis on the job page`
+                    : `Ranked by your target role (${targetRole})`}
                 </p>
                 <button
                   onClick={() => setSortByMatch((v) => !v)}
