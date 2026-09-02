@@ -101,8 +101,25 @@ describe("jobs-utils", () => {
       expect(getCountry("themuse", "New York")).toBe("US");
     });
 
-    it("falls back to ZA when no rule matches", () => {
-      expect(getCountry("unknown", "Cape Town")).toBe("ZA");
+    it("falls back to GLOBAL when no rule matches", () => {
+      expect(getCountry("unknown", "Unknownville")).toBe("GLOBAL");
+    });
+
+    it("maps the cities that were leaking into Ghana as GLOBAL", () => {
+      expect(getCountry("adzuna", "Hyderabad, Telangana")).toBe("IN");
+      expect(getCountry("adzuna", "Chennai, Tamil Nadu")).toBe("IN");
+      expect(getCountry("adzuna", "Noida, Ghaziabad")).toBe("IN");
+      expect(getCountry("adzuna", "Ahmedabad, Gujarat")).toBe("IN");
+      expect(getCountry("adzuna", "West Coast, Western Cape")).toBe("ZA");
+      expect(getCountry("adzuna", "Ekurhuleni, Gauteng")).toBe("ZA");
+      expect(getCountry("adzuna", "Paarl, South Africa")).toBe("ZA");
+      expect(getCountry("adzuna", "West Kelowna, Central Okanagan")).toBe("CA");
+      expect(getCountry("adzuna", "Kenwick, Gosnells Area")).toBe("AU");
+      expect(getCountry("adzuna", "Longmont, Boulder County")).toBe("US");
+    });
+
+    it("does not classify Indiana as India", () => {
+      expect(getCountry("adzuna", "Indianapolis, IN")).not.toBe("IN");
     });
   });
 
@@ -191,7 +208,7 @@ describe("jobs-utils", () => {
       expect(matched).toEqual([cloud, itSec]);
     });
 
-    it("treats Ghana as local plus remote, not Accra-only", () => {
+    it("treats Ghana as local plus unpinned worldwide remote, not Accra-only", () => {
       const accra: FilterableJob = {
         title: "Frontend Developer",
         companyName: "Hubtel",
@@ -218,6 +235,114 @@ describe("jobs-utils", () => {
       };
       const matched = filterJobs([accra, remoteCloud, nycOnsite], { country: "GH" });
       expect(matched).toEqual([accra, remoteCloud]);
+    });
+
+    it("does not treat foreign offices or geocode holes as Ghana", () => {
+      const accra: FilterableJob = {
+        title: "Programs Manager",
+        companyName: "NGO",
+        location: "Accra & Tema Region",
+        country: "GH",
+        workMode: "On-site",
+        seniorityLevel: "Senior",
+      };
+      const hyderabad: FilterableJob = {
+        title: "Cloud Security",
+        companyName: "QualiZeal",
+        location: "Hyderabad, Telangana",
+        country: "GLOBAL",
+        workMode: "Full-time",
+        seniorityLevel: "Mid-Level",
+      };
+      const westernCape: FilterableJob = {
+        title: "Responsible Welding Coordinator",
+        companyName: "NDC",
+        location: "West Coast, Western Cape",
+        country: "GLOBAL",
+        workMode: "Full-time",
+        seniorityLevel: "Mid-Level",
+      };
+      const uber: FilterableJob = {
+        title: "Deliver with Uber Eats",
+        companyName: "Uber eats",
+        location: "West Kelowna, Central Okanagan",
+        country: "GLOBAL",
+        workMode: "Part-time",
+        seniorityLevel: "Mid-Level",
+      };
+      const usRemotePinned: FilterableJob = {
+        title: "Cloud Security Engineer",
+        companyName: "ManTech",
+        location: "Herndon, Fairfax County",
+        country: "US",
+        workMode: "Remote",
+        seniorityLevel: "Mid-Level",
+      };
+      const unmappedTown: FilterableJob = {
+        title: "Garage Door Technician",
+        companyName: "Creative Door",
+        location: "Fort McMurray, Fort McMurray region",
+        country: "GLOBAL",
+        workMode: "Full-time",
+        seniorityLevel: "Mid-Level",
+      };
+      const worldwideRemote: FilterableJob = {
+        title: "Backend Engineer",
+        companyName: "RemoteOK Co",
+        location: "Remote",
+        country: "GLOBAL",
+        workMode: "Remote",
+        seniorityLevel: "Mid-Level",
+      };
+      const matched = filterJobs(
+        [accra, hyderabad, westernCape, uber, usRemotePinned, unmappedTown, worldwideRemote],
+        { country: "GH" },
+      );
+      expect(matched.map((j) => j.title)).toEqual([
+        "Programs Manager",
+        "Backend Engineer",
+      ]);
+    });
+
+    it("does not keep a Ghana country code when the location is another country", () => {
+      const mistagged: FilterableJob = {
+        title: "Cloud Security",
+        companyName: "QualiZeal",
+        location: "Hyderabad, Telangana",
+        country: "GH",
+        workMode: "Full-time",
+        seniorityLevel: "Mid-Level",
+      };
+      expect(filterJobs([mistagged], { country: "GH" })).toEqual([]);
+    });
+
+    it("Remote / Global keeps remote jobs but drops on-site GLOBAL offices", () => {
+      const remote: FilterableJob = {
+        title: "Engineer",
+        companyName: "A",
+        location: "Remote",
+        country: "GLOBAL",
+        workMode: "Remote",
+        seniorityLevel: "Mid-Level",
+      };
+      const indiaOffice: FilterableJob = {
+        title: "Engineer",
+        companyName: "B",
+        location: "Hyderabad, Telangana",
+        country: "GLOBAL",
+        workMode: "Full-time",
+        seniorityLevel: "Mid-Level",
+      };
+      const usRemote: FilterableJob = {
+        title: "Engineer",
+        companyName: "C",
+        location: "New York, NY",
+        country: "US",
+        workMode: "Remote",
+        seniorityLevel: "Mid-Level",
+      };
+      const matched = filterJobs([remote, indiaOffice, usRemote], { country: "REMOTE" });
+      expect(matched).toEqual([remote, usRemote]);
     });
 
     it("supports combining filters", () => {

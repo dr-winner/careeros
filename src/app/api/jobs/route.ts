@@ -14,6 +14,7 @@ import {
   getCountry,
   getWorkMode,
   interleaveHomeAndRemote,
+  isWorldwideLocation,
   paginateJobs,
   paginateWithCursor,
   parseSalary,
@@ -1008,10 +1009,18 @@ const AFRICAN_CODES = new Set(["GH", "NG", "KE", "ZA", "AF"]);
 // newest first. The result is deterministic, which cursor pagination
 // depends on.
 function rankJobsForUser<T extends Job>(jobs: T[], userCountryCode: string): T[] {
+  const resolvedCountry = (job: T): string => {
+    const fromLoc = getCountry("", job.location);
+    if (fromLoc !== "GLOBAL") return fromLoc;
+    return job.country || "GLOBAL";
+  };
   const tierOf = (job: T): number => {
-    const isRemote = job.workMode === "Remote" || job.country === "GLOBAL";
-    if (job.country === userCountryCode) return 0;
-    if (AFRICAN_CODES.has(job.country)) return 1;
+    const country = resolvedCountry(job);
+    const isRemote =
+      job.workMode === "Remote" ||
+      (country === "GLOBAL" && isWorldwideLocation(job.location));
+    if (country === userCountryCode) return 0;
+    if (AFRICAN_CODES.has(country)) return 1;
     if (isRemote) return 2;
     return 3;
   };

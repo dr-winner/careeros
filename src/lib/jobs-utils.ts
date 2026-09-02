@@ -98,55 +98,135 @@ export function parseSalary(salary?: string): { min?: number; max?: number } {
   return { min: parsedNumbers[0] };
 }
 
+function normalizeLoc(location: unknown): string {
+  return String(location || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+}
+
+/** Phrase match, or whole-token match so "india" does not hit "indiana". */
+function locHas(loc: string, needle: string): boolean {
+  if (!needle) return false;
+  if (needle.includes(" ") || needle.startsWith(",") || needle.startsWith(".")) {
+    return loc.includes(needle);
+  }
+  const escaped = needle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(?:^|[^a-z0-9])${escaped}(?:[^a-z0-9]|$)`).test(loc);
+}
+
+function locHasAny(loc: string, needles: string[]): boolean {
+  return needles.some((n) => locHas(loc, n));
+}
+
+const GH_LOCATION_NEEDLES = [
+  "ghana", "accra", "kumasi", "tema", "takoradi", "cape coast", "tamale",
+  "sunyani", "teshie", "ashanti", "volta region",
+];
+const NG_LOCATION_NEEDLES = [
+  "nigeria", "lagos", "abuja", "port harcourt", "ibadan", "kano", "enugu",
+  "benin city", "onitsha", "kaduna", "uyo",
+];
+const KE_LOCATION_NEEDLES = ["kenya", "nairobi", "mombasa", "kisumu"];
+const ZA_LOCATION_NEEDLES = [
+  "south africa", "johannesburg", "cape town", "durban", "pretoria", "soweto",
+  "western cape", "gauteng", "ekurhuleni", "port elizabeth", "gqeberha",
+  "nelson mandela", "bloemfontein", "sandton", "stellenbosch", "paarl",
+  "centurion", "randburg", "polokwane",
+];
+const CA_LOCATION_NEEDLES = [
+  "canada", "toronto", "vancouver", "montreal", "ottawa", "calgary", "edmonton",
+  "winnipeg", "halifax", "kelowna", "alberta", "saskatchewan",
+  "manitoba", "ontario", "quebec", "okanagan", "saskatoon", "regina", "red deer",
+];
+const US_LOCATION_NEEDLES = [
+  "united states", "usa", "u.s.", "new york", "san francisco", "austin",
+  "seattle", "chicago", "boston", "denver", "atlanta", "dallas", "houston",
+  "miami", "los angeles", "washington", "herndon", "arlington", "longmont",
+  "tempe", "fairfax", "boulder", ", tx", ", ca", ", ny", ", va", ", il",
+  ", co", ", ma", ", ga", ", az", ", pa", ", fl", ", wa",
+];
+const GB_LOCATION_NEEDLES = [
+  "united kingdom", "london", "manchester", "birmingham", "leeds",
+  "bournemouth", "knutsford", ", uk", "england", "scotland", "wales",
+];
+const IN_LOCATION_NEEDLES = [
+  "india", "bangalore", "bengaluru", "mumbai", "delhi", "hyderabad", "chennai",
+  "noida", "ahmedabad", "pune", "gurgaon", "gurugram", "kolkata", "jaipur",
+  "coimbatore", "ghaziabad", "telangana", "tamil nadu", "gujarat", "karnataka",
+  "maharashtra", "haryana",
+];
+const AU_LOCATION_NEEDLES = [
+  "australia", "sydney", "melbourne", "brisbane", "perth", "adelaide",
+  "gosnells", "kenwick",
+];
+
+const WORLDWIDE_LOCATION_EXACT = new Set([
+  "",
+  "remote",
+  "worldwide",
+  "anywhere",
+  "global",
+  "work from home",
+  "wfh",
+  "not specified",
+  "n/a",
+  "na",
+  "-",
+  "unspecified",
+  "location unspecified",
+  "no location specified",
+]);
+
+const WORLDWIDE_LOCATION_TOKENS = new Set([
+  "remote", "worldwide", "anywhere", "global", "fully", "the", "world",
+  "work", "from", "home", "wfh", "only",
+]);
+
+export function isWorldwideLocation(location: unknown): boolean {
+  const loc = normalizeLoc(location);
+  if (WORLDWIDE_LOCATION_EXACT.has(loc)) return true;
+  const stripped = loc.replace(/[()/,|._-]+/g, " ").replace(/\s+/g, " ").trim();
+  if (WORLDWIDE_LOCATION_EXACT.has(stripped)) return true;
+  const tokens = stripped.split(" ").filter((t) => t.length > 0);
+  return tokens.length > 0 && tokens.every((t) => WORLDWIDE_LOCATION_TOKENS.has(t));
+}
+
+function looksLikeSpecificPlace(location: unknown): boolean {
+  const loc = normalizeLoc(location);
+  if (!loc || isWorldwideLocation(loc)) return false;
+  if (loc.includes(",")) return true;
+  return loc.split(/\s+/).filter(Boolean).length >= 2;
+}
+
 export function getCountry(source: string, location: unknown): string {
-  // Normalize accented characters so "montréal" matches "montreal", etc.
-  const loc = String(location || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+  const loc = normalizeLoc(location);
 
-  // Africa — Ghana
-  if (loc.includes("ghana") || loc.includes("accra") || loc.includes("kumasi") ||
-      loc.includes("tema") || loc.includes("takoradi") || loc.includes("cape coast") ||
-      loc.includes("tamale") || loc.includes("ho,") || loc.includes("sunyani")) return "GH";
+  if (locHasAny(loc, GH_LOCATION_NEEDLES)) return "GH";
+  if (locHasAny(loc, NG_LOCATION_NEEDLES) || loc.includes("aba,")) return "NG";
+  if (locHasAny(loc, KE_LOCATION_NEEDLES)) return "KE";
+  if (locHasAny(loc, ZA_LOCATION_NEEDLES)) return "ZA";
 
-  // Africa — Nigeria
-  if (loc.includes("nigeria") || loc.includes("lagos") || loc.includes("abuja") ||
-      loc.includes("port harcourt") || loc.includes("ibadan") || loc.includes("kano") ||
-      loc.includes("enugu") || loc.includes("benin city") || loc.includes("aba,") ||
-      loc.includes("onitsha") || loc.includes("kaduna") || loc.includes("uyo")) return "NG";
-
-  // Africa — Kenya
-  if (loc.includes("kenya") || loc.includes("nairobi")) return "KE";
-
-  // Africa — South Africa (explicit mentions only — no longer the catch-all)
-  if (loc.includes("south africa") || loc.includes("johannesburg") || loc.includes("cape town") ||
-      loc.includes("durban") || loc.includes("pretoria") || loc.includes("soweto")) return "ZA";
-
-  // Africa — West Africa generic (region, not a specific country)
   if (loc.includes("west africa")) return "AF";
+  if (locHas(loc, "africa")) return "AF";
 
-  // Africa — other/generic (not ZA)
-  if (loc.includes("africa")) return "AF";
+  if (locHasAny(loc, CA_LOCATION_NEEDLES)) return "CA";
+  if (locHasAny(loc, US_LOCATION_NEEDLES)) return "US";
 
-  // North America
-  if (loc.includes("canada") || loc.includes("toronto") || loc.includes("vancouver") || loc.includes("montreal") || loc.includes("ottawa") || loc.includes("calgary")) return "CA";
-  if (loc.includes("united states") || loc.includes("usa") || loc.includes("new york") || loc.includes("san francisco") || loc.includes("austin") || loc.includes("seattle") || loc.includes(", tx") || loc.includes(", ca") || loc.includes(", ny")) return "US";
+  if (locHasAny(loc, GB_LOCATION_NEEDLES)) return "GB";
+  if (locHasAny(loc, ["germany", "berlin", "munich"])) return "DE";
+  if (locHasAny(loc, ["france", "paris"])) return "FR";
+  if (locHasAny(loc, ["europe", "netherlands", "amsterdam"])) return "EU";
 
-  // Europe
-  if (loc.includes("united kingdom") || loc.includes("london") || loc.includes("manchester") || loc.includes("birmingham") || loc.includes(", uk")) return "GB";
-  if (loc.includes("germany") || loc.includes("berlin") || loc.includes("munich")) return "DE";
-  if (loc.includes("france") || loc.includes("paris")) return "FR";
-  if (loc.includes("europe") || loc.includes("netherlands") || loc.includes("amsterdam")) return "EU";
+  if (locHasAny(loc, AU_LOCATION_NEEDLES)) return "AU";
+  if (locHasAny(loc, IN_LOCATION_NEEDLES)) return "IN";
+  if (locHas(loc, "singapore")) return "SG";
 
-  // Asia-Pacific
-  if (loc.includes("australia") || loc.includes("sydney") || loc.includes("melbourne")) return "AU";
-  if (loc.includes("india") || loc.includes("bangalore") || loc.includes("mumbai") || loc.includes("delhi")) return "IN";
-  if (loc.includes("singapore")) return "SG";
-
-  // Source-based fallbacks
   if (source === "remotive" || source === "remoteok" || source === "jobicy") return "GLOBAL";
   if (source === "arbeitnow") return "EU";
   if (source === "themuse") return "US";
 
-  // Default: GLOBAL, not ZA (was incorrectly South Africa before)
   return "GLOBAL";
 }
 
@@ -154,19 +234,20 @@ const SEARCH_STOPWORDS = new Set([
   "the", "a", "an", "and", "or", "of", "for", "in", "to", "at", "on",
 ]);
 
-// Local boards in GH/NG/KE are heavy on admin/sales. A "Ghana" filter that
-// only keeps country===GH therefore hides every programming role a Ghana-based
-// person can actually do (remote / worldwide). Same for the other African
-// markets we treat as home.
+// Ghana / Nigeria / Kenya / South Africa also keep pan-African listings
+// and unpinned worldwide remote — never a foreign office that geocoded as GLOBAL.
 const AFRICAN_MARKET_CODES = new Set(["GH", "NG", "KE", "ZA", "AF"]);
 
 const COUNTRY_LOCATION_HINTS: Record<string, string[]> = {
-  GH: ["ghana", "accra", "kumasi", "tema", "takoradi"],
-  NG: ["nigeria", "lagos", "abuja"],
-  KE: ["kenya", "nairobi"],
-  ZA: ["south africa", "johannesburg", "cape town", "durban", "pretoria"],
-  GB: ["united kingdom", "london", "manchester", ", uk"],
-  US: ["united states", "new york", "san francisco"],
+  GH: GH_LOCATION_NEEDLES,
+  NG: NG_LOCATION_NEEDLES,
+  KE: KE_LOCATION_NEEDLES,
+  ZA: ZA_LOCATION_NEEDLES,
+  GB: GB_LOCATION_NEEDLES,
+  US: US_LOCATION_NEEDLES,
+  CA: CA_LOCATION_NEEDLES,
+  IN: IN_LOCATION_NEEDLES,
+  AU: AU_LOCATION_NEEDLES,
 };
 
 // Titles that share a token with a real search ("security") but are not
@@ -220,22 +301,64 @@ export function jobMatchesSearch(job: FilterableJob, rawQuery: string): boolean 
   return tokens.every((t) => hay.includes(t));
 }
 
+function locCountryOf(job: FilterableJob): string {
+  const fromLoc = getCountry("", job.location);
+  if (fromLoc !== "GLOBAL") return fromLoc;
+  return (job.country || "GLOBAL").toUpperCase();
+}
+
+function isRemoteWork(job: FilterableJob): boolean {
+  return job.workMode.toLowerCase().includes("remote");
+}
+
+/**
+ * Country this job is pinned to, or null if it is genuinely worldwide.
+ * Re-geocodes the location string so a cached `country: "GLOBAL"` on
+ * "Hyderabad, Telangana" does not count as worldwide.
+ */
+export function pinnedCountryCode(job: FilterableJob): string | null {
+  const fromLoc = getCountry("", job.location);
+  if (fromLoc !== "GLOBAL") return fromLoc;
+
+  const stored = (job.country || "").trim().toUpperCase();
+  if (stored && stored !== "GLOBAL" && stored !== "REMOTE") return stored;
+
+  if (isWorldwideLocation(job.location)) return null;
+  if (looksLikeSpecificPlace(job.location)) return "UNKNOWN";
+  return null;
+}
+
+/**
+ * Ghana (and NG/KE/ZA) means that country, pan-African listings, and
+ * unpinned worldwide remote — not "any GLOBAL geocode" and not a remote
+ * job sitting in Hyderabad, New York, or Kelowna.
+ */
 export function jobMatchesCountry(job: FilterableJob, country: string): boolean {
   if (!country) return true;
 
   if (country === "REMOTE") {
-    return job.workMode.toLowerCase().includes("remote") || job.country === "GLOBAL";
+    return isRemoteWork(job) || isWorldwideLocation(job.location);
   }
 
-  if (job.country === country) return true;
+  const locCountry = getCountry("", job.location);
+  if (locCountry === country) return true;
 
-  const loc = job.location.toLowerCase();
+  const loc = normalizeLoc(job.location);
   const hints = COUNTRY_LOCATION_HINTS[country];
-  if (hints?.some((h) => loc.includes(h))) return true;
+  if (hints?.some((h) => locHas(loc, h))) return true;
+
+  // Trust stored country only when the location string does not name a
+  // different specific country (cached GLOBAL/GH on a Hyderabad office).
+  const locationContradicts =
+    locCountry !== "GLOBAL" && locCountry !== "AF" && locCountry !== country;
+  if (job.country === country && !locationContradicts) return true;
 
   if (AFRICAN_MARKET_CODES.has(country)) {
-    if (job.country === "GLOBAL" || job.country === "AF") return true;
-    if (job.workMode.toLowerCase().includes("remote")) return true;
+    if (!locationContradicts && (job.country === "AF" || locCountry === "AF")) return true;
+    if (isRemoteWork(job)) {
+      const pinned = pinnedCountryCode(job);
+      if (pinned === null || pinned === country || pinned === "AF") return true;
+    }
   }
 
   return false;
@@ -255,8 +378,11 @@ export function interleaveHomeAndRemote<T extends FilterableJob>(
   const hints = COUNTRY_LOCATION_HINTS[homeCountry] || [];
 
   for (const job of jobs) {
-    const loc = job.location.toLowerCase();
-    const isHome = job.country === homeCountry || hints.some((h) => loc.includes(h));
+    const loc = normalizeLoc(job.location);
+    const isHome =
+      job.country === homeCountry ||
+      locCountryOf(job) === homeCountry ||
+      hints.some((h) => locHas(loc, h));
     if (isHome) home.push(job);
     else rest.push(job);
   }

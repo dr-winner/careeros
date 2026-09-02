@@ -123,10 +123,10 @@ interface Job {
 
 const COUNTRY_OPTIONS = [
   { value: "",       label: "All Countries" },
-  { value: "GH",    label: "Ghana + remote" },
-  { value: "NG",    label: "Nigeria + remote" },
-  { value: "KE",    label: "Kenya + remote" },
-  { value: "ZA",    label: "South Africa + remote" },
+  { value: "GH",    label: "Ghana + worldwide remote" },
+  { value: "NG",    label: "Nigeria + worldwide remote" },
+  { value: "KE",    label: "Kenya + worldwide remote" },
+  { value: "ZA",    label: "South Africa + worldwide remote" },
   { value: "REMOTE",label: "Remote / Global" },
   { value: "GB",    label: "United Kingdom" },
   { value: "US",    label: "United States" },
@@ -692,7 +692,7 @@ export default function JobsPage() {
           <p className="text-zinc-400 mb-1">No jobs match these filters</p>
           <p className="text-xs text-zinc-600 mb-4 max-w-sm mx-auto">
             {search && country === "GH"
-              ? `Local Ghana boards rarely list “${search}” as a title. Clear the search to browse Ghana + remote roles.`
+              ? `Local Ghana boards rarely list “${search}” as a title. Clear the search to browse Ghana roles and worldwide remote.`
               : search
                 ? `No titles matched “${search}”. Clear the search to browse, or try a broader term like “security” or “engineer”.`
                 : "Try All Countries, or paste a job you found on WhatsApp / a company site."}
