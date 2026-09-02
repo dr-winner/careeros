@@ -94,11 +94,19 @@ export default function JobDetailPage() {
   }, []);
 
   const handleOptimizeClick = () => {
-    if (isPremium) {
-      setShowOptimizeModal(true);
-    } else {
+    if (!isPremium) {
       setShowPaywall(true);
+      return;
     }
+    if (!aiEnabled || !cvOptimization) {
+      toast.error(
+        aiEnabled
+          ? "Run an analysis first so we can tailor CV changes to this role."
+          : "AI is unavailable, so there is nothing to optimize yet. Re-analyse when it is back — no credit was used.",
+      );
+      return;
+    }
+    setShowOptimizeModal(true);
   };
 
   const analyzeFit = useCallback(
@@ -153,10 +161,16 @@ export default function JobDetailPage() {
               jobTitle: jobData.title,
               isPremium: data.analysis.isPremium ?? false,
             });
+            if (data.analysis.aiEnabled === false) {
+              toast.message("Keyword estimate only — AI is unavailable. No credit was used.");
+            }
           }
+        } else if (data.error) {
+          toast.error(data.message || data.error || "Could not analyse this job.");
         }
       } catch (error) {
         console.error("Error analyzing fit:", error);
+        toast.error("Could not analyse this job. Try again in a moment.");
       } finally {
         setAnalyzing(false);
       }
@@ -782,7 +796,15 @@ export default function JobDetailPage() {
               <p className="mono text-xs text-zinc-400 mt-2 leading-relaxed">{cvAdvice}</p>
               <button
                 onClick={handleOptimizeClick}
-                className="agent-button mt-3 inline-flex"
+                disabled={isPremium && (!aiEnabled || !cvOptimization)}
+                title={
+                  isPremium && !aiEnabled
+                    ? "Needs a full AI analysis — unavailable right now"
+                    : isPremium && !cvOptimization
+                      ? "Run an analysis first"
+                      : undefined
+                }
+                className="agent-button mt-3 inline-flex disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {isPremium ? (
                   <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

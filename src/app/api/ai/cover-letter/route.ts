@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { ZodError } from "zod";
 import { prisma } from "@/lib/db";
-import { generateWithFallback } from "@/lib/ai";
+import { AiUnavailableError, generateWithFallback } from "@/lib/ai";
 import { coverLetterRequestSchema, getZodErrorMessage } from "@/lib/validation";
 import { checkRateLimit, getRateLimitHeaders, RATE_LIMITS } from "@/lib/ratelimit";
 import { sanitizeSkillList } from "@/lib/skills";
@@ -69,7 +69,13 @@ export async function POST(request: NextRequest) {
     }
 
     if (!hasAiProviderConfigured()) {
-      return NextResponse.json({ error: "AI not configured" }, { status: 500 });
+      return NextResponse.json(
+        {
+          error: "ai_unavailable",
+          message: "Our AI is unavailable right now. No credit was used.",
+        },
+        { status: 503 },
+      );
     }
 
     const payload = coverLetterRequestSchema.parse(await request.json());
@@ -175,6 +181,15 @@ Do NOT write generic cover letters that could apply to any job or person.`;
     } catch (aiError) {
       // Refund the claimed slot — a failed generation shouldn't count.
       if (refundQuota) await refundQuota().catch(() => {});
+      if (aiError instanceof AiUnavailableError) {
+        return NextResponse.json(
+          {
+            error: "ai_unavailable",
+            message: "Our AI is unavailable right now. No credit was used.",
+          },
+          { status: 503 },
+        );
+      }
       throw aiError;
     }
 
@@ -206,6 +221,15 @@ Do NOT write generic cover letters that could apply to any job or person.`;
       return NextResponse.json(
         { error: getZodErrorMessage(error) },
         { status: 400 },
+      );
+    }
+    if (error instanceof AiUnavailableError) {
+      return NextResponse.json(
+        {
+          error: "ai_unavailable",
+          message: "Our AI is unavailable right now. No credit was used.",
+        },
+        { status: 503 },
       );
     }
 

@@ -88,6 +88,18 @@ export default function InterviewPrepPage() {
     fetchSessions();
   }, [fetchSessions]);
 
+  useEffect(() => {
+    fetch("/api/user/profile")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        const role = (data?.user?.desiredRole || data?.user?.headline || "").trim();
+        if (!role) return;
+        setSelectedRole((current) => (current === "Software Engineer" ? role : current));
+        setLiveRole((current) => (current === "Software Engineer" ? role : current));
+      })
+      .catch(() => {});
+  }, []);
+
   const filteredQuestions = shuffledQuestions.filter((q) => {
     const categoryMatch = category === "all" || q.category === category;
     const roleMatch =
@@ -105,9 +117,12 @@ export default function InterviewPrepPage() {
   };
 
   const startInterview = async () => {
+    if (aiStatus.status === "degraded" || aiStatus.status === "unconfigured") {
+      toast.error("Our AI interviewer is unavailable right now. Try the Question Bank meanwhile.");
+      return;
+    }
+
     setIsLoading(true);
-    setIsInterviewing(true);
-    setMessages([]);
     setFeedback(null);
 
     try {
@@ -118,23 +133,28 @@ export default function InterviewPrepPage() {
       });
 
       if (response.status === 402) {
-        setIsInterviewing(false);
         setShowPaywall(true);
         posthog?.capture("paywall_shown", { feature: "mock_interview" });
         return;
       }
 
-      const data = await response.json();
-      if (data.error) throw new Error(data.error);
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.text) {
+        toast.error(
+          data.message ||
+            "Our AI interviewer is unavailable right now. No credit was used — try the Question Bank meanwhile.",
+        );
+        return;
+      }
 
       setMessages([{ role: "assistant", content: data.text }]);
+      setIsInterviewing(true);
       posthog?.capture("interview_started", {
         role: selectedRole,
         experience_level: experienceLevel,
       });
     } catch {
       toast.error("Our AI interviewer is unavailable right now. No credit was used — try the Question Bank meanwhile.");
-      setIsInterviewing(false);
     } finally {
       setIsLoading(false);
     }
@@ -155,12 +175,15 @@ export default function InterviewPrepPage() {
         body: JSON.stringify({ action: "respond", role: selectedRole, history: newMessages }),
       });
 
-      const data = await response.json();
-      if (data.error) throw new Error(data.error);
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.text) {
+        toast.error(data.message || "Failed to get a reply. No extra credit was used.");
+        return;
+      }
 
       setMessages([...newMessages, { role: "assistant", content: data.text }]);
     } catch {
-      toast.error("Failed to get response");
+      toast.error("Failed to get a reply. No extra credit was used.");
     } finally {
       setIsLoading(false);
     }
@@ -195,8 +218,11 @@ export default function InterviewPrepPage() {
         }),
       });
 
-      const data = await response.json();
-      if (data.error) throw new Error(data.error);
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || data.error || typeof data.score !== "number") {
+        toast.error(data.message || "Failed to get feedback. No extra credit was used.");
+        return;
+      }
 
       posthog?.capture("interview_feedback_received", {
         role: selectedRole,
@@ -495,14 +521,16 @@ export default function InterviewPrepPage() {
 
                 <button
                   onClick={startInterview}
-                  disabled={isLoading}
-                  className="agent-button-primary w-full py-3.5 text-sm font-bold press-scale"
+                  disabled={isLoading || aiStatus.status === "degraded" || aiStatus.status === "unconfigured"}
+                  className="agent-button-primary w-full py-3.5 text-sm font-bold press-scale disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isLoading ? (
                     <>
                       <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                       Initializing Agent...
                     </>
+                  ) : aiStatus.status === "degraded" || aiStatus.status === "unconfigured" ? (
+                    "AI unavailable"
                   ) : "Start Practice Session"}
                 </button>
               </div>

@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { generateWithFallback } from "@/lib/ai";
+import { AiUnavailableError, generateWithFallback } from "@/lib/ai";
 import { mockInterviewSchema, getZodErrorMessage } from "@/lib/validation";
 import { checkRateLimit, getRateLimitHeaders, RATE_LIMITS } from "@/lib/ratelimit";
 import { getDbUser } from "@/lib/auth";
 import { claimQuota, releaseQuota } from "@/lib/quota";
+import { hasAiProviderConfigured } from "@/lib/env";
 import { ZodError } from "zod";
+
+const AI_UNAVAILABLE = {
+  error: "ai_unavailable",
+  message: "Our AI interviewer is unavailable right now. No credit was used.",
+};
 
 export async function POST(request: NextRequest) {
   let refund: (() => Promise<void>) | null = null;
@@ -27,6 +33,10 @@ export async function POST(request: NextRequest) {
           headers: getRateLimitHeaders(rateLimitResult),
         },
       );
+    }
+
+    if (!hasAiProviderConfigured()) {
+      return NextResponse.json(AI_UNAVAILABLE, { status: 503 });
     }
 
     const body = await request.json();
@@ -99,6 +109,10 @@ Return this JSON:
       }));
     } catch (aiError) {
       if (refund) await refund().catch(() => {});
+      refund = null;
+      if (aiError instanceof AiUnavailableError) {
+        return NextResponse.json(AI_UNAVAILABLE, { status: 503 });
+      }
       throw aiError;
     }
 
@@ -116,10 +130,17 @@ Return this JSON:
     return NextResponse.json({ text });
 
   } catch (error) {
+    if (refund) await refund().catch(() => {});
     if (error instanceof ZodError) {
       return NextResponse.json({ error: getZodErrorMessage(error) }, { status: 400 });
     }
+    if (error instanceof AiUnavailableError) {
+      return NextResponse.json(AI_UNAVAILABLE, { status: 503 });
+    }
     console.error("Interview API error:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 },
+    );
   }
 }

@@ -279,11 +279,15 @@ export default function PricingPage() {
       <div className="animate-fade-up text-center pt-4">
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-purple-500/10 border border-purple-500/20 mb-4">
           <div className="h-1.5 w-1.5 rounded-full bg-purple-400 animate-pulse" />
-          <span className="mono text-xs text-purple-400">Upgrade to Premium</span>
+          <span className="mono text-xs text-purple-400">
+            {isPremium ? "You're on Premium" : "Upgrade to Premium"}
+          </span>
         </div>
         <h1 className="text-3xl font-bold gradient-text mb-3">Simple, honest pricing</h1>
         <p className="text-zinc-400 max-w-md mx-auto mb-6">
-          Free gets you started. Premium removes every limit.
+          {isPremium
+            ? "Your account already has every Premium feature unlocked."
+            : "Free gets you started. Premium removes every limit."}
         </p>
 
         {/* Billing toggle */}
@@ -334,15 +338,21 @@ export default function PricingPage() {
               ))}
             </ul>
 
-            <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-4 text-center">
-              <p className="text-sm text-zinc-500">You&apos;re on this plan</p>
-              <Link href="/dashboard" className="inline-flex items-center gap-1.5 mt-2 mono text-xs text-purple-400 hover:text-purple-300 transition-colors">
-                Go to Dashboard
-                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </Link>
-            </div>
+            {isPremium ? (
+              <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-4 text-center">
+                <p className="text-sm text-zinc-500">Included with your Premium plan</p>
+              </div>
+            ) : (
+              <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-4 text-center">
+                <p className="text-sm text-zinc-500">You&apos;re on this plan</p>
+                <Link href="/dashboard" className="inline-flex items-center gap-1.5 mt-2 mono text-xs text-purple-400 hover:text-purple-300 transition-colors">
+                  Go to Dashboard
+                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </Link>
+              </div>
+            )}
           </div>
         </div>
 
