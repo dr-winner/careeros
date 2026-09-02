@@ -6,6 +6,7 @@ import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 import { toast } from "sonner";
 import PaywallModal from "@/components/paywall-modal";
+import { useAnalytics } from "@/lib/analytics";
 import { JOBS_LIST_STORAGE_KEY } from "@/lib/jobs-utils";
 
 function decodeHtmlEntities(html: string): string {
