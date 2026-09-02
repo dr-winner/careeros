@@ -564,9 +564,68 @@ describe("jobsListHref", () => {
 
 describe("roleRelevanceBoost", () => {
   it("scores exact and partial title overlap with the target role", () => {
-    expect(roleRelevanceBoost("Cloud Security Engineer", "Cloud Security")).toBe(40);
-    expect(roleRelevanceBoost("Cloud Engineer", "Cloud Security")).toBe(15);
-    expect(roleRelevanceBoost("Sales Executive", "Cloud Security")).toBe(0);
+    expect(roleRelevanceBoost({ title: "Cloud Security Engineer" }, "Cloud Security")).toBe(40);
+    expect(roleRelevanceBoost({ title: "Cloud Engineer" }, "Cloud Security")).toBe(15);
+    expect(roleRelevanceBoost({ title: "Sales Executive" }, "Cloud Security")).toBe(0);
+  });
+
+  it("scores description and requirements below any title hit", () => {
+    expect(
+      roleRelevanceBoost(
+        {
+          title: "Staff Platform Engineer",
+          description: "Own our AWS IAM, VPC, and cloud security program.",
+        },
+        "Cloud Security",
+      ),
+    ).toBe(12);
+    expect(
+      roleRelevanceBoost(
+        {
+          title: "DevOps Engineer",
+          requirements: "cloud infrastructure, application security, AWS",
+        },
+        "Cloud Security",
+      ),
+    ).toBe(8);
+    expect(
+      roleRelevanceBoost(
+        { title: "Cloud Engineer", description: "Focus on cloud security and IAM." },
+        "Cloud Security",
+      ),
+    ).toBe(27);
+    expect(roleRelevanceBoost({ title: "Cloud Security Engineer" }, "Cloud Security")).toBe(40);
+    expect(
+      roleRelevanceBoost({ title: "Cloud Security Engineer" }, "Cloud Security") >
+        roleRelevanceBoost(
+          { title: "Cloud Engineer", description: "Focus on cloud security and IAM." },
+          "Cloud Security",
+        ),
+    ).toBe(true);
+  });
+
+  it("does not promote a single generic body word or a noise title", () => {
+    expect(
+      roleRelevanceBoost(
+        { title: "Sales Executive", description: "We use the cloud for CRM." },
+        "Cloud Security",
+      ),
+    ).toBe(0);
+    expect(
+      roleRelevanceBoost(
+        { title: "Office Assistant", description: "Campus security briefing on Fridays." },
+        "Cloud Security",
+      ),
+    ).toBe(0);
+    expect(
+      roleRelevanceBoost(
+        { title: "Security Guard", description: "cloud security cameras and access control" },
+        "Cloud Security",
+      ),
+    ).toBe(0);
+    expect(
+      roleRelevanceBoost({ title: "Cloud Kitchen Manager" }, "Cloud Security"),
+    ).toBe(0);
   });
 });
 
@@ -608,5 +667,71 @@ describe("interleaveHomeAndRemote", () => {
     ];
     const ordered = interleaveHomeAndRemote(jobs, "GH").map((j) => j.title);
     expect(ordered).toEqual(["Sales 1", "Cloud Engineer", "Backend Engineer", "Sales 2"]);
+  });
+
+  it("puts Cloud Security remotes above unrelated Ghana titles, then mixes locals", () => {
+    const jobs: FilterableJob[] = [
+      {
+        title: "Sales Executive",
+        companyName: "A",
+        location: "Accra",
+        country: "GH",
+        workMode: "On-site",
+        seniorityLevel: "Entry-Level",
+      },
+      {
+        title: "Endpoint Engineer",
+        companyName: "B",
+        location: "Kumasi",
+        country: "GH",
+        workMode: "On-site",
+        seniorityLevel: "Mid-Level",
+      },
+      {
+        title: "ALX Data Scientist",
+        companyName: "ALX",
+        location: "Accra",
+        country: "GH",
+        workMode: "On-site",
+        seniorityLevel: "Mid-Level",
+      },
+      {
+        title: "Apparel Sourcing Manager",
+        companyName: "Quince",
+        location: "Remote",
+        country: "GLOBAL",
+        workMode: "Remote",
+        seniorityLevel: "Mid-Level",
+      },
+      {
+        title: "Staff Platform Engineer",
+        companyName: "Remote Co",
+        location: "Worldwide",
+        country: "GLOBAL",
+        workMode: "Remote",
+        seniorityLevel: "Senior",
+        description: "You will own cloud security, IAM, and AWS.",
+      },
+      {
+        title: "Cloud Security Engineer",
+        companyName: "Canonical",
+        location: "Anywhere",
+        country: "GLOBAL",
+        workMode: "Remote",
+        seniorityLevel: "Senior",
+      },
+    ];
+    const ordered = interleaveHomeAndRemote(jobs, "GH", "Cloud Security").map((j) => j.title);
+    expect(ordered[0]).toBe("Cloud Security Engineer");
+    expect(ordered[1]).toBe("Staff Platform Engineer");
+    expect(ordered.slice(0, 2)).not.toContain("Sales Executive");
+    expect(ordered.slice(0, 2)).not.toContain("Endpoint Engineer");
+    expect(ordered.slice(0, 2)).not.toContain("ALX Data Scientist");
+    expect(ordered.slice(0, 2)).not.toContain("Apparel Sourcing Manager");
+    expect(ordered).toContain("Sales Executive");
+    expect(ordered).toContain("Endpoint Engineer");
+    expect(ordered.indexOf("Sales Executive")).toBeGreaterThan(
+      ordered.indexOf("Staff Platform Engineer"),
+    );
   });
 });

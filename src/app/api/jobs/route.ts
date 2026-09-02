@@ -1033,7 +1033,7 @@ function rankJobsForUser<T extends Job>(
     return Number.isNaN(t) ? 0 : t;
   };
   return [...jobs].sort((a, b) => {
-    const role = roleRelevanceBoost(b.title, desiredRole) - roleRelevanceBoost(a.title, desiredRole);
+    const role = roleRelevanceBoost(b, desiredRole) - roleRelevanceBoost(a, desiredRole);
     if (role !== 0) return role;
     const ta = tierOf(a);
     const tb = tierOf(b);

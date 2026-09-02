@@ -430,12 +430,24 @@ export default function JobsPage() {
   const displayedJobs =
     sortByMatch && (userSkills.length > 0 || !!targetRole)
       ? [...jobs].sort((a, b) => {
-          const roleB = roleRelevanceBoost(b.title, targetRole);
-          const roleA = roleRelevanceBoost(a.title, targetRole);
+          const roleB = roleRelevanceBoost(b, targetRole);
+          const roleA = roleRelevanceBoost(a, targetRole);
           if (roleB !== roleA) return roleB - roleA;
           return (matchFor(b) ?? 0) - (matchFor(a) ?? 0);
         })
       : jobs;
+
+  const roleBoostedOnPage =
+    !!targetRole && jobs.some((j) => roleRelevanceBoost(j, targetRole) > 0);
+  const emptyBrowseHint = (() => {
+    if (!targetRole || search) return "";
+    if (roleBoostedOnPage) return `Browsing all roles · ${targetRole} ranked first`;
+    if (country === "GH") return `Browsing Ghana + remote · search to focus on ${targetRole}`;
+    if (country === "NG") return `Browsing Nigeria + remote · search to focus on ${targetRole}`;
+    if (country === "KE") return `Browsing Kenya + remote · search to focus on ${targetRole}`;
+    if (country === "ZA") return `Browsing South Africa + remote · search to focus on ${targetRole}`;
+    return `Browsing all roles · search to focus on ${targetRole}`;
+  })();
 
   const handleSearch = () => {
     const q = search.trim();
@@ -616,9 +628,9 @@ export default function JobsPage() {
             Search
           </button>
         </div>
-        {targetRole && !search && jobs.some((j) => roleRelevanceBoost(j.title, targetRole) > 0) && (
+        {emptyBrowseHint && (
           <p className="px-4 pb-2 mono text-[10px] text-zinc-600">
-            Browsing all roles · {targetRole} ranked first
+            {emptyBrowseHint}
           </p>
         )}
       </div>
@@ -750,7 +762,9 @@ export default function JobsPage() {
                 <p className="mono text-[10px] text-zinc-600">
                   {userSkills.length > 0
                     ? `Quick match: your ${userSkills.length} extracted skills vs each advert · full AI analysis on the job page`
-                    : `Ranked by your target role (${targetRole})`}
+                    : roleBoostedOnPage
+                      ? `Ranked by your target role (${targetRole})`
+                      : `Target role: ${targetRole} · search to focus the feed`}
                 </p>
                 <button
                   onClick={() => setSortByMatch((v) => !v)}

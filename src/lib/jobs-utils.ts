@@ -317,7 +317,17 @@ const COUNTRY_LOCATION_HINTS: Record<string, string[]> = {
 
 // Titles that share a token with a real search ("security") but are not
 // professional roles the searcher meant.
-const NOISE_ROLE_TITLE = /\b(guard|watchman|driver|cleaner|cook|waiter|cashier|hawker|nanny|househelp)\b/i;
+const NOISE_ROLE_TITLE =
+  /\b(guard|watchman|driver|cleaner|cook|waiter|cashier|hawker|nanny|househelp|kitchen|chef|janitor|steward)\b/i;
+
+/** Mix one home-country listing after this many role-relevant jobs. */
+const HOME_MIX_EVERY = 3;
+
+const TITLE_PHRASE_SCORE = 40;
+const TITLE_ALL_TOKENS_SCORE = 30;
+const TITLE_SOME_TOKENS_SCORE = 15;
+const BODY_PHRASE_SCORE = 12;
+const BODY_ALL_TOKENS_SCORE = 8;
 
 export function tokenizeSearch(query: string): string[] {
   return query
@@ -433,25 +443,56 @@ export function jobMatchesCountry(job: FilterableJob, country: string): boolean 
   return false;
 }
 
-/**
- * When the user already filtered to Ghana (or another African market),
- * GH-first ranking fills page 1 with local admin/sales listings and the
- * remote engineering roles never appear. Interleave 1 local : 2 others.
- */
-function sortByRoleThenTime<T extends FilterableJob & { postedAt?: string }>(
+function isHomeCountryJob(job: FilterableJob, homeCountry: string): boolean {
+  const loc = normalizeLoc(job.location);
+  const hints = COUNTRY_LOCATION_HINTS[homeCountry] || [];
+  return (
+    job.country === homeCountry ||
+    locCountryOf(job) === homeCountry ||
+    hints.some((h) => locHas(loc, h))
+  );
+}
+
+function postedTimeMs(job: { postedAt?: string }): number {
+  const t = new Date(job.postedAt || 0).getTime();
+  return Number.isNaN(t) ? 0 : t;
+}
+
+function sortByRoleThenHomeThenTime<T extends FilterableJob>(
   jobs: T[],
   desiredRole: string,
+  homeCountry: string,
 ): T[] {
-  if (!desiredRole.trim()) return jobs;
   return [...jobs].sort((a, b) => {
-    const role = roleRelevanceBoost(b.title, desiredRole) - roleRelevanceBoost(a.title, desiredRole);
-    if (role !== 0) return role;
-    const ta = new Date(a.postedAt || 0).getTime();
-    const tb = new Date(b.postedAt || 0).getTime();
-    return (Number.isNaN(tb) ? 0 : tb) - (Number.isNaN(ta) ? 0 : ta);
+    if (desiredRole.trim()) {
+      const role = roleRelevanceBoost(b, desiredRole) - roleRelevanceBoost(a, desiredRole);
+      if (role !== 0) return role;
+    }
+    const homeA = isHomeCountryJob(a, homeCountry) ? 0 : 1;
+    const homeB = isHomeCountryJob(b, homeCountry) ? 0 : 1;
+    if (homeA !== homeB) return homeA - homeB;
+    return postedTimeMs(b) - postedTimeMs(a);
   });
 }
 
+function interleaveOneHomeTwoRest<T>(home: T[], rest: T[]): T[] {
+  const out: T[] = [];
+  let i = 0;
+  let j = 0;
+  while (i < home.length || j < rest.length) {
+    if (i < home.length) out.push(home[i++]);
+    if (j < rest.length) out.push(rest[j++]);
+    if (j < rest.length) out.push(rest[j++]);
+  }
+  return out;
+}
+
+/**
+ * Ghana (and NG/KE/ZA) empty browse: role-relevant jobs first (title or
+ * body), then a light mix of local listings so page 1 is not a wall of
+ * worldwide remotes. Unrelated leftovers stay 1 local : 2 others.
+ * With no target role, keep the 1:2 mix so locals are not buried.
+ */
 export function interleaveHomeAndRemote<T extends FilterableJob>(
   jobs: T[],
   homeCountry: string,
@@ -459,44 +500,82 @@ export function interleaveHomeAndRemote<T extends FilterableJob>(
 ): T[] {
   const home: T[] = [];
   const rest: T[] = [];
-  const hints = COUNTRY_LOCATION_HINTS[homeCountry] || [];
-
   for (const job of jobs) {
-    const loc = normalizeLoc(job.location);
-    const isHome =
-      job.country === homeCountry ||
-      locCountryOf(job) === homeCountry ||
-      hints.some((h) => locHas(loc, h));
-    if (isHome) home.push(job);
+    if (isHomeCountryJob(job, homeCountry)) home.push(job);
     else rest.push(job);
   }
 
-  const homeRanked = sortByRoleThenTime(home, desiredRole);
-  const restRanked = sortByRoleThenTime(rest, desiredRole);
+  if (!desiredRole.trim()) {
+    return interleaveOneHomeTwoRest(home, rest);
+  }
+
+  const relevant = sortByRoleThenHomeThenTime(
+    jobs.filter((job) => roleRelevanceBoost(job, desiredRole) > 0),
+    desiredRole,
+    homeCountry,
+  );
+  const unrelatedHome: T[] = [];
+  const unrelatedRest: T[] = [];
+  for (const job of jobs) {
+    if (roleRelevanceBoost(job, desiredRole) > 0) continue;
+    if (isHomeCountryJob(job, homeCountry)) unrelatedHome.push(job);
+    else unrelatedRest.push(job);
+  }
 
   const out: T[] = [];
-  let i = 0;
-  let j = 0;
-  while (i < homeRanked.length || j < restRanked.length) {
-    if (i < homeRanked.length) out.push(homeRanked[i++]);
-    if (j < restRanked.length) out.push(restRanked[j++]);
-    if (j < restRanked.length) out.push(restRanked[j++]);
+  let hi = 0;
+  for (let r = 0; r < relevant.length; r++) {
+    out.push(relevant[r]);
+    if ((r + 1) % HOME_MIX_EVERY === 0 && hi < unrelatedHome.length) {
+      out.push(unrelatedHome[hi++]);
+    }
   }
-  return out;
+  if (relevant.length > 0 && relevant.length < HOME_MIX_EVERY && hi < unrelatedHome.length) {
+    out.push(unrelatedHome[hi++]);
+  }
+
+  return out.concat(interleaveOneHomeTwoRest(unrelatedHome.slice(hi), unrelatedRest));
 }
 
-/** Boost jobs whose title overlaps the user's target role. Used to rank, not filter. */
-export function roleRelevanceBoost(jobTitle: string, desiredRole: string): number {
+export type RoleBoostJob = {
+  title: string;
+  description?: string;
+  requirements?: string;
+};
+
+/**
+ * Rank (do not filter) by overlap with the user's target role.
+ * Title hits stay far above description-only hits. Body matches need a
+ * multi-word phrase or every token — a lone "cloud" in a sales JD does
+ * not count. Noise titles (guard, kitchen, …) score 0.
+ */
+export function roleRelevanceBoost(job: RoleBoostJob, desiredRole: string): number {
   const role = desiredRole.trim().toLowerCase();
   if (!role) return 0;
-  const title = jobTitle.toLowerCase();
-  if (title.includes(role)) return 40;
+  if (NOISE_ROLE_TITLE.test(job.title)) return 0;
+
+  const title = job.title.toLowerCase();
   const tokens = tokenizeSearch(role);
-  if (tokens.length === 0) return 0;
-  const hits = tokens.filter((t) => title.includes(t)).length;
-  if (hits === 0) return 0;
-  if (hits === tokens.length) return 30;
-  return 15;
+
+  let titleScore = 0;
+  if (title.includes(role)) {
+    titleScore = TITLE_PHRASE_SCORE;
+  } else if (tokens.length > 0) {
+    const hits = tokens.filter((t) => title.includes(t)).length;
+    if (hits === tokens.length) titleScore = TITLE_ALL_TOKENS_SCORE;
+    else if (hits > 0) titleScore = TITLE_SOME_TOKENS_SCORE;
+  }
+
+  const body = `${job.description || ""} ${job.requirements || ""}`.toLowerCase();
+  let bodyScore = 0;
+  if (tokens.length >= 2 && body.trim()) {
+    if (body.includes(role)) bodyScore = BODY_PHRASE_SCORE;
+    else if (tokens.every((t) => body.includes(t))) bodyScore = BODY_ALL_TOKENS_SCORE;
+  }
+
+  if (titleScore === 0) return bodyScore;
+  if (titleScore >= TITLE_ALL_TOKENS_SCORE) return titleScore;
+  return titleScore + bodyScore;
 }
 
 export function filterJobs<T extends FilterableJob>(
