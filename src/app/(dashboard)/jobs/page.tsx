@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useAuth } from "@clerk/nextjs";
+import { useAuth, useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -208,8 +208,13 @@ function getWorkModeAccentBar(workMode: string): string {
   }
 }
 
+interface OnboardingJobPreferences {
+  remoteOnly?: boolean;
+}
+
 export default function JobsPage() {
   const { userId, isLoaded } = useAuth();
+  const { user: clerkUser } = useUser();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [showPaste, setShowPaste] = useState(false);
   // The OS layer: user's extracted skills, matched against every listed
@@ -342,10 +347,11 @@ export default function JobsPage() {
   );
 
   useEffect(() => {
-    if (!userId) return;
+    if (!userId || !clerkUser) return;
     // The OS knows what you're looking for — the feed defaults to the
-    // role from your profile, not a hardcoded query. Falls back to the
-    // generic feed only when no target role was ever set.
+    // role from your profile and the work-mode preference you gave during
+    // onboarding, not a hardcoded query. Falls back to the browse feed
+    // only when nothing was ever set.
     (async () => {
       let q = "";
       try {
@@ -355,11 +361,25 @@ export default function JobsPage() {
           q = (data.user?.desiredRole || data.user?.roleType || "").trim();
         }
       } catch {}
+
+      // Only the explicit "remote only" toggle is a trustworthy signal —
+      // workModes/jobTypes have pre-selected defaults that users who skip
+      // onboarding never touched, so filtering on them would hide most of
+      // the feed from people who never asked for that.
+      const prefs = (clerkUser.publicMetadata?.onboardingJobPreferences ?? null) as
+        | OnboardingJobPreferences
+        | null;
+      const wm = prefs?.remoteOnly ? "Remote" : "";
+
       if (q) setSearch(q);
-      fetchJobs(true, q ? { search: q } : undefined);
+      if (wm) setWorkMode(wm);
+      fetchJobs(true, {
+        ...(q ? { search: q } : {}),
+        ...(wm ? { workMode: wm } : {}),
+      });
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId]);
+  }, [userId, clerkUser?.id]);
 
   // Load the user's extracted skills once so every listed job can be
   // quick-matched automatically.

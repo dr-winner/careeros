@@ -104,7 +104,10 @@ const REMOTIVE_CATEGORIES = [
 ] as const;
 
 const SEARCH_CACHE_TTL_MS = 5 * 60 * 1000;
-const JOB_DETAIL_CACHE_TTL_MS = 15 * 60 * 1000;
+// Detail entries outlive the search cache so a job someone opened, saved
+// to their phone or shared on WhatsApp still resolves the next day rather
+// than 404ing 15 minutes later.
+const JOB_DETAIL_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const PROVIDER_TIMEOUT_MS = 6_000;
 
 function extractLocation(raw: RawJob): string {
@@ -235,7 +238,8 @@ async function fetchFromAdzuna(
 
   const results = await Promise.allSettled(
     ADZUNA_COUNTRIES.map(async ({ code }) => {
-      const url = `https://api.adzuna.com/v1/api/jobs/${code}/search/1?app_id=${encodeURIComponent(appId)}&app_key=${encodeURIComponent(appKey)}&what=${encodeURIComponent(query)}&results_per_page=15`;
+      const what = query ? `&what=${encodeURIComponent(query)}` : "";
+      const url = `https://api.adzuna.com/v1/api/jobs/${code}/search/1?app_id=${encodeURIComponent(appId)}&app_key=${encodeURIComponent(appKey)}${what}&results_per_page=15`;
       const data = (await fetchJsonWithTimeout(url)) as { results?: RawJob[] };
       if (!Array.isArray(data.results)) return [];
       return data.results.map((job) => formatJob(job, job.id, "adzuna", savedJobIds));
@@ -922,10 +926,18 @@ async function fetchFromJobberman(savedJobIds: string[]): Promise<Job[]> {
       }
     }
 
+    // The GTM payload and the anchor list come from the same rendered
+    // listing order, so positional matching is only trustworthy when the
+    // two arrays line up exactly. Otherwise send the user to a Jobberman
+    // search for the exact title — an honest landing, never a wrong job.
+    const canMatchByIndex = listingLinks.length === items.length;
+
     const jobs: Job[] = [];
     items.forEach((item, index: number) => {
       const itemId = item.item_id;
-      const matchingLink = listingLinks[index] || "https://www.jobberman.com.gh/jobs";
+      const matchingLink = canMatchByIndex
+        ? listingLinks[index]
+        : `https://www.jobberman.com.gh/jobs?q=${encodeURIComponent(item.item_name)}`;
       const id = `jobberman-${itemId}`;
       
       const seniorityMap: Record<string, string> = {
@@ -943,11 +955,14 @@ async function fetchFromJobberman(savedJobIds: string[]): Promise<Job[]> {
         companyName: item.affiliation === "Anonymous Employer" ? "Confidential Company" : item.affiliation || "Unknown Company",
         location: item.location_id || "Ghana",
         country: "GH",
-        workMode: item.item_category3 || "Full-time",
+        workMode: "On-site",
         seniorityLevel,
         employmentType: item.item_category3 || "Full-time",
-        description: `Legit local listing on Jobberman Ghana. Category: ${item.item_category} / ${item.item_category2}.`,
-        requirements: `Functional Area: ${item.item_category}`,
+        // Jobberman's listing page carries no advert text. Ship an empty
+        // description so the UI and the analyser treat it as "needs the
+        // full advert" instead of scoring a fabricated sentence.
+        description: "",
+        requirements: [item.item_category, item.item_category2].filter(Boolean).join(" / ") || "See job posting for details",
         postedAt: new Date().toISOString(),
         isSaved: savedJobIds.includes(id),
         applicationUrl: matchingLink,
@@ -966,6 +981,51 @@ function buildSavedJobMap(
   savedJobs: SavedJobRecord[],
 ): Record<string, SavedJobRecord> {
   return Object.fromEntries(savedJobs.map((job) => [job.externalJobId, job]));
+}
+
+// A listing the user cannot actually apply to is worse than no listing:
+// it burns trust the moment they click Apply and land on "https://#".
+function hasUsableApplyUrl(job: Job): boolean {
+  const url = (job.applicationUrl || "").trim();
+  if (!url || url === "#") return false;
+  return /^https?:\/\/\S+/i.test(url) || url.startsWith("mailto:");
+}
+
+const COUNTRY_NAME_TO_CODE: Record<string, string> = {
+  ghana: "GH",
+  nigeria: "NG",
+  kenya: "KE",
+  "south africa": "ZA",
+};
+
+const AFRICAN_CODES = new Set(["GH", "NG", "KE", "ZA", "AF"]);
+
+// Ghana-first ordering. Providers are concatenated in fetch order, which
+// put Adzuna's US/UK/Canada results at the top of every feed for a user in
+// Accra. Rank: their own country, then the rest of Africa, then remote /
+// global roles they can apply to, then everything else. Within a tier,
+// newest first. The result is deterministic, which cursor pagination
+// depends on.
+function rankJobsForUser<T extends Job>(jobs: T[], userCountryCode: string): T[] {
+  const tierOf = (job: T): number => {
+    const isRemote = job.workMode === "Remote" || job.country === "GLOBAL";
+    if (job.country === userCountryCode) return 0;
+    if (AFRICAN_CODES.has(job.country)) return 1;
+    if (isRemote) return 2;
+    return 3;
+  };
+  const time = (job: T): number => {
+    const t = new Date(job.postedAt).getTime();
+    return Number.isNaN(t) ? 0 : t;
+  };
+  return [...jobs].sort((a, b) => {
+    const ta = tierOf(a);
+    const tb = tierOf(b);
+    if (ta !== tb) return ta - tb;
+    const dt = time(b) - time(a);
+    if (dt !== 0) return dt;
+    return a.id.localeCompare(b.id);
+  });
 }
 
 function getSingleJobResponse(savedJob: SavedJobRecord) {
@@ -1078,8 +1138,9 @@ async function fetchSearchResults(
 
   for (const result of results) {
     if (result.status === "fulfilled") {
-      sourcesBreakdown[result.value.source] = result.value.jobs.length;
-      allJobs.push(...result.value.jobs);
+      const usable = result.value.jobs.filter(hasUsableApplyUrl);
+      sourcesBreakdown[result.value.source] = usable.length;
+      allJobs.push(...usable);
     } else {
       partialFailure = true;
       warnings.push("One or more job sources were temporarily unavailable.");
@@ -1130,27 +1191,29 @@ export async function GET(request: NextRequest) {
     let savedJobs: SavedJobRecord[] = [];
     let savedJobIds: string[] = [];
     let savedJobsMap: Record<string, SavedJobRecord> = {};
+    let userCountryCode = "GH";
 
     if (userId) {
-      savedJobs = await prisma.savedJob.findMany({
-        where: { userId },
-      });
+      const [saved, dbUser] = await Promise.all([
+        prisma.savedJob.findMany({ where: { userId } }),
+        prisma.user.findUnique({ where: { id: userId }, select: { country: true } }),
+      ]);
+      savedJobs = saved;
       savedJobIds = savedJobs.map((job) => job.externalJobId);
       savedJobsMap = buildSavedJobMap(savedJobs);
+      const name = (dbUser?.country || "Ghana").trim().toLowerCase();
+      userCountryCode = COUNTRY_NAME_TO_CODE[name] || "GH";
     }
+    const savedIdSet = new Set(savedJobIds);
 
     if (jobId) {
-      const cacheKey = createCacheKey("jobs:detail", { jobId, userId });
-      const cachedSingleJob = getOrSetCachedValue(
+      // Detail cache is shared across users; per-user save state is
+      // layered on afterwards so one user's view never leaks into another's.
+      const cacheKey = createCacheKey("jobs:detail", { jobId });
+      const cachedSingleJob = getOrSetCachedValue<{ job: Record<string, unknown> } | null>(
         cacheKey,
         JOB_DETAIL_CACHE_TTL_MS,
         async () => {
-          const savedJob = savedJobsMap[jobId];
-
-          if (savedJob) {
-            return getSingleJobResponse(savedJob);
-          }
-
           // DB fallback: employer-posted and user-pasted jobs live in the
           // Job table and must resolve on deep links even after the
           // search cache expires.
@@ -1167,6 +1230,7 @@ export async function GET(request: NextRequest) {
                 seniorityLevel: dbJob.seniorityLevel || "Not specified",
                 employmentType: dbJob.employmentType || "Not specified",
                 description: dbJob.description || "",
+                requirements: dbJob.requirementsText || "See job posting for details",
                 applicationUrl: dbJob.applicationUrl || "",
                 postedAt: (dbJob.postedAt || new Date()).toISOString(),
                 source: dbJob.externalSource || "saved",
@@ -1182,36 +1246,54 @@ export async function GET(request: NextRequest) {
       const singleJobResult = await cachedSingleJob;
 
       if (singleJobResult) {
-        return NextResponse.json(singleJobResult);
+        return NextResponse.json({
+          job: { ...singleJobResult.job, isSaved: savedIdSet.has(jobId) },
+        });
+      }
+
+      // Saved-job stub: the user bookmarked it but the provider has since
+      // dropped it from search and it was never persisted with a description.
+      const savedJob = savedJobsMap[jobId];
+      if (savedJob) {
+        return NextResponse.json(getSingleJobResponse(savedJob));
       }
 
       return NextResponse.json({ error: "Job not found" }, { status: 404 });
     }
 
-    const query = search || "software developer";
-    const searchCacheKey = createCacheKey("jobs:search", {
-      query,
-      userId,
-    });
+    // Empty query means "browse": sources that support it return their
+    // full boards (Greenhouse/Ashby/Workable/Jobberman are Ghana-heavy),
+    // instead of the old hardcoded "software developer" default that made
+    // the feed useless for every non-developer.
+    const query = search.trim();
+
+    // Shared across users — save state is applied after the cache read.
+    // Keying on userId meant every visitor missed the cache and paid the
+    // full 13-provider fan-out (6–10s) on their first page load.
+    const searchCacheKey = createCacheKey("jobs:search", { query });
 
     const cachedPayload = await getOrSetCachedValue<CachedJobsPayload>(
       searchCacheKey,
       SEARCH_CACHE_TTL_MS,
-      async () => fetchSearchResults(query, savedJobIds),
+      async () => {
+        const payload = await fetchSearchResults(query, []);
+        // Seed detail entries only on a real fetch. Doing this on every
+        // request wrote a few hundred Redis keys per page view.
+        for (const job of payload.jobs) {
+          setCachedValue(
+            createCacheKey("jobs:detail", { jobId: job.id }),
+            { job: { ...job, isSaved: false } },
+            JOB_DETAIL_CACHE_TTL_MS,
+          );
+        }
+        return payload;
+      },
     );
 
     const jobsWithSaveState = cachedPayload.jobs.map((job) => ({
       ...job,
-      isSaved: savedJobIds.includes(job.id),
+      isSaved: savedIdSet.has(job.id),
     }));
-
-    for (const job of jobsWithSaveState) {
-      setCachedValue(
-        createCacheKey("jobs:detail", { jobId: job.id, userId }),
-        { job },
-        JOB_DETAIL_CACHE_TTL_MS,
-      );
-    }
 
     const filteredJobs = filterJobs(jobsWithSaveState, {
       workMode,
@@ -1223,7 +1305,7 @@ export async function GET(request: NextRequest) {
       datePosted,
     });
 
-    const uniqueJobs = dedupeJobsByTitleAndCompany(filteredJobs);
+    const uniqueJobs = rankJobsForUser(dedupeJobsByTitleAndCompany(filteredJobs), userCountryCode);
 
     let pagination;
     let jobs;

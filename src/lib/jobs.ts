@@ -90,7 +90,13 @@ export async function ensureJobRecord(input: EnsureJobRecordInput) {
         workMode: existing.workMode ?? nullIfBlank(input.workMode) ?? undefined,
         employmentType:
           existing.employmentType ?? nullIfBlank(input.employmentType) ?? undefined,
-        description: existing.description ?? nullIfBlank(input.description) ?? undefined,
+        // A stub description (source category label, or the old synthetic
+        // Jobberman sentence) counts as missing so a user-pasted advert can
+        // replace it.
+        description:
+          existing.description && existing.description.trim().length >= 80
+            ? undefined
+            : nullIfBlank(input.description) ?? undefined,
         requirementsText:
           existing.requirementsText ?? nullIfBlank(input.requirementsText) ?? undefined,
         applicationUrl:

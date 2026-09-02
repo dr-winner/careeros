@@ -6,8 +6,11 @@ import { hasAiProviderConfigured } from "@/lib/env";
 import { isUserPremium } from "@/lib/auth";
 import { checkRateLimit, getRateLimitHeaders, RATE_LIMITS } from "@/lib/ratelimit";
 import { ensureJobRecord } from "@/lib/jobs";
-import { claimQuota, releaseQuota } from "@/lib/quota";
+import { checkQuota, claimQuota, releaseQuota } from "@/lib/quota";
 import { sendReferralConvertedEmail } from "@/lib/transactional-emails";
+
+// Below this the "description" is a category label or a stub, not an advert.
+const MIN_DESCRIPTION_CHARS = 80;
 
 const SKILL_KEYWORDS: Record<string, string[]> = {
   JavaScript: ["javascript", "js", "ecmascript"],
@@ -69,6 +72,17 @@ function extractSkills(text: string): string[] {
   return foundSkills;
 }
 
+const getVerdict = (s: number) => {
+  if (s >= 80) return "Strong Match";
+  if (s >= 60) return "Good Fit";
+  if (s >= 40) return "Partial Match";
+  return "Reach Position";
+};
+
+// A stored analysis is served for free while it's this fresh. Re-opening
+// the same job must never cost a credit — only an explicit re-analyze does.
+const CACHED_ANALYSIS_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+
 export async function POST(request: NextRequest) {
   // Set once a free-tier slot has been claimed, so the catch block can
   // refund it if the analysis fails after claiming.
@@ -89,33 +103,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const isPremiumEarly = await isUserPremium();
-    // Atomic claim: parallel requests cannot exceed the free-tier limit.
-    const quota = await claimQuota(userId, isPremiumEarly);
-
-    if (!quota.allowed) {
-      return NextResponse.json(
-        {
-          error: "quota_exceeded",
-          message: `Free plan includes ${quota.limit} analyses per month. Upgrade to Premium for unlimited.`,
-          remaining: 0,
-          resetAt: quota.resetAt,
-        },
-        { status: 402 },
-      );
-    }
-    if (!isPremiumEarly) {
-      refund = () => releaseQuota(userId, isPremiumEarly);
-    }
-
-    const { jobId, jobDescription: clientDescription, jobTitle, companyName } = await request.json();
-    if (!jobId) {
+    // Validate input BEFORE touching quota — a malformed request must
+    // never cost the user a credit.
+    const body = await request.json().catch(() => ({}));
+    const {
+      jobId,
+      jobDescription: clientDescription,
+      jobTitle,
+      companyName,
+      force,
+    } = body as {
+      jobId?: string;
+      jobDescription?: string;
+      jobTitle?: string;
+      companyName?: string;
+      force?: boolean;
+    };
+    if (!jobId || typeof jobId !== "string") {
       return NextResponse.json({ error: "Job ID required" }, { status: 400 });
     }
 
+    const isPremium = await isUserPremium();
+
     // Persist job to DB (upsert) so description is available for future analyses
     if (clientDescription || jobTitle) {
-      ensureJobRecord({ jobId, title: jobTitle, companyName, description: clientDescription }).catch(() => {});
+      await ensureJobRecord({ jobId, title: jobTitle, companyName, description: clientDescription }).catch(() => {});
     }
 
     // Prefer the full description stored in DB over the truncated client-sent one
@@ -123,7 +135,24 @@ export async function POST(request: NextRequest) {
       where: { id: jobId },
       select: { description: true },
     });
-    const jobDescription = storedJob?.description || clientDescription || "";
+    const storedDescription = (storedJob?.description || "").trim();
+    const jobDescription =
+      storedDescription.length >= MIN_DESCRIPTION_CHARS
+        ? storedDescription
+        : (clientDescription || "").trim();
+
+    // Several sources (Workable, SmartRecruiters, Jobberman) list a title
+    // but no advert text. There is nothing to score against, and the old
+    // behaviour — a flat 50% with "low confidence" — read as a random
+    // number and cost a credit. Ask for the advert instead; the client
+    // re-submits with the pasted text, which ensureJobRecord persists.
+    if (jobDescription.length < MIN_DESCRIPTION_CHARS) {
+      return NextResponse.json({
+        analysis: null,
+        needsDescription: true,
+        charged: false,
+      });
+    }
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -162,17 +191,9 @@ export async function POST(request: NextRequest) {
       jobSkills.length > 0
         ? Math.min(100, Math.round((matched.length / jobSkills.length) * 100))
         : 50;
-
-    const getVerdict = (s: number) => {
-      if (s >= 80) return "Strong Match";
-      if (s >= 60) return "Good Fit";
-      if (s >= 40) return "Partial Match";
-      return "Reach Position";
-    };
     let verdict = getVerdict(score);
 
     const hasAI = hasAiProviderConfigured();
-    const isPremium = isPremiumEarly;
 
     let cvAdvice = "";
     let cvOptimization: {
@@ -193,12 +214,113 @@ export async function POST(request: NextRequest) {
     const lowConfidence =
       (allUserSkills.length < 3 && !profileIncomplete) || jobSkills.length === 0;
 
+    const quotaSnapshot = isPremium ? null : await checkQuota(userId, false);
+    const quotaPayload = quotaSnapshot
+      ? { remaining: quotaSnapshot.remaining, limit: quotaSnapshot.limit, resetAt: quotaSnapshot.resetAt }
+      : null;
+
+    // Nothing to analyse against: no CV, no headline, no experience. A
+    // keyword-only score is a nudge to complete the profile, not a paid
+    // deliverable — return it without spending a credit.
+    if (profileIncomplete) {
+      return NextResponse.json({
+        analysis: {
+          fitScore: score,
+          matchedSkills: matched,
+          missingSkills: missing,
+          verdict,
+          hasResume: !!user?.resumes[0],
+          hasProfile: false,
+          cvAdvice: missing.length > 0 ? `Skills this role asks for: ${missing.slice(0, 5).join(", ")}` : "",
+          cvOptimization: null,
+          aiNarrative: null,
+          aiEnabled: hasAI,
+          isPremium,
+          premiumRequired: false,
+          profileIncomplete: true,
+          lowConfidence: true,
+          cached: false,
+          charged: false,
+          quota: quotaPayload,
+        },
+      });
+    }
+
+    // Free tier: re-opening a job you've already analysed is free. Serve
+    // the stored result (score, verdict, narrative) and recompute the
+    // cheap keyword overlap live so it reflects any CV updates.
+    if (!isPremium && !force) {
+      const existing = await prisma.fitAnalysis.findUnique({
+        where: { userId_jobId: { userId, jobId } },
+        select: {
+          fitScore: true,
+          verdict: true,
+          strengthsSummary: true,
+          gapsSummary: true,
+          riskSummary: true,
+          createdAt: true,
+        },
+      });
+      const fresh =
+        existing && Date.now() - existing.createdAt.getTime() < CACHED_ANALYSIS_MAX_AGE_MS;
+      if (existing && fresh) {
+        const storedNarrative =
+          existing.strengthsSummary && existing.gapsSummary && existing.riskSummary
+            ? {
+                strengths: existing.strengthsSummary,
+                gaps: existing.gapsSummary,
+                recommendation: existing.riskSummary,
+              }
+            : null;
+        return NextResponse.json({
+          analysis: {
+            fitScore: Math.round(existing.fitScore),
+            matchedSkills: matched,
+            missingSkills: missing,
+            verdict: existing.verdict,
+            hasResume: !!user?.resumes[0],
+            hasProfile: !!(user?.headline || user?.experience),
+            cvAdvice: missing.length > 0 ? `Skills to develop: ${missing.slice(0, 5).join(", ")}` : "",
+            cvOptimization: null,
+            aiNarrative: storedNarrative,
+            aiEnabled: hasAI,
+            isPremium,
+            premiumRequired: missing.length > 0,
+            profileIncomplete: false,
+            lowConfidence,
+            cached: true,
+            charged: false,
+            analyzedAt: existing.createdAt,
+            quota: quotaPayload,
+          },
+        });
+      }
+    }
+
+    // Atomic claim: parallel requests cannot exceed the free-tier limit.
+    const quota = await claimQuota(userId, isPremium);
+
+    if (!quota.allowed) {
+      return NextResponse.json(
+        {
+          error: "quota_exceeded",
+          message: `Free plan includes ${quota.limit} AI credits per month. Upgrade to Premium for unlimited.`,
+          remaining: 0,
+          resetAt: quota.resetAt,
+        },
+        { status: 402 },
+      );
+    }
+    if (!isPremium) {
+      refund = () => releaseQuota(userId, isPremium);
+    }
+
     // SECURITY NOTE: jobDescription and CV text below are untrusted user
     // input flowing into LLM prompts (prompt injection is possible). Safe
     // today because model output only affects the requesting user's own
     // displayed score/advice and scores are clamped — revisit if AI output
     // ever gains authority (auto-actions, payments, other users' data).
-    if (hasAI && jobDescription && !profileIncomplete) {
+    if (hasAI && jobDescription) {
       // AI narrative analysis for ALL users — brief summary of fit + AI-scored fitScore
       try {
         const narrativePrompt = `You are a career advisor speaking directly to a job seeker. Analyze their fit for this role and speak in second person ("you", "your").
@@ -300,16 +422,32 @@ Return ONLY this JSON (no markdown):
       }
     }
 
-    // Quota already claimed atomically at the top of the handler.
-
-    // Persist this analysis so the analytics page has real data
+    // Persist this analysis so re-opens are free and analytics has real
+    // data. createdAt is refreshed so the cache window restarts.
+    const analyzedAt = new Date();
     try {
       const jobRecord = await prisma.job.findUnique({ where: { id: jobId }, select: { id: true } });
       if (jobRecord) {
         await prisma.fitAnalysis.upsert({
           where: { userId_jobId: { userId, jobId } },
-          update: { fitScore: score, verdict },
-          create: { userId, jobId, fitScore: score, verdict },
+          update: {
+            fitScore: score,
+            verdict,
+            strengthsSummary: aiNarrative?.strengths ?? null,
+            gapsSummary: aiNarrative?.gaps ?? null,
+            riskSummary: aiNarrative?.recommendation ?? null,
+            createdAt: analyzedAt,
+          },
+          create: {
+            userId,
+            jobId,
+            fitScore: score,
+            verdict,
+            strengthsSummary: aiNarrative?.strengths ?? null,
+            gapsSummary: aiNarrative?.gaps ?? null,
+            riskSummary: aiNarrative?.recommendation ?? null,
+            createdAt: analyzedAt,
+          },
         });
 
         // Referral reward: credit referrer on user's very first analysis
@@ -363,6 +501,9 @@ Return ONLY this JSON (no markdown):
         premiumRequired: !isPremium && missing.length > 0,
         profileIncomplete,
         lowConfidence,
+        cached: false,
+        charged: !isPremium,
+        analyzedAt,
         quota: isPremium
           ? null
           : { remaining: quota.remaining, limit: quota.limit, resetAt: quota.resetAt },

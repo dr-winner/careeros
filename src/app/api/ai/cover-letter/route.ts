@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error: "quota_exceeded",
-          message: `Free plan includes ${quota.limit} AI generations per month. Upgrade to Premium for unlimited cover letters.`,
+          message: `Free plan includes ${quota.limit} AI credits per month. Upgrade to Premium for unlimited cover letters.`,
           resetAt: quota.resetAt,
         },
         { status: 402 },

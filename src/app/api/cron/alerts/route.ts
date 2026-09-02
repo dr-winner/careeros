@@ -9,10 +9,13 @@ const resend = resendApiKey ? new Resend(resendApiKey) : null;
 
 const PROVIDER_TIMEOUT_MS = 6_000;
 
+// Adzuna has no GH/NG/KE markets (their API returns 404 for those codes —
+// see the same note in /api/jobs). ZA is the only African country Adzuna
+// serves, so it's the only one we query; Ghana-focused alerts rely on
+// Remotive (remote roles) until the alert pipeline shares the main
+// aggregator with Greenhouse/Ashby/Workable/Jobberman.
 const ADZUNA_COUNTRIES = [
   { name: "South Africa", code: "ZA", region: "Africa" },
-  { name: "Kenya", code: "KE", region: "Africa" },
-  { name: "Ghana", code: "GH", region: "Africa" },
 ];
 
 
@@ -101,11 +104,10 @@ async function fetchFromAdzuna(query: string, country: string): Promise<JobAlert
 
   const countryMap: Record<string, string> = {
     "South Africa": "za",
-    Kenya: "ke",
-    Ghana: "gh",
   };
 
-  const countryCode = countryMap[country] || "za";
+  const countryCode = countryMap[country];
+  if (!countryCode) return [];
 
   try {
     const url = `https://api.adzuna.com/v1/api/jobs/${countryCode}/search/1?app_id=${encodeURIComponent(appId)}&app_key=${encodeURIComponent(appKey)}&what=${encodeURIComponent(query)}&results_per_page=20`;
@@ -199,15 +201,22 @@ function escapeHtml(value: string): string {
     .replaceAll("'", "&#39;");
 }
 
+const ALERT_STOPWORDS = new Set(["and", "or", "the", "of", "in", "for", "at", "to", "a", "an", "jobs", "job"]);
+
+// Match against the TITLE only and require every meaningful token. The old
+// rule matched ANY token anywhere (title + company + location), so a saved
+// search for "product manager" emailed every "Manager" role and every job
+// at a company with "Product" in its name — the fastest way to teach users
+// that alerts are spam.
 function matchesJobAlert(search: string, job: JobAlert): boolean {
-  const tokens = tokenizeSearchQuery(search);
-  const searchableText = `${job.title} ${job.companyName} ${job.location}`.toLowerCase();
+  const tokens = tokenizeSearchQuery(search).filter((t) => !ALERT_STOPWORDS.has(t));
+  const title = job.title.toLowerCase();
 
   if (tokens.length > 0) {
-    return tokens.some((token) => searchableText.includes(token));
+    return tokens.every((token) => title.includes(token));
   }
 
-  return searchableText.includes(search.toLowerCase());
+  return title.includes(search.toLowerCase());
 }
 
 function getJobsWithinPeriod(jobs: JobAlert[], hoursBack: number): JobAlert[] {
@@ -297,8 +306,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Either channel is enough to run. Previously a missing Resend key
+    // returned 503 before any SMS went out, so SMS-only users silently
+    // never received alerts and the product looked dead.
+    const smsConfigured = isMoolreSmsConfigured();
+    if (!resend && !smsConfigured) {
+      console.error("Alerts cron: neither RESEND_API_KEY nor Moolre SMS is configured — no alerts can be delivered");
+      return NextResponse.json({ error: "No alert delivery channel is configured" }, { status: 503 });
+    }
     if (!resend) {
-      return NextResponse.json({ error: "Email delivery is not configured" }, { status: 503 });
+      console.warn("Alerts cron: RESEND_API_KEY missing — sending SMS alerts only");
     }
 
     const { prisma } = await import("@/lib/db");
@@ -342,23 +359,28 @@ export async function GET(request: NextRequest) {
 
         searchesMatched++;
 
-        await resend.emails.send({
-          from: getEmailFrom(),
-          to: search.user.email,
-          subject: `New jobs matching "${search.searchQuery}" (${matchedJobs.length})`,
-          html: renderEmailHtml(search, matchedJobs, baseUrl),
-        });
+        const wantsSms = search.user.smsAlerts && !!search.user.phone && smsConfigured;
+        let delivered = false;
 
-        await prisma.savedSearch.update({
-          where: { id: search.id },
-          data: { lastNotified: now },
-        });
-
-        emailsSent++;
+        if (resend) {
+          try {
+            await resend.emails.send({
+              from: getEmailFrom(),
+              to: search.user.email,
+              subject: `New jobs matching "${search.searchQuery}" (${matchedJobs.length})`,
+              html: renderEmailHtml(search, matchedJobs, baseUrl),
+            });
+            emailsSent++;
+            delivered = true;
+          } catch (emailError) {
+            console.error(`Email alert failed for search ${search.id}:`, emailError);
+            if (!wantsSms) throw emailError;
+          }
+        }
 
         // SMS channel via Moolre — reaches users who don't check email.
         // Opt-in (smsAlerts) and requires a phone number on the profile.
-        if (search.user.smsAlerts && search.user.phone && isMoolreSmsConfigured()) {
+        if (wantsSms) {
           const topJob = matchedJobs[0];
           const others = matchedJobs.length - 1;
           const smsBody =
@@ -369,13 +391,27 @@ export async function GET(request: NextRequest) {
 
           try {
             const sms = await sendSms([
-              { recipient: search.user.phone, message: smsBody, ref: `alert-${search.id}-${now.getTime()}` },
+              { recipient: search.user.phone!, message: smsBody, ref: `alert-${search.id}-${now.getTime()}` },
             ]);
-            if (sms.ok) smsSent++;
-            else console.error(`SMS alert failed for search ${search.id}: ${sms.code}`);
+            if (sms.ok) {
+              smsSent++;
+              delivered = true;
+            } else {
+              console.error(`SMS alert failed for search ${search.id}: ${sms.code}`);
+            }
           } catch (smsError) {
             console.error(`SMS alert error for search ${search.id}:`, smsError);
           }
+        }
+
+        // Only mark notified when something actually reached the user, so
+        // a transient provider failure retries on the next run instead of
+        // silently skipping a whole day/week.
+        if (delivered) {
+          await prisma.savedSearch.update({
+            where: { id: search.id },
+            data: { lastNotified: now },
+          });
         }
       } catch (error) {
         console.error(`Error processing search ${search.id}:`, error);

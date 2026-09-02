@@ -120,9 +120,9 @@ export async function initiateTransfer(params: {
     accountnumber: readEnv("MOOLRE_ACCOUNT_NUMBER"),
   });
 
-  const payload = data.data as { txstatus?: number } | null;
+  const payload = data.data as { txstatus?: number | string } | null;
   const initiated = Number(data.status) === 1;
-  return { initiated, settled: initiated && payload?.txstatus === 1, code: data.code };
+  return { initiated, settled: initiated && Number(payload?.txstatus) === 1, code: data.code };
 }
 
 // ─── Direct MoMo collection (USSD approval prompt) ──────────────────────────
@@ -165,6 +165,90 @@ export async function getTransactionStatus(
     id: externalref,
     accountnumber: readEnv("MOOLRE_ACCOUNT_NUMBER"),
   });
-  const payload = data.data as { txstatus?: number } | null;
-  return { txstatus: payload?.txstatus ?? null };
+  const payload = data.data as { txstatus?: number | string } | null;
+  const raw = payload?.txstatus;
+  if (raw === undefined || raw === null) return { txstatus: null };
+  const n = Number(raw);
+  return { txstatus: Number.isNaN(n) ? null : n };
+}
+
+// ─── Collection verification (subscription activation) ──────────────────────
+
+export type CollectionVerification =
+  | { ok: true; amount: number | null }
+  | {
+      ok: false;
+      // pending/failed are terminal answers from Moolre; "error" means we
+      // could not get an answer (network, malformed response) and the
+      // caller should retry rather than treat the payment as bad.
+      reason: "pending" | "failed" | "underpaid" | "error";
+      txstatus: number | null;
+      amount: number | null;
+    };
+
+function readAmount(payload: Record<string, unknown> | null): number | null {
+  if (!payload) return null;
+  for (const key of ["amount", "value", "amountpaid", "amount_paid"]) {
+    const raw = payload[key];
+    if (raw === undefined || raw === null || raw === "") continue;
+    const n = Number(raw);
+    if (Number.isFinite(n)) return n;
+  }
+  return null;
+}
+
+/**
+ * Server-to-server check that a collection identified by our externalref
+ * actually settled. Moolre webhooks are unsigned, so this is the only
+ * thing that may ever grant Premium.
+ *
+ * txstatus is coerced with Number() — the API has been observed returning
+ * both numeric and string status values, and a strict `!== 1` would
+ * silently reject every real payment if the type flipped.
+ *
+ * When expectedAmount is given and Moolre reports an amount, an underpaid
+ * transaction is rejected. A missing amount field is tolerated: the
+ * externalref was minted by us for a fixed-price link/charge, so the
+ * status check alone is already authoritative.
+ */
+export async function verifyCollectionPayment(
+  externalref: string,
+  expectedAmount: number | null,
+): Promise<CollectionVerification> {
+  let data: MoolreResponse;
+  try {
+    data = await moolrePost("/open/transact/status", keyHeaders(), {
+      type: 1,
+      idtype: 1,
+      id: externalref,
+      accountnumber: readEnv("MOOLRE_ACCOUNT_NUMBER"),
+    });
+  } catch (err) {
+    console.error("Moolre status lookup failed:", err);
+    return { ok: false, reason: "error", txstatus: null, amount: null };
+  }
+
+  const payload = (data?.data && typeof data.data === "object" ? data.data : null) as Record<string, unknown> | null;
+  const rawStatus = payload?.txstatus ?? (data as unknown as { txstatus?: unknown })?.txstatus;
+  const txstatus = rawStatus === undefined || rawStatus === null ? null : Number(rawStatus);
+  const amount = readAmount(payload);
+
+  if (txstatus === null || Number.isNaN(txstatus)) {
+    console.error("Moolre status lookup returned no txstatus", { externalref, code: data?.code });
+    return { ok: false, reason: "error", txstatus: null, amount };
+  }
+
+  // txstatus: 0 = Pending, 1 = Success, 2 = Failed
+  if (txstatus === 0) return { ok: false, reason: "pending", txstatus, amount };
+  if (txstatus !== 1) return { ok: false, reason: "failed", txstatus, amount };
+
+  if (expectedAmount !== null && amount !== null && amount < expectedAmount) {
+    console.error(`Moolre verify: underpaid ref=${externalref} paid=${amount} expected=${expectedAmount}`);
+    return { ok: false, reason: "underpaid", txstatus, amount };
+  }
+  if (expectedAmount !== null && amount === null) {
+    console.warn(`Moolre verify: no amount in status payload for ref=${externalref}; accepting on txstatus alone`);
+  }
+
+  return { ok: true, amount };
 }

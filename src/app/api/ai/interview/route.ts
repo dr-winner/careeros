@@ -3,9 +3,13 @@ import { auth } from "@clerk/nextjs/server";
 import { generateWithFallback } from "@/lib/ai";
 import { mockInterviewSchema, getZodErrorMessage } from "@/lib/validation";
 import { checkRateLimit, getRateLimitHeaders, RATE_LIMITS } from "@/lib/ratelimit";
+import { getDbUser } from "@/lib/auth";
+import { claimQuota, releaseQuota } from "@/lib/quota";
 import { ZodError } from "zod";
 
 export async function POST(request: NextRequest) {
+  let refund: (() => Promise<void>) | null = null;
+
   try {
     const { userId: clerkId } = await auth();
     if (!clerkId) {
@@ -29,6 +33,31 @@ export async function POST(request: NextRequest) {
     const payload = mockInterviewSchema.parse(body);
 
     const { action, role, experienceLevel, history, currentQuestion, userResponse } = payload;
+
+    // Mock interviews are sold as a Premium feature. Free users spend one
+    // monthly AI credit per session (claimed at "start"); follow-up turns
+    // and feedback inside that session are free so a session is never
+    // cut off mid-conversation.
+    if (action === "start") {
+      const dbUser = await getDbUser();
+      if (!dbUser) {
+        return NextResponse.json({ error: "User not found" }, { status: 404 });
+      }
+      const quota = await claimQuota(dbUser.id, dbUser.isPremium);
+      if (!quota.allowed) {
+        return NextResponse.json(
+          {
+            error: "quota_exceeded",
+            message: `Free plan includes ${quota.limit} AI credits per month. Upgrade to Premium for unlimited mock interviews.`,
+            resetAt: quota.resetAt,
+          },
+          { status: 402 },
+        );
+      }
+      if (!dbUser.isPremium) {
+        refund = () => releaseQuota(dbUser.id, false);
+      }
+    }
 
     let systemPrompt = "";
     let userPrompt = "";
@@ -62,10 +91,16 @@ Return this JSON:
 }`;
     }
 
-    const { text } = await generateWithFallback(userPrompt, systemPrompt, {
-      temperature: action === "feedback" ? 0.3 : 0.7,
-      json: action === "feedback",
-    });
+    let text: string;
+    try {
+      ({ text } = await generateWithFallback(userPrompt, systemPrompt, {
+        temperature: action === "feedback" ? 0.3 : 0.7,
+        json: action === "feedback",
+      }));
+    } catch (aiError) {
+      if (refund) await refund().catch(() => {});
+      throw aiError;
+    }
 
     if (action === "feedback") {
       try {

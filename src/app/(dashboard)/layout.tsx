@@ -15,11 +15,14 @@ const navItems = [
   { href: "/interview", label: "Interview", icon: "M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z", color: "cyan" },
   { href: "/saved-jobs", label: "Saved", icon: "M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z", color: "purple" },
   { href: "/resumes", label: "CVs", icon: "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z", color: "cyan" },
+  { href: "/cover-letter", label: "Cover Letters", icon: "M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z", color: "purple" },
+  { href: "/alerts", label: "Job Alerts", icon: "M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9", color: "cyan" },
+  { href: "/referrals", label: "Referrals", icon: "M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z", color: "purple" },
   { href: "/profile", label: "Profile", icon: "M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z", color: "purple" },
 ];
 
-// Bottom nav: the 5 most-reached pages (Saved/CVs still accessible via drawer)
-const primaryNav = [navItems[0], navItems[1], navItems[2], navItems[3], navItems[6]];
+// Bottom nav: the 5 most-reached pages (the rest live in the drawer)
+const primaryNav = [navItems[0], navItems[1], navItems[2], navItems[3], navItems[navItems.length - 1]];
 
 const colorMap: Record<string, { bg: string; text: string }> = {
   purple: { bg: "bg-purple-500/15", text: "text-purple-400" },
@@ -47,11 +50,11 @@ function UpgradeCard({ onNavigate }: { onNavigate?: () => void }) {
           </svg>
         </div>
         <span className="text-sm font-bold text-white group-hover:text-purple-200 transition-colors">
-          Upgrade to Pro
+          Upgrade to Premium
         </span>
       </div>
       <p className="mono text-[10px] text-zinc-500 leading-relaxed">
-        Unlimited analyses · AI cover letters<br />GHS 25/mo · pay with MoMo
+        Unlimited AI · CV rewritten per role<br />GHS 25/mo · pay with MoMo · no auto-renewal
       </p>
     </Link>
   );
@@ -164,7 +167,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         )}
         {isPremium === true && (
           <div className="px-6 py-2 flex items-center gap-2">
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 mono">PRO</span>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 mono">PREMIUM</span>
             <span className="mono text-[10px] text-zinc-600">All features unlocked</span>
           </div>
         )}
@@ -204,7 +207,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
-                PRO
+                UPGRADE
               </Link>
             )}
             <UserButton />

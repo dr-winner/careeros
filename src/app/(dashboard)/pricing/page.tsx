@@ -8,20 +8,19 @@ import { toast } from "sonner";
 import { usePostHog } from "posthog-js/react";
 
 const FREE_FEATURES = [
-  "3 job match analyses per month",
-  "Basic match score (% only)",
-  "Browse 9+ aggregated job sources",
-  "CV upload and storage",
-  "Application tracking",
+  "3 AI credits per month — use on job analyses, cover letters or mock interviews",
+  "Full match score with matched and missing skills",
+  "Browse jobs from 13 sources across Ghana, Africa and remote",
+  "Paste any advert (WhatsApp, agency list) and score it",
+  "CV upload, application tracker and daily job alerts",
 ];
 
 const PREMIUM_FEATURES = [
-  "Unlimited job analyses",
-  "Full skill gap breakdown",
-  "AI cover letters per job",
-  "Interview prep questions per role",
-  "CV optimization suggestions",
-  "Priority job alerts",
+  "Unlimited job-fit analyses",
+  "AI CV optimization tailored to each role",
+  "Unlimited AI cover letters",
+  "Unlimited AI mock interviews with scored feedback",
+  "CV rewrite and role-tailored CV versions",
   "Early access to new features",
 ];
 
@@ -32,15 +31,15 @@ const FAQS = [
   },
   {
     q: "What exactly is free?",
-    a: "You get 3 full job-fit analyses per month, basic match scores, job browsing, CV upload, and application tracking — no card needed.",
+    a: "Everything except unlimited AI. Free accounts get 3 AI credits a month (a job-fit analysis, a cover letter or a mock interview each cost one credit). Re-opening a job you've already analysed is always free. Job browsing, pasting adverts, CV storage, the application tracker and job alerts are unlimited.",
   },
   {
-    q: "What does the analysis include?",
-    a: "Premium analysis includes your full match percentage, every skill gap identified, how to fix your CV for that specific role, and tailored interview prep questions.",
+    q: "What does Premium add?",
+    a: "No credit limit, plus the tools that actually change your outcome: AI CV optimization written for the specific role, a full CV rewrite, unlimited cover letters and unlimited mock interviews with scored feedback.",
   },
   {
-    q: "Can I cancel anytime?",
-    a: "Yes. Cancel before your next billing date and you won't be charged. Your premium access continues until the end of the billing period.",
+    q: "Is this a subscription that charges me automatically?",
+    a: "No. You pay for one month or one year up front and nothing is ever debited from your wallet automatically. Before your period ends we email you a renewal link — if you don't renew, you simply drop back to the free plan and keep all your data.",
   },
   {
     q: "Is there a yearly plan?",
@@ -60,6 +59,8 @@ export default function PricingPage() {
   const [loading, setLoading] = useState(false);
   const [isPremium, setIsPremium] = useState(false);
   const [verifying, setVerifying] = useState(false);
+  const [verifyMessage, setVerifyMessage] = useState<string | null>(null);
+  const [verifyExhausted, setVerifyExhausted] = useState(false);
   const [annual, setAnnual] = useState(false);
   const isSuccess = searchParams.get("success") === "true";
   const paymentRef = searchParams.get("ref") || "";
@@ -78,20 +79,71 @@ export default function PricingPage() {
 
   useEffect(() => { checkPremium(); }, [checkPremium]);
 
+  // Returning from Moolre: actively verify the payment with the ref from
+  // the redirect instead of only polling and hoping the webhook landed.
+  // Verification is idempotent server-side, so racing the webhook is safe.
   useEffect(() => {
-    if (!isSuccess) return;
+    if (!isSuccess || !userId) return;
+    let cancelled = false;
     let attempts = 0;
-    const interval = setInterval(async () => {
+    const maxAttempts = 12; // ~45s including backoff
+
+    const tick = async () => {
+      if (cancelled) return;
       attempts++;
-      const res = await fetch("/api/user/premium").catch(() => null);
-      if (res?.ok) {
-        const d = await res.json();
-        if (d.isPremium) { posthog?.capture("premium_activated", { method: "auto_poll" }); setIsPremium(true); clearInterval(interval); }
+
+      if (paymentRef) {
+        try {
+          const res = await fetch("/api/payment/verify", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ref: paymentRef }),
+          });
+          const d = await res.json().catch(() => ({}));
+          if (cancelled) return;
+          if (d.isPremium) {
+            posthog?.capture("premium_activated", { method: "auto_verify", attempts });
+            setIsPremium(true);
+            return;
+          }
+          if (res.status === 400) {
+            // Terminal: amount mismatch or malformed ref — stop and surface it.
+            setVerifyMessage(d.error || d.message || null);
+            setVerifyExhausted(true);
+            return;
+          }
+          if (d.pending === false && d.message) {
+            setVerifyMessage(d.message);
+            setVerifyExhausted(true);
+            return;
+          }
+        } catch {
+          // network blip — fall through to retry
+        }
+      } else {
+        const res = await fetch("/api/user/premium").catch(() => null);
+        if (res?.ok) {
+          const d = await res.json();
+          if (cancelled) return;
+          if (d.isPremium) {
+            posthog?.capture("premium_activated", { method: "auto_poll", attempts });
+            setIsPremium(true);
+            return;
+          }
+        }
       }
-      if (attempts >= 8) clearInterval(interval);
-    }, 2000);
-    return () => clearInterval(interval);
-  }, [isSuccess, posthog]);
+
+      if (attempts >= maxAttempts) {
+        setVerifyExhausted(true);
+        return;
+      }
+      const delay = attempts < 4 ? 2000 : 5000;
+      setTimeout(tick, delay);
+    };
+
+    tick();
+    return () => { cancelled = true; };
+  }, [isSuccess, userId, paymentRef, posthog]);
 
   const handleManualVerify = async () => {
     if (!paymentRef) return;
@@ -108,7 +160,7 @@ export default function PricingPage() {
         setIsPremium(true);
         toast.success("Premium activated!");
       } else {
-        toast.error(d.message || "Payment not yet confirmed. Please wait and try again.");
+        toast.error(d.error || d.message || "Payment not yet confirmed. Please wait and try again.");
       }
     } catch {
       toast.error("Verification failed. Please try again.");
@@ -180,10 +232,24 @@ export default function PricingPage() {
           </>
         ) : (
           <>
-            <h1 className="text-2xl font-bold text-white mb-3">Verifying payment…</h1>
+            <h1 className="text-2xl font-bold text-white mb-3">
+              {verifyExhausted ? "Still confirming your payment" : "Verifying payment…"}
+            </h1>
             <p className="text-zinc-400 mb-6 leading-relaxed">
-              Your payment is being confirmed. This usually takes a few seconds.
+              {verifyMessage
+                ? verifyMessage
+                : verifyExhausted
+                  ? "Moolre hasn't confirmed this payment yet. If money left your wallet, you will be upgraded automatically as soon as it settles — or tap below to check again."
+                  : "We're confirming your payment with Moolre. This usually takes a few seconds."}
             </p>
+            {paymentRef && (
+              <p className="mono text-[10px] text-zinc-600 mb-4 break-all">Reference: {paymentRef}</p>
+            )}
+            {verifyExhausted && (
+              <p className="text-xs text-zinc-500 mb-4">
+                Need help? Email <a href={`mailto:support@careeros.live?subject=Payment%20${encodeURIComponent(paymentRef)}`} className="text-purple-400 hover:underline">support@careeros.live</a> with the reference above.
+              </p>
+            )}
             {paymentRef && (
               <button
                 onClick={handleManualVerify}
@@ -300,7 +366,7 @@ export default function PricingPage() {
             {annual ? (
               <p className="mono text-xs text-green-400 mb-7">GHS 16.58/month · save GHS 101/year</p>
             ) : (
-              <p className="mono text-xs text-zinc-600 mb-7">Cancel anytime · billed via Moolre</p>
+              <p className="mono text-xs text-zinc-600 mb-7">No auto-renewal · pay with MoMo via Moolre</p>
             )}
 
             <ul className="space-y-3 mb-8">
@@ -384,7 +450,7 @@ export default function PricingPage() {
             </div>
             <div>
               <p className="text-sm font-semibold text-white">Hiring?</p>
-              <p className="mono text-xs text-zinc-500">Post jobs and access a pre-scored candidate pool. From GHS 500/listing.</p>
+              <p className="mono text-xs text-zinc-500">Employer pilot: post a role and reach skill-matched seekers. First 10 employers free.</p>
             </div>
           </div>
           <a
@@ -401,7 +467,7 @@ export default function PricingPage() {
         {[
           { icon: "M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z", label: "Secure payment" },
           { icon: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z", label: "Instant access" },
-          { icon: "M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z", label: "Cancel anytime" },
+          { icon: "M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z", label: "No auto-renewal" },
         ].map((t) => (
           <div key={t.label} className="flex items-center gap-2">
             <svg className="h-4 w-4 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">

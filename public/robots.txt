@@ -11,7 +11,6 @@ Disallow: /profile/
 Disallow: /interview/
 Disallow: /referrals/
 Disallow: /cover-letter/
-Disallow: /pricing/
 Disallow: /guided-onboarding/
 
 Sitemap: https://careeros.live/sitemap.xml

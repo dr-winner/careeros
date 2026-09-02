@@ -4,29 +4,27 @@ import Link from "next/link";
 import { useState } from "react";
 
 const FREE_FEATURES = [
-  "3 job match analyses / month",
-  "Basic match score (% only)",
-  "Browse 9+ job sources",
-  "CV upload and storage",
-  "Application tracking",
+  "3 AI credits / month (analyses, cover letters, mock interviews)",
+  "Full match score with matched & missing skills",
+  "Jobs from 13 sources — Ghana, Africa & remote",
+  "Paste any advert from WhatsApp and score it",
+  "CV storage, application tracker, job alerts",
 ];
 
 const PREMIUM_FEATURES = [
-  "Unlimited job analyses",
-  "Full skill gap breakdown",
-  "AI cover letters per job",
-  "Interview prep questions per role",
-  "CV optimization suggestions",
-  "Priority job alerts",
+  "Unlimited job-fit analyses",
+  "AI CV optimization for each specific role",
+  "Unlimited AI cover letters",
+  "Unlimited AI mock interviews with feedback",
+  "CV rewrite & role-tailored CV versions",
   "Early access to new features",
 ];
 
 const EMPLOYER_FEATURES = [
-  "Post jobs directly on CareerOS",
-  "Pre-scored candidate pool",
-  "Filter by match % threshold",
-  "Monthly recruiter dashboard",
-  "Candidate contact details",
+  "Post roles directly on CareerOS",
+  "Shown to seekers whose skills match",
+  "Applicants arrive with a fit score",
+  "Pilot: first 10 employers free",
 ];
 
 export default function PricingSection() {
@@ -47,7 +45,7 @@ export default function PricingSection() {
             Simple plans. <span className="gradient-text">No contracts.</span>
           </h2>
           <p className="text-zinc-400 max-w-lg mx-auto mb-8">
-            Get started for free to test your fit. Upgrade to Premium for unlimited analyses, gap fixes, and interview prep.
+            Start free and see your real fit. Upgrade when you want unlimited AI and a CV rewritten for each role.
           </p>
 
           {/* Billing toggle */}
@@ -118,7 +116,7 @@ export default function PricingSection() {
           <div className="relative flex flex-col">
             <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
               <span className="px-3 py-0.5 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 mono text-[10px] font-bold text-white uppercase tracking-wider">
-                Most popular
+                Recommended
               </span>
             </div>
             <div className="rounded-2xl border border-purple-500/30 bg-[#0d0d18] overflow-hidden flex flex-col flex-1 relative">
@@ -137,7 +135,7 @@ export default function PricingSection() {
                 </p>
               ) : (
                 <p className="mono text-xs text-zinc-600 mb-7">
-                  Cancel anytime · billed via Moolre
+                  No auto-renewal · pay with MoMo via Moolre
                 </p>
               )}
 
@@ -191,7 +189,7 @@ export default function PricingSection() {
                 <span className="font-display text-4xl font-bold text-white">GHS 500</span>
                 <span className="text-zinc-500 text-sm">+/listing</span>
               </div>
-              <p className="mono text-xs text-zinc-600 mb-7">Or monthly dashboard access</p>
+              <p className="mono text-xs text-zinc-600 mb-7">Pilot pricing · per listing</p>
 
               <ul className="space-y-3 mb-8 flex-1">
                 {EMPLOYER_FEATURES.map((f) => (

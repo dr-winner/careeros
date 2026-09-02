@@ -27,6 +27,17 @@ export function parseExternalRef(ref: string): {
   return { userId, billingCycle: "lifetime" };
 }
 
+// Expected GHS per plan — activation asserts the paid amount covers the
+// plan, so a verified-but-underpaid transaction can never grant it.
+// Legacy lifetime refs predate amount encoding, so only status is checked.
+export function expectedPlanAmount(
+  billingCycle: "monthly" | "annual" | "lifetime",
+): number | null {
+  if (billingCycle === "monthly") return parseFloat(process.env.MOOLRE_MONTHLY_AMOUNT || "25");
+  if (billingCycle === "annual") return parseFloat(process.env.MOOLRE_ANNUAL_AMOUNT || "199");
+  return null;
+}
+
 // Compute the next period end date from now
 function periodEnd(billingCycle: "monthly" | "annual" | "lifetime"): Date | null {
   if (billingCycle === "lifetime") return null;

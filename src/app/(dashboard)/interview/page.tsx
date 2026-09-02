@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { INTERVIEW_QUESTIONS, QUESTION_CATEGORIES, ROLE_TYPES, ROLE_SPECIFIC_QUESTIONS } from "@/lib/interview-questions";
 import { toast } from "sonner";
 import { usePostHog } from "posthog-js/react";
+import PaywallModal from "@/components/paywall-modal";
 
 const ALL_QUESTIONS = [...INTERVIEW_QUESTIONS, ...ROLE_SPECIFIC_QUESTIONS];
 
@@ -47,6 +48,7 @@ export default function InterviewPrepPage() {
   const [selectedRole, setSelectedRole] = useState("Software Engineer");
   const [experienceLevel, setExperienceLevel] = useState("Mid-level");
   const [isSaving, setIsSaving] = useState(false);
+  const [showPaywall, setShowPaywall] = useState(false);
 
   // Past Sessions
   const [pastSessions, setPastSessions] = useState<PastSession[]>([]);
@@ -112,6 +114,13 @@ export default function InterviewPrepPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "start", role: selectedRole, experienceLevel }),
       });
+
+      if (response.status === 402) {
+        setIsInterviewing(false);
+        setShowPaywall(true);
+        posthog?.capture("paywall_shown", { feature: "mock_interview" });
+        return;
+      }
 
       const data = await response.json();
       if (data.error) throw new Error(data.error);
@@ -272,6 +281,12 @@ export default function InterviewPrepPage() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
+      <PaywallModal
+        isOpen={showPaywall}
+        onClose={() => setShowPaywall(false)}
+        feature="mock_interview"
+        title="Monthly credits used"
+      />
       {/* Header + tabs */}
       <div className="animate-fade-up flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -435,8 +450,11 @@ export default function InterviewPrepPage() {
                   </svg>
                 </div>
                 <h2 className="text-xl font-bold text-white mb-2">AI Mock Interview</h2>
-                <p className="text-sm text-zinc-400 mb-7 max-w-md mx-auto leading-relaxed">
+                <p className="text-sm text-zinc-400 mb-2 max-w-md mx-auto leading-relaxed">
                   Practice with our AI interviewer. Get real questions, give your answers, and receive detailed feedback.
+                </p>
+                <p className="mono text-[10px] text-zinc-600 mb-7">
+                  Free plan: one session uses 1 of your monthly AI credits · unlimited on Premium
                 </p>
 
                 <div className="grid grid-cols-2 gap-4 mb-7 text-left">

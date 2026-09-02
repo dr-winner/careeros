@@ -208,7 +208,7 @@ export default function LeadMagnet() {
 
               <div className="space-y-3">
                 <p className="text-xs text-zinc-400 max-w-xs mx-auto leading-relaxed">
-                  Your free account shows every gap, exactly how to fix your CV for this job, and 3 full analyses a month — free forever.
+                  Your free account reveals every missing requirement for this job and gives you 3 AI credits a month — free forever. Premium adds the CV rewrite for each role.
                 </p>
                 <div className="flex items-center justify-center gap-3">
                   <button

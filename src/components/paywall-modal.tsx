@@ -61,22 +61,24 @@ export default function PaywallModal({
             </div>
 
             <h3 className="text-xl font-bold text-white mb-2">
-              {feature === "job_analysis" ? "You've used your 3 free analyses" : "Unlock Premium Features"}
+              {feature === "job_analysis" || feature === "mock_interview" || feature === "cover_letter"
+                ? "You've used this month's 3 free AI credits"
+                : "Unlock Premium"}
             </h3>
             <p className="text-sm text-zinc-400 mb-6 max-w-xs mx-auto">
-              {feature === "job_analysis"
-                ? "Free plan includes 3 job analyses per month. Upgrade for unlimited — coffee money at GHS 25/month."
-                : "Get unlimited analyses, CV optimization, cover letters, and interview prep."}
+              {feature === "job_analysis" || feature === "mock_interview" || feature === "cover_letter"
+                ? "Credits reset next month. Or go unlimited now for GHS 25/month — less than one trotro fare a day — and pay with MoMo."
+                : "Premium removes every limit: unlimited analyses, CV optimization for each role, cover letters and mock interviews."}
             </p>
 
             <div className="rounded-xl border border-purple-500/20 bg-purple-500/5 p-4 mb-6 text-left">
               <ul className="space-y-2">
                 {[
-                  "Unlimited job analyses",
-                  "Full skill gap breakdown",
-                  "AI cover letters per job",
-                  "Interview prep questions",
-                  "CV optimization suggestions",
+                  "Unlimited job-fit analyses",
+                  "AI CV optimization for each role",
+                  "Unlimited AI cover letters",
+                  "Unlimited AI mock interviews",
+                  "CV rewrite and role-tailored versions",
                 ].map((item, i) => (
                   <li key={i} className="flex items-center gap-2 text-sm text-zinc-300">
                     <svg className="h-4 w-4 text-purple-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">

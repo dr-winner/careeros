@@ -38,6 +38,7 @@ interface Job {
   salaryMax?: number;
   isSaved: boolean;
   applicationUrl: string;
+  source?: string;
 }
 
 export default function JobDetailPage() {
@@ -62,6 +63,10 @@ export default function JobDetailPage() {
   const [quotaRemaining, setQuotaRemaining] = useState<number | null>(null);
   const [analysisFeedback, setAnalysisFeedback] = useState<"up" | "down" | null>(null);
   const [lowConfidence, setLowConfidence] = useState(false);
+  const [analysisCached, setAnalysisCached] = useState(false);
+  const [analyzedAt, setAnalyzedAt] = useState<string | null>(null);
+  const [needsDescription, setNeedsDescription] = useState(false);
+  const [pastedDescription, setPastedDescription] = useState("");
   const [cvOptimization, setCvOptimization] = useState<{
     content: string[];
     format: string[];
@@ -97,7 +102,7 @@ export default function JobDetailPage() {
   };
 
   const analyzeFit = useCallback(
-    async (jobData: Job) => {
+    async (jobData: Job, force = false, descriptionOverride?: string) => {
       if (!userId) return;
       setAnalyzing(true);
       setAnalysisFeedback(null);
@@ -108,7 +113,9 @@ export default function JobDetailPage() {
           body: JSON.stringify({
             jobId: jobData.id,
             jobTitle: jobData.title,
-            jobDescription: jobData.description,
+            companyName: jobData.companyName,
+            jobDescription: descriptionOverride || jobData.description,
+            force,
           }),
         });
         if (response.status === 402) {
@@ -117,6 +124,14 @@ export default function JobDetailPage() {
           return;
         }
         const data = await response.json();
+        if (data.needsDescription) {
+          setNeedsDescription(true);
+          return;
+        }
+        setNeedsDescription(false);
+        if (descriptionOverride) {
+          setJob((prev) => (prev ? { ...prev, description: descriptionOverride } : prev));
+        }
         if (data.analysis) {
           setFitScore(data.analysis.fitScore);
           setMatchedSkills(data.analysis.matchedSkills || []);
@@ -130,11 +145,15 @@ export default function JobDetailPage() {
           if (data.analysis.isPremium !== undefined) setIsPremium(data.analysis.isPremium);
           if (data.analysis.quota?.remaining !== undefined) setQuotaRemaining(data.analysis.quota.remaining);
           setLowConfidence(!!data.analysis.lowConfidence);
-          analytics.jobAnalyzed({
-            score: data.analysis.fitScore,
-            jobTitle: jobData.title,
-            isPremium: data.analysis.isPremium ?? false,
-          });
+          setAnalysisCached(!!data.analysis.cached);
+          setAnalyzedAt(data.analysis.analyzedAt ?? null);
+          if (!data.analysis.cached) {
+            analytics.jobAnalyzed({
+              score: data.analysis.fitScore,
+              jobTitle: jobData.title,
+              isPremium: data.analysis.isPremium ?? false,
+            });
+          }
         }
       } catch (error) {
         console.error("Error analyzing fit:", error);
@@ -475,7 +494,7 @@ export default function JobDetailPage() {
         </div>
       )}
 
-      {userId && !hasResume && !analyzing && fitScore === null && (
+      {userId && !hasResume && !analyzing && fitScore === null && !needsDescription && (
         <div className="agent-card p-6 animate-fade-up border-amber-500/20">
           <div className="flex items-start gap-4">
             <div className="h-10 w-10 rounded-lg bg-amber-500/20 flex items-center justify-center flex-shrink-0">
@@ -489,6 +508,50 @@ export default function JobDetailPage() {
               <Link href="/resumes" className="agent-button mt-3 inline-flex">
                 Upload CV
               </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {userId && needsDescription && !analyzing && fitScore === null && (
+        <div className="agent-card p-6 animate-fade-up border-cyan-500/20">
+          <div className="flex items-start gap-4">
+            <div className="h-10 w-10 rounded-lg bg-cyan-500/20 flex items-center justify-center flex-shrink-0">
+              <svg className="h-5 w-5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <h3 className="text-sm font-medium text-cyan-400">This listing came without the full advert</h3>
+              <p className="mono text-xs text-zinc-500 mt-1 leading-relaxed">
+                {job.source || "This source"} only shares the title. Open the posting, copy the requirements, and paste them here for a real score. No credit is used until there is something to analyse.
+              </p>
+              <textarea
+                value={pastedDescription}
+                onChange={(e) => setPastedDescription(e.target.value)}
+                rows={6}
+                placeholder="Paste the job requirements / responsibilities here…"
+                className="agent-input mt-3 w-full text-xs"
+              />
+              <div className="mt-3 flex items-center gap-3 flex-wrap">
+                <button
+                  onClick={() => analyzeFit(job, true, pastedDescription.trim())}
+                  disabled={pastedDescription.trim().length < 80}
+                  className="agent-button-primary disabled:opacity-40"
+                >
+                  {isPremium ? "Analyse my fit" : "Analyse my fit · 1 credit"}
+                </button>
+                {job.applicationUrl && job.applicationUrl !== "#" && (
+                  <a
+                    href={job.applicationUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mono text-xs text-zinc-500 hover:text-cyan-400"
+                  >
+                    Open the posting →
+                  </a>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -586,18 +649,31 @@ export default function JobDetailPage() {
                     ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
                     : "bg-white/[0.04] text-zinc-500 border-white/[0.06]"
                 } whitespace-nowrap`}>
-                  {quotaRemaining} left this month
+                  {quotaRemaining} credit{quotaRemaining === 1 ? "" : "s"} left this month
+                </span>
+              )}
+              {analysisCached && analyzedAt && (
+                <span className="mono text-[10px] text-zinc-600 whitespace-nowrap">
+                  Saved {formatDate(analyzedAt)} · free to revisit
                 </span>
               )}
             </div>
             <button
-              onClick={() => job && analyzeFit(job)}
+              onClick={() => {
+                if (!job) return;
+                if (!isPremium && quotaRemaining === 0) {
+                  setShowPaywall(true);
+                  return;
+                }
+                analyzeFit(job, true);
+              }}
+              title={isPremium ? "Run a fresh analysis" : "Runs a fresh AI analysis · uses 1 credit"}
               className="mono text-xs text-cyan-400 hover:text-cyan-300 flex items-center gap-1 whitespace-nowrap flex-shrink-0"
             >
               <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
-              Re-analyze
+              {isPremium ? "Re-analyze" : "Re-analyze · 1 credit"}
             </button>
           </div>
 
@@ -719,9 +795,15 @@ export default function JobDetailPage() {
 
       <div className="agent-card p-6 animate-fade-up">
         <p className="section-label">Job Description</p>
-        <div className="text-sm text-zinc-300 whitespace-pre-wrap leading-relaxed">
-          {stripHtml(job.description)}
-        </div>
+        {stripHtml(job.description || "").trim().length > 0 ? (
+          <div className="text-sm text-zinc-300 whitespace-pre-wrap leading-relaxed">
+            {stripHtml(job.description)}
+          </div>
+        ) : (
+          <p className="mono text-xs text-zinc-500 leading-relaxed">
+            {job.source || "This source"} didn&apos;t include the advert text in its feed. The full description, requirements and salary are on the original posting.
+          </p>
+        )}
       </div>
 
       <div className="agent-card p-6 animate-fade-up">
@@ -877,7 +959,7 @@ export default function JobDetailPage() {
                   Update My CV
                 </Link>
                 <button
-                  onClick={() => { setShowOptimizeModal(false); analyzeFit(job!); }}
+                  onClick={() => { setShowOptimizeModal(false); analyzeFit(job!, true); }}
                   className="flex-1 agent-button text-center justify-center press-scale"
                 >
                   Re-analyze

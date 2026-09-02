@@ -435,7 +435,7 @@ export default function DashboardPage() {
               <div className="flex-1 min-w-[220px]">
                 <div className="flex items-center justify-between mb-2">
                   <p className="mono text-xs text-zinc-500 uppercase tracking-widest">
-                    Free plan · AI analyses
+                    Free plan · AI credits
                   </p>
                   <p className={`mono text-xs font-bold ${
                     quota.remaining === 0 ? "text-red-400" : quota.remaining === 1 ? "text-amber-400" : "text-zinc-300"
@@ -456,15 +456,24 @@ export default function DashboardPage() {
                   />
                 </div>
                 <p className="mono text-[10px] text-zinc-600 mt-1.5">
-                  Resets {new Date(quota.resetAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                  1 credit = a job analysis, cover letter or mock interview · re-opening analysed jobs is free · resets {new Date(quota.resetAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
                 </p>
               </div>
-              <Link
-                href="/pricing"
-                className="agent-button-primary px-5 py-2.5 text-sm font-bold press-scale flex-shrink-0"
-              >
-                {quota.remaining === 0 ? "Upgrade — unlock unlimited" : "Go unlimited — GHS 25/mo"}
-              </Link>
+              {quota.remaining <= 1 ? (
+                <Link
+                  href="/pricing"
+                  className="agent-button-primary px-5 py-2.5 text-sm font-bold press-scale flex-shrink-0"
+                >
+                  {quota.remaining === 0 ? "Upgrade — unlock unlimited" : "Go unlimited — GHS 25/mo"}
+                </Link>
+              ) : (
+                <Link
+                  href="/pricing"
+                  className="mono text-xs text-zinc-500 hover:text-purple-300 transition-colors flex-shrink-0"
+                >
+                  What Premium adds →
+                </Link>
+              )}
             </div>
           </div>
         )}
@@ -648,10 +657,10 @@ export default function DashboardPage() {
             <div className="absolute -right-4 -bottom-4 text-5xl opacity-10 select-none group-hover:scale-110 transition-transform duration-300 pointer-events-none">🎁</div>
             <h4 className="text-sm font-semibold text-white mb-1.5 flex items-center gap-2">
               <span className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
-              Earn Free Analyses
+              Invite friends, earn credits and cash
             </h4>
             <p className="text-xs text-zinc-400 leading-relaxed mb-4">
-              Invite friends to CareerOS. When they join and run a fit check, you instantly get 1 bonus match check added to your quota!
+              When a friend joins and runs their first fit check you get +1 AI credit. When they go Premium you get GHS 5 to your MoMo.
             </p>
             <Link
               href="/referrals"

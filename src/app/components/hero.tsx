@@ -112,7 +112,7 @@ export default function Hero() {
         {/* Compact stats — the real interactive demo is one scroll below */}
         <div className="animate-fade-up delay-600 mt-14 grid grid-cols-3 gap-4 max-w-sm mx-auto">
           {[
-            { value: "9+", label: "live job sources" },
+            { value: "13", label: "live job sources" },
             { value: "Free", label: "to get started" },
             { value: "< 30s", label: "to your first score" },
           ].map((stat) => (

@@ -1,6 +1,4 @@
-const CACHE_NAME = 'careeros-v2';
-const STATIC_CACHE = 'careeros-static-v2';
-const API_CACHE = 'careeros-api-v2';
+const STATIC_CACHE = 'careeros-static-v3';
 const OFFLINE_URL = '/offline.html';
 
 const STATIC_ASSETS = [
@@ -18,11 +16,6 @@ const CACHE_STRATEGIES = {
     pattern: /\.(js|css|png|jpg|jpeg|svg|ico|woff2?)$/,
     strategy: 'cache-first',
     maxAge: 60 * 60 * 24 * 7,
-  },
-  api: {
-    pattern: /\/api\//,
-    strategy: 'network-first',
-    maxAge: 60 * 5,
   },
   pages: {
     pattern: /\/(dashboard|jobs|saved-jobs|applications|resumes|interview|analytics|alerts|profile|cover-letter)$/,
@@ -45,7 +38,7 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames
-          .filter((name) => name !== STATIC_CACHE && name !== API_CACHE)
+          .filter((name) => name !== STATIC_CACHE)
           .map((name) => caches.delete(name))
       );
     })
@@ -61,6 +54,13 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Authenticated, per-user API responses (premium status, quota, saved
+  // jobs) must never be served from a cache — a stale copy can show a
+  // paying user as free or a spent credit as available.
+  if (url.pathname.startsWith('/api/') || request.method !== 'GET') {
+    return;
+  }
+
   const cacheStrategy = getCacheStrategy(request);
 
   event.respondWith(handleFetch(request, cacheStrategy));
@@ -71,9 +71,6 @@ function getCacheStrategy(request) {
 
   if (CACHE_STRATEGIES.static.pattern.test(url)) {
     return { ...CACHE_STRATEGIES.static, cache: STATIC_CACHE };
-  }
-  if (CACHE_STRATEGIES.api.pattern.test(url)) {
-    return { ...CACHE_STRATEGIES.api, cache: API_CACHE };
   }
   if (CACHE_STRATEGIES.pages.pattern.test(url)) {
     return { ...CACHE_STRATEGIES.pages, cache: STATIC_CACHE };

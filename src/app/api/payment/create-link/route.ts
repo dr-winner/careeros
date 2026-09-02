@@ -49,9 +49,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Block if already on an active or lifetime plan
-    if (user.isPremium && (user.subscriptionStatus === "active" || !user.subscriptionStatus)) {
-      return NextResponse.json({ error: "Already premium" }, { status: 400 });
+    // Block if already on an active or lifetime plan. Users whose period
+    // has expired/cancelled (status "expired"/"cancelled") may re-subscribe.
+    if (
+      user.isPremium &&
+      (user.subscriptionStatus === "active" ||
+        user.subscriptionStatus === "lifetime" ||
+        !user.subscriptionStatus)
+    ) {
+      return NextResponse.json(
+        { error: user.subscriptionStatus === "lifetime" ? "You already have lifetime Premium" : "Already premium" },
+        { status: 400 },
+      );
     }
 
     // Format: co-{userId}-{planCode}-{timestamp}
