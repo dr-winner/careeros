@@ -108,12 +108,19 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!isLoaded || !userId) return;
 
+    const fallbackAction = {
+      action: "Find today's matches",
+      description: "Browse the feed and analyse anything that looks close — you'll see exactly what to fix before applying.",
+      priority: "medium",
+      link: "/jobs",
+      icon: "search",
+    };
     fetch("/api/ai/next-action")
       .then(res => res.json())
       .then(data => {
-        if (!data.error) setNextAction(data);
+        setNextAction(data.error ? fallbackAction : data);
       })
-      .catch(console.error)
+      .catch(() => setNextAction(fallbackAction))
       .finally(() => setIsLoadingAction(false));
 
     fetch("/api/user/premium")

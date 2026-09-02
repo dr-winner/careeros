@@ -1,76 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getDbUserId } from "@/lib/auth";
-import { generateWithFallback } from "@/lib/ai";
+import { AiUnavailableError, generateWithFallback } from "@/lib/ai";
 import { hasAiProviderConfigured } from "@/lib/env";
 import { isUserPremium } from "@/lib/auth";
 import { checkRateLimit, getRateLimitHeaders, RATE_LIMITS } from "@/lib/ratelimit";
 import { ensureJobRecord } from "@/lib/jobs";
 import { checkQuota, claimQuota, releaseQuota } from "@/lib/quota";
 import { sendReferralConvertedEmail } from "@/lib/transactional-emails";
+import { SOFT_SKILLS, canonicalizeSkill, extractSkills } from "@/lib/skills";
 
 // Below this the "description" is a category label or a stub, not an advert.
 const MIN_DESCRIPTION_CHARS = 80;
-
-const SKILL_KEYWORDS: Record<string, string[]> = {
-  JavaScript: ["javascript", "js", "ecmascript"],
-  TypeScript: ["typescript", "ts"],
-  React: ["react", "reactjs", "react.js", "nextjs", "next.js"],
-  Vue: ["vue", "vuejs", "vue.js", "nuxt"],
-  Angular: ["angular", "angularjs"],
-  "Node.js": ["node", "nodejs", "node.js", "express", "expressjs"],
-  Python: ["python", "django", "flask", "fastapi", "pandas", "numpy"],
-  Java: ["java", "spring", "springboot", "spring boot", "jvm"],
-  "C#": ["c#", "csharp", ".net", "dotnet", "asp.net"],
-  PHP: ["php", "laravel", "codeigniter", "wordpress"],
-  Ruby: ["ruby", "ruby on rails", "rails"],
-  Go: ["golang", "go programming"],
-  Rust: ["rust", "rustlang"],
-  Swift: ["swift", "ios", "swiftui"],
-  Kotlin: ["kotlin", "android"],
-  Flutter: ["flutter", "dart"],
-  "React Native": ["react native", "rn"],
-  SQL: ["sql", "mysql", "postgresql", "postgres", "sqlite", "mssql", "database"],
-  MongoDB: ["mongodb", "mongo", "nosql"],
-  Redis: ["redis", "cache"],
-  AWS: ["aws", "amazon web services", "ec2", "s3", "lambda"],
-  Azure: ["azure", "microsoft azure", "azure devops"],
-  GCP: ["gcp", "google cloud", "google cloud platform"],
-  Docker: ["docker", "container", "containerization"],
-  Kubernetes: ["kubernetes", "k8s", "helm"],
-  "CI/CD": ["ci/cd", "jenkins", "gitlab ci", "github actions", "pipeline"],
-  Git: ["git", "github", "gitlab", "bitbucket", "version control"],
-  Linux: ["linux", "unix", "bash", "shell"],
-  "Machine Learning": ["machine learning", "ml", "tensorflow", "pytorch", "keras"],
-  "Data Analysis": ["data analysis", "analytics", "tableau", "power bi"],
-  Agile: ["agile", "scrum", "kanban", "jira"],
-  Leadership: ["leadership", "team lead", "mentoring", "management"],
-  Communication: ["communication", "stakeholder", "presentation"],
-  "Project Management": ["project management", "pmp"],
-  Marketing: ["marketing", "seo", "sem", "digital marketing"],
-  Sales: ["sales", "crm", "salesforce", "business development"],
-  Finance: ["finance", "accounting", "financial analysis"],
-  HR: ["hr", "human resources", "recruitment"],
-  "Graphic Design": ["graphic design", "photoshop", "illustrator", "figma"],
-  "UI/UX": ["ui/ux", "ui design", "ux design", "user experience"],
-  Networking: ["networking", "cisco", "ccna", "network security"],
-  Cybersecurity: ["cybersecurity", "security", "penetration testing"],
-  API: ["api", "rest api", "restful", "graphql"],
-  Testing: ["testing", "qa", "selenium", "jest", "unit test"],
-  Microservices: ["microservices", "service mesh"],
-  Cloud: ["cloud", "cloud computing", "serverless"],
-};
-
-function extractSkills(text: string): string[] {
-  const lowerText = text.toLowerCase();
-  const foundSkills: string[] = [];
-  for (const [skill, keywords] of Object.entries(SKILL_KEYWORDS)) {
-    if (keywords.some((kw) => lowerText.includes(kw))) {
-      foundSkills.push(skill);
-    }
-  }
-  return foundSkills;
-}
 
 const getVerdict = (s: number) => {
   if (s >= 80) return "Strong Match";
@@ -168,24 +109,25 @@ export async function POST(request: NextRequest) {
     const profileSkills = extractSkills(
       [user?.headline || "", user?.experience || "", user?.desiredRole || ""].join(" "),
     );
-    const resumeSkills =
+    const rawResumeSkills =
       user?.resumes[0]?.skills?.map((s: { skillName: string }) => s.skillName) || [];
+    // CV skills arrive as raw parser output ("React and Next.js", "and Python",
+    // "richard · github.com"). Map them onto the dictionary so they compare
+    // like-for-like with the advert, and drop fragments that aren't skills.
+    const resumeSkills = rawResumeSkills.flatMap((s: string) => canonicalizeSkill(s));
     const experiences = user?.resumes[0]?.experiences || [];
     const education = user?.resumes[0]?.education || [];
     const allUserSkills = [...new Set([...profileSkills, ...resumeSkills])];
-    const jobSkills = extractSkills(jobDescription || "");
+    const allJobSkills = extractSkills(jobDescription || "");
+    // Score on hard requirements; soft skills only count if that's all there is.
+    const hardJobSkills = allJobSkills.filter((s) => !SOFT_SKILLS.has(s));
+    const jobSkills = hardJobSkills.length > 0 ? hardJobSkills : allJobSkills;
 
-    const matched = allUserSkills.filter((skill) =>
-      jobSkills.some(
-        (j) =>
-          j.toLowerCase() === skill.toLowerCase() ||
-          skill.toLowerCase().includes(j.toLowerCase()) ||
-          j.toLowerCase().includes(skill.toLowerCase()),
-      ),
-    );
-    const missing = jobSkills.filter(
-      (j) => !matched.some((m) => m.toLowerCase() === j.toLowerCase()),
-    );
+    // Exact canonical overlap only. The old "either contains the other" rule
+    // let a React CV claim React Native and a Java CV claim JavaScript.
+    const userSkillSet = new Set(allUserSkills.map((s) => s.toLowerCase()));
+    const matched = jobSkills.filter((j) => userSkillSet.has(j.toLowerCase()));
+    const missing = jobSkills.filter((j) => !userSkillSet.has(j.toLowerCase()));
 
     let score =
       jobSkills.length > 0
@@ -320,6 +262,10 @@ export async function POST(request: NextRequest) {
     // today because model output only affects the requesting user's own
     // displayed score/advice and scores are clamped — revisit if AI output
     // ever gains authority (auto-actions, payments, other users' data).
+    // Set when every provider fails. The user then sees a keyword estimate,
+    // which must not cost a credit and must not wear the "AI" badge.
+    let aiUnavailable = false;
+
     if (hasAI && jobDescription) {
       // AI narrative analysis for ALL users — brief summary of fit + AI-scored fitScore
       try {
@@ -364,10 +310,17 @@ Return ONLY this JSON (no markdown). Use "you"/"your" throughout, never "the can
         }
       } catch (err) {
         console.error("AI narrative error:", err);
+        if (err instanceof AiUnavailableError) {
+          aiUnavailable = true;
+          if (refund) {
+            await refund().catch(() => {});
+            refund = null;
+          }
+        }
       }
 
       // AI CV optimization — premium only
-      if (isPremium && missing.length > 0) {
+      if (isPremium && missing.length > 0 && !aiUnavailable) {
         try {
           const optimizePrompt = `You are an expert CV optimization specialist for the African job market. Speak directly to the user using "you"/"your".
 
@@ -496,17 +449,22 @@ Return ONLY this JSON (no markdown):
         cvAdvice,
         cvOptimization: isPremium ? cvOptimization : null,
         aiNarrative,
-        aiEnabled: hasAI,
+        aiEnabled: hasAI && !aiUnavailable,
+        aiUnavailable,
         isPremium,
         premiumRequired: !isPremium && missing.length > 0,
         profileIncomplete,
         lowConfidence,
         cached: false,
-        charged: !isPremium,
+        charged: !isPremium && !aiUnavailable,
         analyzedAt,
         quota: isPremium
           ? null
-          : { remaining: quota.remaining, limit: quota.limit, resetAt: quota.resetAt },
+          : {
+              remaining: aiUnavailable ? quota.remaining + 1 : quota.remaining,
+              limit: quota.limit,
+              resetAt: quota.resetAt,
+            },
       },
     });
   } catch (error) {

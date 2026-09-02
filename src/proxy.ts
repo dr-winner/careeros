@@ -22,6 +22,8 @@ const isPublicRoute = createRouteMatcher([
   "/api/jobs/create(.*)",
   // Anonymous landing-page fit preview; strict per-IP limit, no storage.
   "/api/fit-preview(.*)",
+  // Token-free health flag so the landing page can say "AI is busy" honestly.
+  "/api/ai/status",
 ]);
 
 const isLandingPage = createRouteMatcher(["/"]);

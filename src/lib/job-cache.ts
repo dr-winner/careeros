@@ -122,6 +122,14 @@ export function getCachedValue<T>(key: string): T | null {
   return entry.value as T;
 }
 
+// Redis-first read for state that must be visible across serverless
+// instances (e.g. "AI provider is down"), falling back to the local store.
+export async function readCachedValue<T>(key: string): Promise<T | null> {
+  const redisCached = await getRedisValue<T>(key);
+  if (redisCached !== null) return redisCached;
+  return getCachedValue<T>(key);
+}
+
 export function setCachedValue<T>(key: string, value: T, ttlMs: number): T {
   const store = getLocalStore();
   const safeTtl = Math.max(0, ttlMs);

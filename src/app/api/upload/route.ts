@@ -68,59 +68,13 @@ function parseCVText(text: string): ParsedResumeData {
     .map((line) => line.trim())
     .filter(Boolean);
 
-  const skills: string[] = [];
   const experience: { title: string; company: string | null }[] = [];
   const education: { institution: string; degree: string | null }[] = [];
 
-  const skillKeywords = [
-    "javascript",
-    "typescript",
-    "react",
-    "node",
-    "python",
-    "java",
-    "c++",
-    "c#",
-    "html",
-    "css",
-    "sql",
-    "mongodb",
-    "postgresql",
-    "aws",
-    "docker",
-    "kubernetes",
-    "git",
-    "github",
-    "figma",
-    "photoshop",
-    "excel",
-    "word",
-    "powerpoint",
-    "communication",
-    "leadership",
-    "teamwork",
-    "problem solving",
-    "analytical",
-    "project management",
-    "agile",
-    "scrum",
-    "machine learning",
-    "data analysis",
-  ];
-
-  for (const line of lines) {
-    const lowerLine = line.toLowerCase();
-
-    if (skillKeywords.some((keyword) => lowerLine.includes(keyword))) {
-      const parts = line.split(/[,@|/]/).map((part) => part.trim());
-
-      for (const part of parts) {
-        if (part.length > 2 && part.length < 40 && !skills.includes(part)) {
-          skills.push(part);
-        }
-      }
-    }
-  }
+  // Dictionary scan over the whole text. The previous approach split any
+  // line containing a keyword on commas/slashes and stored every fragment,
+  // which is how "and Python" and "richard · github.com" ended up as skills.
+  const skills = extractSkills(text);
 
   const experiencePatterns = [
     /^(software|frontend|backend|full.?stack|web|mobile|data|devops|cloud|product|project|marketing|sales|hr)/i,
@@ -161,7 +115,7 @@ function parseCVText(text: string): ParsedResumeData {
   const nameMatch = text.match(/^([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})$/m);
 
   return {
-    skills: [...new Set(skills)].slice(0, 15),
+    skills: skills.slice(0, 25),
     experience: experience.slice(0, 5),
     education: education.slice(0, 3),
     name: nameMatch ? nameMatch[1] : null,
@@ -214,10 +168,15 @@ Rules: skills are 1-5 words each, proper casing, no duplicates, 10-40 total. Use
       parsed = JSON.parse(match[0]);
     }
 
-    const cleanSkills = (parsed.skills || [])
-      .filter((s) => typeof s === "string" && s.trim().length > 1 && s.trim().length < 60)
-      .map((s) => s.trim())
-      .slice(0, 40);
+    // Canonicalise where the dictionary knows the skill (so "ReactJS" and
+    // "React" don't both get stored) and keep well-formed labels it doesn't.
+    const cleanSkills = [
+      ...new Set(
+        (parsed.skills || [])
+          .filter((s): s is string => typeof s === "string")
+          .flatMap((s) => canonicalizeSkill(s)),
+      ),
+    ].slice(0, 40);
 
     if (cleanSkills.length > 0) {
       await prisma.resumeSkill.createMany({

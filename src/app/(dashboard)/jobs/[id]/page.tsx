@@ -636,9 +636,16 @@ export default function JobDetailPage() {
               <span className="text-xs text-zinc-500 whitespace-nowrap">
                 {hasResume ? "CV Analysis" : "Profile Analysis"}
               </span>
-              {aiEnabled && (
+              {aiEnabled ? (
                 <span className="px-2 py-0.5 rounded text-xs bg-purple-500/20 text-purple-400 border border-purple-500/30">
                   AI
+                </span>
+              ) : (
+                <span
+                  className="px-2 py-0.5 rounded text-xs bg-amber-500/10 text-amber-300 border border-amber-500/20"
+                  title="Our AI is unavailable right now, so this is a keyword overlap only. No credit was used — re-analyse later for the full reading."
+                >
+                  Keyword estimate · AI unavailable
                 </span>
               )}
               {!isPremium && quotaRemaining !== null && (

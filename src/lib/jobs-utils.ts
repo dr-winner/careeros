@@ -1,3 +1,5 @@
+import { SKILL_KEYWORDS, canonicalizeSkill, skillMentioned } from "./skills";
+
 export interface JobFilters {
   workMode?: string;
   seniority?: string;
@@ -320,11 +322,24 @@ export function quickMatchScore(
   userSkills: string[],
   jobText: string,
 ): { score: number; matched: string[] } {
-  const cleanSkills = [...new Set(userSkills.map((s) => s.trim().toLowerCase()).filter((s) => s.length > 1))];
+  // Canonicalise first so "React and Next.js" from the CV parser counts as
+  // React, and fragments like "and Python" don't count twice.
+  const cleanSkills = [
+    ...new Set(
+      userSkills
+        .flatMap((s) => canonicalizeSkill(s))
+        .map((s) => s.trim().toLowerCase())
+        .filter((s) => s.length > 1),
+    ),
+  ];
   if (cleanSkills.length === 0 || !jobText) return { score: 0, matched: [] };
 
-  const text = jobText.toLowerCase();
-  const matched = cleanSkills.filter((skill) => text.includes(skill));
+  // Whole-token match; raw substring checks let "go" hit "Google" and "c"
+  // hit everything.
+  const canonicalByLower = new Map(Object.keys(SKILL_KEYWORDS).map((k) => [k.toLowerCase(), k]));
+  const matched = cleanSkills.filter((skill) =>
+    skillMentioned(jobText, canonicalByLower.get(skill) ?? skill),
+  );
 
   // Denominator is capped so users with very long skill lists aren't
   // punished, and floored so one lucky hit can't read as a strong match.

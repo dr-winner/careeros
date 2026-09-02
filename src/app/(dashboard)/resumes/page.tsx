@@ -264,8 +264,9 @@ export default function CVsPage() {
       });
       const data = await response.json();
       if (response.ok && data.coverLetter) { setCoverLetter(data.coverLetter); toast.success("Cover letter generated!"); }
-      else { generateTemplateCoverLetter(); }
-    } catch { generateTemplateCoverLetter(); } finally { setGenerating(false); }
+      else if (response.status === 402) { toast.error("Monthly AI credits used up — here's a starter template instead."); generateTemplateCoverLetter(); }
+      else { toast.error("Our AI is unavailable right now — here's a starter template to edit. No credit was used."); generateTemplateCoverLetter(); }
+    } catch { toast.error("Couldn't reach the AI — here's a starter template to edit."); generateTemplateCoverLetter(); } finally { setGenerating(false); }
   };
 
   const generateTemplateCoverLetter = () => {

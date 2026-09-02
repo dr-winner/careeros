@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { toast } from "sonner";
 import { usePostHog } from "posthog-js/react";
+import { AiOutageNotice, AiStatusBadge, useAiStatus } from "@/components/ai-status";
 
 interface UserProfile {
   fullName: string | null;
@@ -30,6 +31,10 @@ export default function CoverLetterPage() {
   });
 
   const [coverLetter, setCoverLetter] = useState("");
+  // "template" means the AI call failed and the user is looking at a generic
+  // starter — they must be told, or they'll send it as-is.
+  const [letterSource, setLetterSource] = useState<"ai" | "template" | null>(null);
+  const aiStatus = useAiStatus();
 
   useEffect(() => {
     if (userId) {
@@ -75,6 +80,7 @@ export default function CoverLetterPage() {
 
       if (response.ok && data.coverLetter) {
         setCoverLetter(data.coverLetter);
+        setLetterSource("ai");
         posthog?.capture("cover_letter_generated", {
           job_title: formData.jobTitle,
           company_name: formData.companyName,
@@ -83,17 +89,14 @@ export default function CoverLetterPage() {
         });
         toast.success("Cover letter generated!");
       } else if (response.status === 402) {
-        toast.error("Monthly AI limit reached — using a template. Upgrade to Premium for unlimited AI letters.");
-        generateTemplateCoverLetter();
-      } else if (data.error === "AI not configured") {
-        toast.error("AI not configured. Using template.");
+        toast.error("Monthly AI credits used up — here's a starter template instead. Upgrade to Premium for unlimited AI letters.");
         generateTemplateCoverLetter();
       } else {
-        toast.error(data.error || "Failed to generate");
+        toast.error("Our AI is unavailable right now — here's a starter template to edit. No credit was used.");
         generateTemplateCoverLetter();
       }
     } catch {
-      toast.error("Failed to generate cover letter");
+      toast.error("Couldn't reach the AI — here's a starter template to edit.");
       generateTemplateCoverLetter();
     } finally {
       setGenerating(false);
@@ -132,6 +135,7 @@ ${name}`;
       method: "template",
     });
     setCoverLetter(letter);
+    setLetterSource("template");
   };
 
   const copyToClipboard = () => {
@@ -143,6 +147,24 @@ ${name}`;
     setCopied(true);
     toast.success("Copied to clipboard!");
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  // Plain .txt keeps the letter editable in any phone notes app or Word;
+  // most applicants paste it into an email or a portal form anyway.
+  const downloadLetter = () => {
+    const safe = (s: string) => s.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "");
+    const filename = `Cover-Letter-${safe(formData.companyName) || "company"}-${safe(formData.jobTitle) || "role"}.txt`;
+    const blob = new Blob([coverLetter], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+    posthog?.capture("cover_letter_downloaded", {
+      job_title: formData.jobTitle,
+      company_name: formData.companyName,
+    });
   };
 
   if (!isLoaded || loading) {
@@ -164,11 +186,14 @@ ${name}`;
           <h1 className="text-2xl font-bold gradient-text">Cover Letter</h1>
           <p className="text-sm text-zinc-400 mt-0.5">AI-powered letter generator</p>
         </div>
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/20">
-          <div className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse" />
-          <span className="mono text-xs text-cyan-400">AI Ready</span>
-        </div>
+        <AiStatusBadge status={aiStatus.status} />
       </div>
+
+      <AiOutageNotice
+        status={aiStatus.status}
+        reasons={aiStatus.reasons}
+        message="Generating now gives you a starter template to edit instead of a tailored letter."
+      />
 
       <div className="grid gap-5 lg:grid-cols-2 animate-fade-up delay-100">
         {/* Left: form */}
@@ -296,6 +321,16 @@ ${name}`;
             <div className="flex items-center justify-between mb-4">
               <p className="section-label mb-0">Generated Letter</p>
               {coverLetter && (
+                <div className="flex items-center gap-2">
+                <button
+                  onClick={downloadLetter}
+                  className="press-scale flex items-center gap-1.5 rounded-lg border border-white/[0.1] bg-white/[0.03] px-3 py-1.5 text-xs font-medium text-zinc-300 transition-all hover:bg-white/[0.06]"
+                >
+                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  Download
+                </button>
                 <button
                   onClick={copyToClipboard}
                   className={`press-scale flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-all ${
@@ -320,8 +355,16 @@ ${name}`;
                     </>
                   )}
                 </button>
+                </div>
               )}
             </div>
+
+            {coverLetter && letterSource === "template" && (
+              <div className="mb-3 rounded-lg border border-amber-500/25 bg-amber-500/[0.08] px-3 py-2 text-xs text-amber-200">
+                <span className="font-semibold">Starter template, not AI-written.</span> It is generic on purpose — replace the middle
+                paragraphs with one real achievement and why you want this specific role before sending.
+              </div>
+            )}
 
             {coverLetter ? (
               <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-5 max-h-[600px] overflow-y-auto">

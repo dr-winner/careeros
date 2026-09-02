@@ -5,6 +5,7 @@ import { INTERVIEW_QUESTIONS, QUESTION_CATEGORIES, ROLE_TYPES, ROLE_SPECIFIC_QUE
 import { toast } from "sonner";
 import { usePostHog } from "posthog-js/react";
 import PaywallModal from "@/components/paywall-modal";
+import { AiOutageNotice, useAiStatus } from "@/components/ai-status";
 
 const ALL_QUESTIONS = [...INTERVIEW_QUESTIONS, ...ROLE_SPECIFIC_QUESTIONS];
 
@@ -33,6 +34,7 @@ interface PastSession {
 
 export default function InterviewPrepPage() {
   const posthog = usePostHog();
+  const aiStatus = useAiStatus();
   const [activeTab, setActiveTab] = useState<"bank" | "mock" | "live">("bank");
   const [category, setCategory] = useState("all");
   const [roleType, setRoleType] = useState("all");
@@ -131,7 +133,7 @@ export default function InterviewPrepPage() {
         experience_level: experienceLevel,
       });
     } catch {
-      toast.error("Failed to start interview");
+      toast.error("Our AI interviewer is unavailable right now. No credit was used — try the Question Bank meanwhile.");
       setIsInterviewing(false);
     } finally {
       setIsLoading(false);
@@ -443,6 +445,13 @@ export default function InterviewPrepPage() {
         <div className="animate-fade-up">
           {!isInterviewing ? (
             <div className="space-y-5">
+              <div className="max-w-2xl mx-auto">
+                <AiOutageNotice
+                  status={aiStatus.status}
+                  reasons={aiStatus.reasons}
+                  message="Mock interviews are paused until it's back — the Question Bank still works for practice."
+                />
+              </div>
               <div className="rounded-2xl border border-white/[0.08] bg-[#0d0d18] p-8 text-center max-w-2xl mx-auto">
                 <div className="h-16 w-16 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center mx-auto mb-5">
                   <svg className="h-8 w-8 text-purple-400 animate-glow-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">

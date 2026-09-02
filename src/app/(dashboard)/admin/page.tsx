@@ -2,17 +2,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getDbUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-
-// ─── Admin guard ──────────────────────────────────────────────────────────────
-
-function isAdmin(email: string): boolean {
-  const raw = process.env.ADMIN_EMAILS ?? "";
-  if (!raw) return false;
-  return raw
-    .split(",")
-    .map((e) => e.trim().toLowerCase())
-    .includes(email.toLowerCase());
-}
+import { isAdminEmail as isAdmin } from "@/lib/admin";
 
 // Approve or reject a pending employer job submission. Re-checks the
 // admin guard — server actions are callable outside this page's render.
