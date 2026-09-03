@@ -10,7 +10,7 @@ import {
 const fullstackCloudCv = {
   originalName: "Richard_Winner_Duvor_FullStack_Engineer_cv.pdf",
   parsedText:
-    "Led teams building responsive interfaces using HTML and React. Work with PHP, JavaScript, AWS, Azure, Cloud Security and Cybersecurity across multiple products.",
+    "Led teams building responsive interfaces using HTML and React. Work with PHP, JavaScript, AWS, Azure, Cloud Security and Cybersecurity across multiple products in Ghana and remote. Implemented IAM reviews, threat modelling, and documented incident response for production systems.",
   skills: [
     { skillName: "JavaScript" },
     { skillName: "React" },
