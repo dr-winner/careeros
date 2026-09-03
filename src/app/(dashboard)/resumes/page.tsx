@@ -57,6 +57,7 @@ function ScoreRing({ score, size = 128, label, warn }: { score: number; size?: n
   const cy = size / 2;
   const r = cx - 10;
   const circ = 2 * Math.PI * r;
+  const fill = circ * (Math.min(100, Math.max(0, score)) / 100);
   const color = warn ? "#f59e0b" : score >= 80 ? "#22c55e" : score >= 60 ? "#8b5cf6" : score >= 40 ? "#f59e0b" : "#ef4444";
   const ringLabel = label ?? (score >= 80 ? "Excellent" : score >= 60 ? "Good" : score >= 40 ? "Fair" : "Needs Work");
   const sw = size > 140 ? 10 : 8;

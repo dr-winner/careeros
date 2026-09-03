@@ -737,7 +737,7 @@ export async function sendPremiumActivatedEmail(
     '</p>',
     '</div>',
     '<p class="body-text">',
-    'One more thing: share your referral link and you earn <span class="highlight">GHS 5 to your MoMo</span> for every friend who goes Premium. Your subscription can literally pay for itself.',
+    'One more thing: share your referral link and you earn <span class="highlight">GHS 5 on your CareerOS balance</span> for every friend who goes Premium — withdraw to MoMo from GHS 5. Your subscription can literally pay for itself.',
     '</p>',
     '<p class="body-text" style="margin-bottom: 0;">',
     'Go get that job.<br>',
