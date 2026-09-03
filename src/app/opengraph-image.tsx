@@ -119,7 +119,7 @@ export default function Image() {
           }}
         >
           {[
-            { value: "9+", label: "Job sources" },
+            { value: "13", label: "Job sources" },
             { value: "AI", label: "Skills analysis" },
             { value: "Africa", label: "Built for" },
           ].map((stat) => (

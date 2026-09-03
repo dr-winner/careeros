@@ -427,8 +427,11 @@ export default function JobsPage() {
     [userSkills],
   );
 
+  const emptyBrowse = !search.trim();
+  // Empty browse keeps server rank. Client skill-sort only runs after a search
+  // so page 1 does not fight the API order.
   const displayedJobs =
-    sortByMatch && (userSkills.length > 0 || !!targetRole)
+    !emptyBrowse && sortByMatch && (userSkills.length > 0 || !!targetRole)
       ? [...jobs].sort((a, b) => {
           const roleB = roleRelevanceBoost(b, targetRole);
           const roleA = roleRelevanceBoost(a, targetRole);
@@ -760,22 +763,26 @@ export default function JobsPage() {
             {(userSkills.length > 0 || targetRole) && (
               <div className="flex items-center justify-between gap-3 px-1">
                 <p className="mono text-[10px] text-zinc-600">
-                  {userSkills.length > 0
-                    ? `Quick match: your ${userSkills.length} extracted skills vs each advert · full AI analysis on the job page`
-                    : roleBoostedOnPage
-                      ? `Ranked by your target role (${targetRole})`
-                      : `Target role: ${targetRole} · search to focus the feed`}
+                  {emptyBrowse
+                    ? `Feed order from the server${targetRole ? ` · ${emptyBrowseHint || `target ${targetRole}`}` : ""}`
+                    : userSkills.length > 0
+                      ? `Quick match: your ${userSkills.length} extracted skills vs each advert · full AI analysis on the job page`
+                      : roleBoostedOnPage
+                        ? `Ranked by your target role (${targetRole})`
+                        : `Target role: ${targetRole} · search to focus the feed`}
                 </p>
-                <button
-                  onClick={() => setSortByMatch((v) => !v)}
-                  className={`mono text-[10px] px-2.5 py-1 rounded-md border transition-all flex-shrink-0 ${
-                    sortByMatch
-                      ? "border-purple-500/40 bg-purple-500/10 text-purple-300"
-                      : "border-white/[0.08] text-zinc-500 hover:text-zinc-300"
-                  }`}
-                >
-                  {sortByMatch ? "Sorted: best match" : "Sort by match"}
-                </button>
+                {!emptyBrowse && (
+                  <button
+                    onClick={() => setSortByMatch((v) => !v)}
+                    className={`mono text-[10px] px-2.5 py-1 rounded-md border transition-all flex-shrink-0 ${
+                      sortByMatch
+                        ? "border-purple-500/40 bg-purple-500/10 text-purple-300"
+                        : "border-white/[0.08] text-zinc-500 hover:text-zinc-300"
+                    }`}
+                  >
+                    {sortByMatch ? "Sorted: best match" : "Sort by match"}
+                  </button>
+                )}
               </div>
             )}
             {displayedJobs.map((job) => (

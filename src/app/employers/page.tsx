@@ -8,23 +8,23 @@ import Logo from "@/app/components/logo";
 const PERKS = [
   {
     icon: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z",
-    title: "Pre-screened candidates",
-    body: "Every applicant has already run a fit analysis against your job. You see their score before they see you.",
+    title: "Fit scores, when they run one",
+    body: "Seekers can analyse their CV against your listing. We do not run a private pre-screened pool — you see whoever applied and any score they already generated.",
   },
   {
     icon: "M13 10V3L4 14h7v7l9-11h-7z",
-    title: "Skill-matched shortlists",
-    body: "Get a ranked list of candidates whose skills actually match your requirements — not just keyword stuffers.",
+    title: "Shown in a skill-ranked feed",
+    body: "Your role appears next to aggregated jobs. Candidates filter by country and rank by their target role and CV skills.",
   },
   {
     icon: "M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z",
-    title: "Pan-African talent pool",
-    body: "Access a growing pool of job-ready candidates across Ghana, Nigeria, Kenya, and beyond.",
+    title: "Ghana-first, Africa-wide",
+    body: "Listings reach seekers browsing Ghana, Nigeria, Kenya, South Africa, and worldwide remote — a small but growing pool.",
   },
   {
     icon: "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z",
-    title: "Real analytics",
-    body: "See how many candidates ran your job through CareerOS, their average fit score, and what skills are scarce.",
+    title: "Pilot analytics",
+    body: "We will share view and apply counts as volume grows. A recruiter dashboard with average fit scores is on the roadmap, not live yet.",
   },
 ];
 
@@ -85,8 +85,8 @@ export default function EmployersPage() {
             <span className="gradient-text">Know fit before you interview.</span>
           </h1>
           <p className="text-lg text-zinc-400 max-w-2xl mx-auto">
-            CareerOS candidates have already self-screened against your job requirements.
-            Post a listing directly to let candidates auto-analyze their CV fit and apply.
+            Post a listing to the CareerOS feed. Seekers can score their CV against it and apply.
+            We do not sell a pre-screened candidate pool.
           </p>
         </div>
 
@@ -164,7 +164,7 @@ export default function EmployersPage() {
                       <input
                         required
                         className="agent-input w-full"
-                        placeholder="Senior Software Engineer"
+                        placeholder="Cloud Security Analyst"
                         value={jobForm.title}
                         onChange={(e) => setJobForm((f) => ({ ...f, title: e.target.value }))}
                       />
@@ -174,7 +174,7 @@ export default function EmployersPage() {
                       <input
                         required
                         className="agent-input w-full"
-                        placeholder="Acme West Africa"
+                        placeholder="North Ridge Bank"
                         value={jobForm.companyName}
                         onChange={(e) => setJobForm((f) => ({ ...f, companyName: e.target.value }))}
                       />
@@ -240,7 +240,7 @@ export default function EmployersPage() {
                       required
                       type="url"
                       className="agent-input w-full"
-                      placeholder="https://careers.acme.com/jobs/apply"
+                        placeholder="https://careers.example.com/jobs/apply"
                       value={jobForm.applicationUrl}
                       onChange={(e) => setJobForm((f) => ({ ...f, applicationUrl: e.target.value }))}
                     />
@@ -250,7 +250,7 @@ export default function EmployersPage() {
                     <label className="block text-xs text-zinc-400 mb-1.5">Key Skills (comma-separated)</label>
                     <input
                       className="agent-input w-full"
-                      placeholder="React, TypeScript, Node.js, REST APIs"
+                        placeholder="AWS, IAM, SIEM, ISO 27001"
                       value={jobForm.skills}
                       onChange={(e) => setJobForm((f) => ({ ...f, skills: e.target.value }))}
                     />
@@ -276,7 +276,7 @@ export default function EmployersPage() {
                         <input
                           required
                           className="agent-input w-full"
-                          placeholder="John Doe"
+                          placeholder="Ama Mensah"
                           value={jobForm.employerName}
                           onChange={(e) => setJobForm((f) => ({ ...f, employerName: e.target.value }))}
                         />
@@ -287,7 +287,7 @@ export default function EmployersPage() {
                           required
                           type="email"
                           className="agent-input w-full"
-                          placeholder="john@acme.com"
+                          placeholder="ama@company.com"
                           value={jobForm.employerEmail}
                           onChange={(e) => setJobForm((f) => ({ ...f, employerEmail: e.target.value }))}
                         />

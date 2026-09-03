@@ -27,7 +27,7 @@ const PREMIUM_FEATURES = [
 const FAQS = [
   {
     q: "What payment methods are accepted?",
-    a: "MTN Mobile Money, Telecel Cash, AirtelTigo Money, or card — all processed securely by Moolre.",
+    a: "MTN, Telecel and AirtelTigo Mobile Money via Moolre. Card appears only when Moolre’s checkout offers it — most Ghana payments are MoMo.",
   },
   {
     q: "What exactly is free?",

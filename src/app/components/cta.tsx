@@ -57,8 +57,8 @@ export default function CTA() {
           {[
             { icon: "M4.5 12.75l6 6 9-13.5", label: "Free to start" },
             { icon: "M4.5 12.75l6 6 9-13.5", label: "Detailed fit analysis" },
-            { icon: "M4.5 12.75l6 6 9-13.5", label: "Local MoMo & Card payments" },
-            { icon: "M4.5 12.75l6 6 9-13.5", label: "Earn GHS 5 per referral, paid to MoMo" },
+            { icon: "M4.5 12.75l6 6 9-13.5", label: "Pay with MoMo via Moolre" },
+            { icon: "M4.5 12.75l6 6 9-13.5", label: "Earn GHS 5 — withdraw to MoMo from GHS 5" },
           ].map((item) => (
             <span key={item.label} className="flex items-center gap-2 mono text-sm text-zinc-500">
               <svg className="h-4 w-4 text-purple-400" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
@@ -73,7 +73,7 @@ export default function CTA() {
         <div className="mt-14 inline-flex items-center gap-4 px-6 py-3.5 rounded-2xl bg-white/[0.03] border border-white/[0.06]">
           <span className="mono text-xs text-zinc-500">Built for African job seekers</span>
           <span className="h-3 w-px bg-white/10" />
-          <span className="mono text-xs text-zinc-500">9+ live job sources</span>
+          <span className="mono text-xs text-zinc-500">13 live job sources</span>
           <span className="h-3 w-px bg-white/10" />
           <span className="mono text-xs text-zinc-500">AI cover letters</span>
         </div>

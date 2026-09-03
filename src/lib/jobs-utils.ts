@@ -271,6 +271,9 @@ export function countryNameToCode(name?: string | null): string {
 
 export const JOBS_LIST_STORAGE_KEY = "careeros:jobs-list";
 
+/** External boards queried on each browse. Employer posts are extra. */
+export const JOB_FEED_SOURCE_COUNT = 13;
+
 /** Build /jobs?... from an alert or the last list view so Back/Search keep Ghana. */
 export function jobsListHref(opts: {
   search?: string | null;

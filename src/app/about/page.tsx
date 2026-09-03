@@ -50,7 +50,7 @@ export default function AboutPage() {
             {[
               {
                 title: "Job aggregation",
-                desc: "We pull live jobs from 9 sources — including Greenhouse, The Muse, Adzuna, Remotive, and more — filtered and presented for the African market.",
+                desc: "We pull live jobs from 13 sources — including Greenhouse, The Muse, Adzuna, Remotive, Jobberman, and more — filtered and presented for the African market.",
               },
               {
                 title: "AI fit analysis",
@@ -62,11 +62,11 @@ export default function AboutPage() {
               },
               {
                 title: "Interview prep",
-                desc: "Practice with AI-generated questions tailored to the role. Available in text and voice formats.",
+                desc: "Practice with AI-generated questions tailored to the role. Text sessions in the app today.",
               },
               {
                 title: "Application tracking",
-                desc: "Track every application in one place — status, next steps, and follow-up reminders.",
+                desc: "Track every application in one place and update the status yourself as it moves.",
               },
             ].map((item) => (
               <div key={item.title} className="agent-card p-5">

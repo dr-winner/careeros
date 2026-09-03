@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
+import { advancedRatePercent } from "@/lib/application-stats";
 
 interface Application {
   id: string;
@@ -176,8 +177,7 @@ export default function ApplicationsPage() {
     const active = applications.filter(a => !["Rejected", "Withdrawn"].includes(a.status)).length;
     const interviews = applications.filter(a => a.status === "Interview").length;
     const offers = applications.filter(a => a.status === "Offer").length;
-    const responseRate = total > 0 ? Math.round(((applications.filter(a => !["Applied"].includes(a.status)).length) / total) * 100) : 0;
-    return { total, active, interviews, offers, responseRate };
+    return { total, active, interviews, offers, advancedRate: advancedRatePercent(applications.map((a) => a.status)) };
   }, [applications]);
 
   const filteredApplications =
@@ -248,6 +248,9 @@ export default function ApplicationsPage() {
           <div className="text-2xl font-bold text-white">{stats.offers}</div>
           <div className="section-label mb-0 mt-0.5">Offers</div>
         </div>
+        <p className="col-span-2 md:col-span-4 mono text-[10px] text-zinc-600">
+          {stats.advancedRate}% moved forward (statuses you set past Applied — not confirmed employer replies)
+        </p>
       </div>
 
       {/* Filter tabs — pill style */}
@@ -359,6 +362,12 @@ export default function ApplicationsPage() {
                           <option key={opt} value={opt} className="bg-[#0d0d18]">{opt}</option>
                         ))}
                       </select>
+                      <Link
+                        href={`/jobs/${application.jobId}`}
+                        className="mono text-xs px-3 py-2 rounded-lg border border-white/[0.08] text-zinc-400 hover:text-white hover:border-purple-500/40 transition-colors"
+                      >
+                        View job
+                      </Link>
                       <button
                         onClick={() => deleteApplication(application.id)}
                         className="mono text-xs px-3 py-2 rounded-lg border border-red-500/20 text-red-400/60 hover:bg-red-500/10 hover:border-red-500/40 hover:text-red-400 transition-colors"

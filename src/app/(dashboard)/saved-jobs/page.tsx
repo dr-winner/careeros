@@ -219,7 +219,9 @@ export default function SavedPage() {
             >
               {t.label}
               {!loading && t.count > 0 && (
-                <span className="ml-1.5 opacity-60"> {t.count}</span>
+                <span className="ml-2 inline-flex min-w-[1.25rem] items-center justify-center rounded-md bg-white/10 px-1.5 py-0.5 mono text-[10px] opacity-80">
+                  {t.count}
+                </span>
               )}
             </button>
           ))}

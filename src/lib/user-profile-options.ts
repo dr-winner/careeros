@@ -36,6 +36,7 @@ export const ROLE_TYPE_GROUPS = [
     group: "Cybersecurity",
     roles: [
       "Cybersecurity Analyst",
+      "Cloud Security Engineer",
       "Network Security Engineer",
       "Penetration Tester / Ethical Hacker",
       "Security Operations (SOC) Analyst",

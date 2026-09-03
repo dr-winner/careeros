@@ -14,6 +14,8 @@ const PDFDownloadLink = dynamic(
 import CVPDF from "@/components/cv-pdf";
 import CVAnalysisScreen from "@/components/cv-analysis-screen";
 import type { StructuredCV } from "@/app/api/cv-regenerate/route";
+import Link from "next/link";
+import { analyzeCvQuality, cvScoreLabel, hasRoleGap, scoreCvFromTips } from "@/lib/cv-score";
 
 const JOB_ROLES = [
   { id: "frontend",   label: "Frontend Development",       icon: "M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" },
@@ -50,14 +52,13 @@ interface UserProfile {
   desiredRole: string | null;
 }
 
-function ScoreRing({ score, size = 128 }: { score: number; size?: number }) {
+function ScoreRing({ score, size = 128, label, warn }: { score: number; size?: number; label?: string; warn?: boolean }) {
   const cx = size / 2;
   const cy = size / 2;
   const r = cx - 10;
   const circ = 2 * Math.PI * r;
-  const fill = (score / 100) * circ;
-  const color = score >= 80 ? "#22c55e" : score >= 60 ? "#8b5cf6" : score >= 40 ? "#f59e0b" : "#ef4444";
-  const label = score >= 80 ? "Excellent" : score >= 60 ? "Good" : score >= 40 ? "Fair" : "Needs Work";
+  const color = warn ? "#f59e0b" : score >= 80 ? "#22c55e" : score >= 60 ? "#8b5cf6" : score >= 40 ? "#f59e0b" : "#ef4444";
+  const ringLabel = label ?? (score >= 80 ? "Excellent" : score >= 60 ? "Good" : score >= 40 ? "Fair" : "Needs Work");
   const sw = size > 140 ? 10 : 8;
   const scoreFontSize = size > 140 ? 38 : 28;
   return (
@@ -89,7 +90,7 @@ function ScoreRing({ score, size = 128 }: { score: number; size?: number }) {
           /100
         </text>
       </svg>
-      <span className="text-sm font-bold mono" style={{ color }}>{label}</span>
+      <span className="text-sm font-bold mono" style={{ color }}>{ringLabel}</span>
     </div>
   );
 }
@@ -112,12 +113,11 @@ export default function CVsPage() {
     setIsMounted(true);
   }, []);
 
-  const [activeTab, setActiveTab] = useState<"cvs" | "cover-letter">(() => {
-    if (typeof window !== "undefined") {
-      return new URLSearchParams(window.location.search).get("tab") === "cover-letter" ? "cover-letter" : "cvs";
+  useEffect(() => {
+    if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("tab") === "cover-letter") {
+      router.replace("/cover-letter");
     }
-    return "cvs";
-  });
+  }, [router]);
 
   const [cvs, setCVs] = useState<CV[]>([]);
   const [loading, setLoading] = useState(true);
@@ -134,10 +134,6 @@ export default function CVsPage() {
   const [analysisCvId, setAnalysisCvId] = useState<string | null>(null);
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [profileLoading, setProfileLoading] = useState(true);
-  const [generating, setGenerating] = useState(false);
-  const [coverForm, setCoverForm] = useState({ recipientName: "", companyName: "", jobTitle: "", jobDescription: "" });
-  const [coverLetter, setCoverLetter] = useState("");
 
   useEffect(() => {
     fetch("/api/user/premium").then((r) => r.ok ? r.json() : null).then((d) => { if (d?.isPremium !== undefined) setIsPremium(d.isPremium); }).catch(() => {});
@@ -174,8 +170,6 @@ export default function CVsPage() {
       }
     } catch (error) {
       console.error("Error fetching profile:", error);
-    } finally {
-      setProfileLoading(false);
     }
   }, []);
 
@@ -252,50 +246,11 @@ export default function CVsPage() {
     } catch { toast.error("Failed to regenerate CV"); } finally { setRegenerating(false); }
   };
 
-  const generateCoverLetter = async () => {
-    if (!coverForm.jobTitle || !coverForm.companyName) { toast.error("Fill in job title and company name"); return; }
-    if (generating) return;
-    setGenerating(true);
-    try {
-      const response = await fetch("/api/ai/cover-letter", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(coverForm),
-      });
-      const data = await response.json();
-      if (response.ok && data.coverLetter) { setCoverLetter(data.coverLetter); toast.success("Cover letter generated!"); }
-      else if (response.status === 402) { toast.error("Monthly AI credits used up — here's a starter template instead."); generateTemplateCoverLetter(); }
-      else { toast.error("Our AI is unavailable right now — here's a starter template to edit. No credit was used."); generateTemplateCoverLetter(); }
-    } catch { toast.error("Couldn't reach the AI — here's a starter template to edit."); generateTemplateCoverLetter(); } finally { setGenerating(false); }
-  };
-
-  const generateTemplateCoverLetter = () => {
-    const name = profile?.fullName || "Your Name";
-    const headline = profile?.headline || profile?.experience || "professional";
-    const phone = profile?.phone || "";
-    const email = profile?.email || "";
-    const letter = `${name}\n${phone}\n${email}\n\n${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}\n\n${coverForm.recipientName ? `Dear ${coverForm.recipientName},\n\n` : ""}I am writing to express my interest in the ${coverForm.jobTitle} position at ${coverForm.companyName}. With my background as a ${headline}, I am confident in my ability to contribute effectively to your team.\n\n${coverForm.jobDescription ? "I was excited to see the requirements for this role. My experience has prepared me well to excel in these areas." : "I am drawn to this opportunity because of your company's commitment to excellence."}\n\nThroughout my career, I have developed strong skills in problem-solving and collaboration. I am committed to continuous learning and staying current with industry best practices.\n\nI would welcome the opportunity to discuss how my skills and experience align with your needs. I am available for an interview at your earliest convenience and can be reached at ${phone || email}.\n\nThank you for considering my application.\n\nSincerely,\n${name}`;
-    setCoverLetter(letter);
-  };
-
-  const analyzeCV = (cv: CV | null) => {
-    if (!cv) return [];
-    const s: { category: string; issue: string; suggestion: string; priority: "high" | "medium" | "low" }[] = [];
-    if (!cv.parsedText || cv.parsedText.length < 200) s.push({ category: "Content", issue: "Limited CV content", suggestion: "Add more details about your experience and achievements.", priority: "high" });
-    if (cv.skills.length < 5) s.push({ category: "Skills", issue: "Fewer than 5 skills listed", suggestion: "Add more relevant technical and soft skills.", priority: "high" });
-    if (cv.experiences.length < 2) s.push({ category: "Experience", issue: "Limited work experience", suggestion: "Include all relevant positions, even internships.", priority: "medium" });
-    if (cv.education.length === 0) s.push({ category: "Education", issue: "No education entries", suggestion: "Add your educational background and certifications.", priority: "high" });
-    if (!/^(Led|Managed|Developed|Created|Implemented|Increased|Reduced|Improved|Designed|Built|Analyzed)/.test(cv.parsedText || "")) s.push({ category: "Writing", issue: "Use stronger action verbs", suggestion: "Start bullets with verbs like Led, Built, Increased.", priority: "low" });
-    if (!s.length) s.push({ category: "Overall", issue: "Looking great!", suggestion: "Your CV is well-structured.", priority: "low" });
-    return s;
-  };
-
   const formatDate = (date: string) => new Date(date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 
-  const suggestions = analyzeCV(selectedCV);
-  const cvScore = selectedCV
-    ? Math.max(0, 100 - suggestions.filter((s) => s.priority === "high").length * 20 - suggestions.filter((s) => s.priority === "medium").length * 10 - suggestions.filter((s) => s.priority === "low").length * 5)
-    : 0;
+  const suggestions = analyzeCvQuality(selectedCV, profile?.desiredRole, profile?.headline);
+  const cvScore = selectedCV ? scoreCvFromTips(suggestions) : 0;
+  const roleGap = hasRoleGap(suggestions);
 
   if (!isLoaded) {
     return (
@@ -325,19 +280,17 @@ export default function CVsPage() {
           </div>
           <div className="flex items-center gap-3">
             <div className="flex items-center rounded-xl border border-white/[0.08] bg-white/[0.03] p-1 gap-1">
-              {(["cvs", "cover-letter"] as const).map((t) => (
-                <button
-                  key={t}
-                  onClick={() => setActiveTab(t)}
-                  className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                    activeTab === t ? "bg-purple-500/20 text-purple-300 border border-purple-500/30" : "text-zinc-500 hover:text-zinc-300"
-                  }`}
-                >
-                  {t === "cvs" ? "My CVs" : "Cover Letter"}
-                </button>
-              ))}
+              <span className="px-4 py-1.5 rounded-lg text-sm font-medium bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                My CVs
+              </span>
+              <Link
+                href="/cover-letter"
+                className="px-4 py-1.5 rounded-lg text-sm font-medium text-zinc-500 hover:text-zinc-300 transition-all"
+              >
+                Cover Letter
+              </Link>
             </div>
-            {activeTab === "cvs" && (
+            {(
               <button onClick={() => setShowUpload(!showUpload)} className="agent-button-primary press-scale">
                 {showUpload ? (
                   <>
@@ -355,8 +308,8 @@ export default function CVsPage() {
           </div>
         </div>
 
-        {/* ── CVs tab ── */}
-        {activeTab === "cvs" && (
+        {/* ── CVs ── */}
+        {(
           <>
             {/* Upload zone */}
             {showUpload && (
@@ -456,11 +409,19 @@ export default function CVsPage() {
                     {/* Centered ring */}
                     <div className="flex flex-col items-center mb-7">
                       <div className="relative mb-2">
-                        <div className="absolute inset-0 rounded-full blur-2xl opacity-20" style={{ background: cvScore >= 80 ? "#22c55e" : cvScore >= 60 ? "#8b5cf6" : cvScore >= 40 ? "#f59e0b" : "#ef4444" }} />
-                        <ScoreRing score={cvScore} size={168} />
+                        <div className="absolute inset-0 rounded-full blur-2xl opacity-20" style={{ background: roleGap ? "#f59e0b" : cvScore >= 80 ? "#22c55e" : cvScore >= 60 ? "#8b5cf6" : cvScore >= 40 ? "#f59e0b" : "#ef4444" }} />
+                        <ScoreRing score={cvScore} size={168} label={cvScoreLabel(cvScore, roleGap)} warn={roleGap} />
                       </div>
                       <h2 className="text-base font-semibold text-white mt-2">{selectedCV.originalName}</h2>
-                      <p className="mono text-xs text-zinc-500 mt-0.5">{formatDate(selectedCV.createdAt)} · CV Analysis</p>
+                      <p className="mono text-xs text-zinc-500 mt-0.5">
+                        {formatDate(selectedCV.createdAt)} · Completeness
+                        {profile?.desiredRole ? ` vs ${profile.desiredRole}` : ""}
+                      </p>
+                      {roleGap && profile?.desiredRole && (
+                        <p className="mono text-[11px] text-amber-400/90 mt-2 max-w-sm text-center leading-relaxed">
+                          Completeness is not a {profile.desiredRole} fit score. Align this file with that role or upload a version named for it.
+                        </p>
+                      )}
                     </div>
 
                     {/* Stat blocks */}
@@ -709,125 +670,6 @@ export default function CVsPage() {
               </div>
             )}
           </>
-        )}
-
-        {/* ── Cover Letter tab ── */}
-        {activeTab === "cover-letter" && (
-          <div className="max-w-5xl mx-auto">
-            {profileLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="h-5 w-5 rounded-full border-2 border-purple-500/30 border-t-purple-500 animate-spin" />
-              </div>
-            ) : (
-              <div className="grid gap-5 lg:grid-cols-2">
-                <div className="space-y-4">
-                  <div className="agent-card p-5">
-                    <p className="text-xs font-semibold text-zinc-400 uppercase tracking-widest mono mb-4">Job Details</p>
-                    <div className="space-y-3.5">
-                      {[
-                        { label: "Recipient Name", key: "recipientName" as const, placeholder: "Hiring Manager", required: false },
-                        { label: "Company Name", key: "companyName" as const, placeholder: "Acme Corporation", required: true },
-                        { label: "Job Title", key: "jobTitle" as const, placeholder: "Software Engineer", required: true },
-                      ].map((f) => (
-                        <div key={f.key}>
-                          <label className="text-xs text-zinc-400 mb-1.5 block">{f.label}{f.required ? " *" : ""}</label>
-                          <input
-                            type="text"
-                            placeholder={f.placeholder}
-                            value={coverForm[f.key]}
-                            onChange={(e) => setCoverForm({ ...coverForm, [f.key]: e.target.value })}
-                            className="agent-input"
-                          />
-                        </div>
-                      ))}
-                      <div>
-                        <label className="text-xs text-zinc-400 mb-1.5 block">Job Description</label>
-                        <textarea
-                          rows={4}
-                          placeholder="Paste the job description for a tailored letter…"
-                          value={coverForm.jobDescription}
-                          onChange={(e) => setCoverForm({ ...coverForm, jobDescription: e.target.value })}
-                          className="agent-input resize-none"
-                        />
-                      </div>
-                      <button
-                        onClick={generateCoverLetter}
-                        disabled={generating}
-                        className="agent-button-primary w-full justify-center py-3 press-scale"
-                      >
-                        {generating ? (
-                          <><div className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />Generating…</>
-                        ) : (
-                          <><svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>Generate Letter</>
-                        )}
-                      </button>
-                    </div>
-                  </div>
-
-                  {profile && (
-                    <div className="agent-card p-5">
-                      <p className="text-xs font-semibold text-zinc-400 uppercase tracking-widest mono mb-3">Your Profile</p>
-                      <div className="space-y-2">
-                        {[
-                          { label: "Name", value: profile.fullName },
-                          { label: "Email", value: profile.email },
-                          { label: "Headline", value: profile.headline || profile.experience },
-                        ].map((item) => (
-                          <div key={item.label} className="flex justify-between gap-3 py-1.5 border-b border-white/[0.04] last:border-0">
-                            <span className="text-xs text-zinc-500">{item.label}</span>
-                            <span className="text-xs text-zinc-300 truncate text-right">{item.value || <span className="text-zinc-600">Not set</span>}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-4">
-                  <div className="agent-card p-5">
-                    <div className="flex items-center justify-between mb-4">
-                      <p className="text-xs font-semibold text-zinc-400 uppercase tracking-widest mono">Generated Letter</p>
-                      {coverLetter && (
-                        <button
-                          onClick={() => { navigator.clipboard.writeText(coverLetter); toast.success("Copied!"); }}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-purple-500/30 bg-purple-500/10 text-xs text-purple-400 hover:bg-purple-500/20 transition-colors"
-                        >
-                          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-                          Copy
-                        </button>
-                      )}
-                    </div>
-                    {coverLetter ? (
-                      <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-5 space-y-4">
-                        {coverLetter.split("\n\n").filter((p) => p.trim()).map((paragraph, i) => (
-                          <p key={i} className="text-sm text-zinc-200 leading-relaxed whitespace-pre-wrap">{paragraph.trim()}</p>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center justify-center h-48 rounded-xl border-2 border-dashed border-white/[0.06] gap-2">
-                        <svg className="h-8 w-8 text-zinc-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                        <p className="text-xs text-zinc-600 text-center">Fill in the details on the left<br />and click Generate Letter</p>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="agent-card p-5">
-                    <p className="text-xs font-semibold text-zinc-400 uppercase tracking-widest mono mb-3">Tips</p>
-                    <ul className="space-y-2.5">
-                      {["Address to a specific person when possible", "Keep it to one page", "Customize for each application", "Highlight relevant achievements", "Show genuine enthusiasm for the company"].map((item) => (
-                        <li key={item} className="flex items-start gap-2.5">
-                          <span className="text-cyan-400 flex-shrink-0 mt-0.5">→</span>
-                          <span className="mono text-xs text-zinc-500 leading-relaxed">{item}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
         )}
       </div>
     </>

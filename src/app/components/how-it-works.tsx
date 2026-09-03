@@ -12,8 +12,8 @@ export default function HowItWorks() {
     },
     {
       number: "02",
-      title: "Pick a role",
-      description: "Browse listings or paste any job link. Agent reads the requirements.",
+      title: "Set your target role",
+      description: "Tell us the job you want. Browse Ghana and remote listings, or paste any advert.",
       icon: (
         <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
@@ -137,31 +137,31 @@ export default function HowItWorks() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-zinc-500">match_score</span>
-                  <span className="text-sm font-bold text-green-400">87%</span>
+                  <span className="text-sm font-bold text-green-400">62%</span>
                 </div>
                 <div className="h-1.5 w-full rounded-full bg-zinc-800 overflow-hidden">
-                  <div className="h-full w-[87%] rounded-full bg-gradient-to-r from-purple-500 to-cyan-500" />
+                  <div className="h-full w-[62%] rounded-full bg-gradient-to-r from-purple-500 to-cyan-500" />
                 </div>
 
                 <div className="pt-2 border-t border-white/5 space-y-2">
                   <div className="flex items-center gap-2 text-xs">
                     <span className="text-green-400">✓</span>
-                    <span className="text-zinc-400">React, TypeScript, Node.js</span>
+                    <span className="text-zinc-400">AWS, Azure, Cloud Security</span>
                   </div>
                   <div className="flex items-center gap-2 text-xs">
                     <span className="text-amber-400">~</span>
-                    <span className="text-zinc-400">AWS: learning curve</span>
+                    <span className="text-zinc-400">Kubernetes: learning curve</span>
                   </div>
                   <div className="flex items-center gap-2 text-xs">
                     <span className="text-red-400">✗</span>
-                    <span className="text-zinc-400">No fintech experience</span>
+                    <span className="text-zinc-400">No SOC shift experience</span>
                   </div>
                 </div>
 
                 <div className="pt-3 border-t border-white/5">
                   <div className="text-xs text-purple-400 mb-1">action_plan</div>
                   <p className="text-xs text-zinc-500 leading-relaxed">
-                    Highlight TypeScript depth. Consider AWS cert. Customize resume.
+                    Lead with cloud security projects. Name the CV for the role you want.
                   </p>
                 </div>
               </div>

@@ -139,6 +139,13 @@ export default function ProfilePage() {
             <h2 className="text-lg font-bold text-white">{displayName}</h2>
             <p className="text-sm text-zinc-400">{displayEmail}</p>
             {formData.headline && <p className="mono text-xs text-purple-400 mt-1">{formData.headline}</p>}
+            {(formData.desiredRole || formData.roleType) && (
+              <p className="mono text-[11px] text-zinc-500 mt-1.5 leading-relaxed">
+                {formData.desiredRole ? `Targeting ${formData.desiredRole}` : null}
+                {formData.desiredRole && formData.roleType ? " · " : null}
+                {formData.roleType ? `Field: ${formData.roleType}` : null}
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -196,6 +203,9 @@ export default function ProfilePage() {
         {/* Professional section */}
         <div className="rounded-2xl border border-white/[0.08] bg-[#0d0d18] p-6">
           <p className="section-label">Professional Info</p>
+          <p className="mono text-[11px] text-zinc-600 mb-4 leading-relaxed">
+            Headline is how you present. Target title ranks the job feed. Field is the industry category — they can differ.
+          </p>
           <div className="space-y-4">
             <div>
               <label className="block mb-2 text-sm font-medium text-zinc-400">Professional Headline</label>
@@ -203,7 +213,7 @@ export default function ProfilePage() {
                 type="text"
                 value={formData.headline}
                 onChange={(e) => setFormData({ ...formData, headline: e.target.value })}
-                placeholder="e.g., Software Developer | React & Node.js"
+                placeholder="e.g., Cyber & Cloud Security Engineer"
                 className="agent-input"
               />
             </div>
@@ -275,7 +285,7 @@ export default function ProfilePage() {
                 className="agent-input"
               />
               <p className="mono text-xs text-zinc-600 mt-1">
-                Earn GHS 5 per friend who goes Premium — paid instantly via Moolre
+                Earn GHS 5 per friend who goes Premium — credited to your balance, withdraw to MoMo from GHS 5
               </p>
             </div>
             <div>
@@ -306,6 +316,7 @@ export default function ProfilePage() {
             <label className="block mb-2 text-sm font-medium text-zinc-400">SMS Job Alerts</label>
             <button
               type="button"
+              aria-label={formData.smsAlerts ? "SMS alerts on" : "SMS alerts off"}
               onClick={() => setFormData({ ...formData, smsAlerts: !formData.smsAlerts })}
               className={`w-full rounded-xl border p-4 text-left transition-all ${
                 formData.smsAlerts

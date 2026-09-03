@@ -52,7 +52,7 @@ export default function PrivacyPage() {
 
         <section>
           <h2 className="text-white font-semibold text-base mb-3">Retention and deletion</h2>
-          <p>We keep your data while your account is active. You can delete individual CVs from the Resumes page at any time. To delete your whole account and all associated data, email <a href="mailto:support@careeros.live" className="text-purple-400 hover:underline">support@careeros.live</a> from your account address; we complete deletion requests within 30 days, subject to records we must keep for payment reconciliation.</p>
+          <p>We keep your data while your account is active. You can delete individual CVs from the CVs page at any time. To delete your whole account and all associated data, email <a href="mailto:support@careeros.live" className="text-purple-400 hover:underline">support@careeros.live</a> from your account address; we complete deletion requests within 30 days, subject to records we must keep for payment reconciliation.</p>
         </section>
 
         <section>

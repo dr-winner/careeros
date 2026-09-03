@@ -241,6 +241,9 @@ ${name}`;
                     onChange={(e) => setFormData({ ...formData, jobTitle: e.target.value })}
                     className="agent-input w-full"
                   />
+                  {formData.jobTitle && (profile?.desiredRole === formData.jobTitle || profile?.headline === formData.jobTitle) && (
+                    <p className="mono text-[10px] text-zinc-600 mt-1">Prefilled from your target role — change it for a different job.</p>
+                  )}
                 </div>
                 <div>
                   <label className="text-xs text-zinc-500 mb-1.5 block">Job Description</label>

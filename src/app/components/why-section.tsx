@@ -1,7 +1,9 @@
+import { JOB_FEED_SOURCE_COUNT } from "@/lib/jobs-utils";
+
 export default function WhySection() {
   const stats = [
     { value: "Most", label: "applications never get a response — yours don't have to be blind" },
-    { value: "9+", label: "live job sources aggregated" },
+    { value: String(JOB_FEED_SOURCE_COUNT), label: "live job sources aggregated" },
     { value: "Free", label: "to get started" },
   ];
 

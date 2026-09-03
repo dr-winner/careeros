@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import CVUpload from "@/app/components/cv-upload";
 import CVAnalysisScreen from "@/components/cv-analysis-screen";
+import { ADVANCED_RATE_HELPER, advancedRatePercent, isInterviewPipelineStatus } from "@/lib/application-stats";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -139,8 +140,8 @@ export default function DashboardPage() {
     ])
       .then(([appsData, savedData, resumesData, alertsData, profileData]) => {
         const applications: { status?: string; jobTitle?: string | null; companyName?: string | null; id: string; appliedAt?: string | null }[] = appsData.applications || [];
-        const interviews = applications.filter(
-          (application) => ["Screening", "Interview"].includes(application.status || ""),
+        const interviews = applications.filter((application) =>
+          isInterviewPipelineStatus(application.status || ""),
         ).length;
 
         const statusCounts: Record<string, number> = {};
@@ -148,10 +149,7 @@ export default function DashboardPage() {
           statusCounts[app.status || "Applied"] = (statusCounts[app.status || "Applied"] || 0) + 1;
         });
 
-        const responses = applications.filter((a) =>
-          ["Screening", "Interview", "Offer"].includes(a.status || ""),
-        ).length;
-        const responseRate = applications.length > 0 ? Math.round((responses / applications.length) * 100) : 0;
+        const responseRate = advancedRatePercent(applications.map((a) => a.status || "Applied"));
 
         setStats({
           applications: applications.length,
@@ -665,13 +663,17 @@ export default function DashboardPage() {
 
           {/* Referral Promo Box */}
           <div className="rounded-2xl border border-green-500/20 bg-green-500/5 p-5 relative overflow-hidden group">
-            <div className="absolute -right-4 -bottom-4 text-5xl opacity-10 select-none group-hover:scale-110 transition-transform duration-300 pointer-events-none">🎁</div>
+            <div className="absolute -right-3 -bottom-3 opacity-[0.12] select-none group-hover:scale-105 transition-transform duration-300 pointer-events-none">
+              <svg className="h-16 w-16 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 11.25v8.25a1.5 1.5 0 01-1.5 1.5H4.5a1.5 1.5 0 01-1.5-1.5v-8.25M12 4.875A2.625 2.625 0 109.375 7.5H12m0-2.625V7.5m0-2.625A2.625 2.625 0 1114.625 7.5H12m0 0V21m-8.625-9.75h18" />
+              </svg>
+            </div>
             <h4 className="text-sm font-semibold text-white mb-1.5 flex items-center gap-2">
               <span className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
               Invite friends, earn credits and cash
             </h4>
             <p className="text-xs text-zinc-400 leading-relaxed mb-4">
-              When a friend joins and runs their first fit check you get +1 AI credit. When they go Premium you get GHS 5 to your MoMo.
+              When a friend joins and runs their first fit check you get +1 AI credit. When they go Premium you get GHS 5 on your CareerOS balance — withdraw to MoMo from GHS 5.
             </p>
             <Link
               href="/referrals"
@@ -696,13 +698,16 @@ export default function DashboardPage() {
 
             <div className="grid gap-3 sm:grid-cols-3">
               {[
-                { label: "Response Rate", value: `${analytics.responseRate}%`, cardClass: "stat-card stat-card-cyan" },
+                { label: "Moved forward", value: `${analytics.responseRate}%`, cardClass: "stat-card stat-card-cyan", hint: ADVANCED_RATE_HELPER },
                 { label: "CVs Uploaded", value: analytics.resumeCount, cardClass: "stat-card stat-card-purple" },
                 { label: "Active Alerts", value: analytics.alertCount, cardClass: "stat-card stat-card-amber" },
               ].map((item, i) => (
                 <div key={i} className={item.cardClass}>
                   <div className="mono text-[10px] text-zinc-500 uppercase tracking-widest mb-1">{item.label}</div>
                   <div className="text-2xl font-bold text-white">{item.value}</div>
+                  {"hint" in item && item.hint ? (
+                    <p className="mono text-[10px] text-zinc-600 mt-1.5 leading-relaxed">{item.hint}</p>
+                  ) : null}
                 </div>
               ))}
             </div>

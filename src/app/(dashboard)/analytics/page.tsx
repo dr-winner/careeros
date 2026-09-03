@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
+import { ADVANCED_RATE_HELPER, advancedRatePercent } from "@/lib/application-stats";
 
 interface FitAnalysis {
   id: string;
@@ -122,12 +123,7 @@ export default function AnalyticsPage() {
   applications.forEach((a) => {
     statusCounts[a.status] = (statusCounts[a.status] || 0) + 1;
   });
-  const responseRate = applications.length
-    ? Math.round(
-        (applications.filter((a) => ["Screening", "Interview", "Offer"].includes(a.status)).length /
-          applications.length) * 100
-      )
-    : 0;
+  const responseRate = advancedRatePercent(applications.map((a) => a.status));
 
   const isEmpty = analyses.length === 0 && applications.length === 0;
 
@@ -166,8 +162,9 @@ export default function AnalyticsPage() {
               <p className="text-3xl font-bold text-cyan-400 font-display">{applications.length}</p>
             </div>
             <div className="agent-card p-5">
-              <p className="text-xs text-zinc-500 mono uppercase tracking-widest mb-2">Response Rate</p>
+              <p className="text-xs text-zinc-500 mono uppercase tracking-widest mb-2">Moved forward</p>
               <p className="text-3xl font-bold text-green-400 font-display">{responseRate}%</p>
+              <p className="mono text-[10px] text-zinc-600 mt-2 leading-relaxed">{ADVANCED_RATE_HELPER}</p>
             </div>
           </div>
 

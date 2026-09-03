@@ -131,7 +131,7 @@ export default function ReferralPage() {
       <div className="animate-fade-up">
         <h1 className="text-2xl font-bold gradient-text">Refer &amp; Earn</h1>
         <p className="text-sm text-zinc-400 mt-0.5">
-          Earn GHS 5 to your MoMo for every friend who goes Premium — paid via Moolre
+          Earn GHS 5 to your CareerOS balance when a friend goes Premium — withdraw to MoMo from GHS 5
         </p>
       </div>
 
@@ -174,7 +174,7 @@ export default function ReferralPage() {
           {stats.balanceGhs >= stats.minWithdrawalGhs && !stats.hasPayoutWallet && (
             <p className="text-sm text-amber-300 mt-3">
               <a href="/profile" className="underline hover:text-amber-200">Add your MoMo number</a>{" "}
-              to withdraw — paid instantly via Moolre.
+              to withdraw to MoMo via Moolre.
             </p>
           )}
 
@@ -358,7 +358,7 @@ export default function ReferralPage() {
         <p className="section-label">Why Refer Friends</p>
         <div className="space-y-3">
           {[
-            { icon: "M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z", color: "green", text: "GHS 5 to your MoMo when a friend goes Premium — real money, not points" },
+            { icon: "M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z", color: "green", text: "GHS 5 credited to your balance when a friend goes Premium — withdraw to MoMo from GHS 5" },
             { icon: "M13 10V3L4 14h7v7l9-11h-7z", color: "cyan", text: "+1 free analysis the moment they run their first scan" },
             { icon: "M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z", color: "purple", text: "And your friend stops applying blind — you did that" },
           ].map((item, i) => (

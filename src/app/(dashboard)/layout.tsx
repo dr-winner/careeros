@@ -86,6 +86,27 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [userId, synced]);
 
   useEffect(() => {
+    const titles: Record<string, string> = {
+      "/dashboard": "Dashboard",
+      "/jobs": "Jobs",
+      "/applications": "Applications",
+      "/interview": "Interview",
+      "/saved-jobs": "Saved jobs",
+      "/resumes": "CVs",
+      "/cover-letter": "Cover letter",
+      "/alerts": "Job alerts",
+      "/referrals": "Referrals",
+      "/analytics": "Analytics",
+      "/profile": "Profile",
+      "/pricing": "Pricing",
+    };
+    const match = Object.keys(titles)
+      .sort((a, b) => b.length - a.length)
+      .find((href) => pathname === href || pathname.startsWith(`${href}/`));
+    document.title = match ? `${titles[match]} — CareerOS` : "CareerOS — Your AI Career Agent";
+  }, [pathname]);
+
+  useEffect(() => {
     if (!userId) return;
     fetch("/api/user/premium")
       .then((res) => (res.ok ? res.json() : null))
