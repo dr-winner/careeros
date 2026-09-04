@@ -14,6 +14,8 @@ const REQUEST_TIMEOUT_MS = 25_000;
 /** Groq production IDs. llama-3.3-70b-versatile and llama-3.1-8b-instant shut down 2026-08-16. */
 export const GROQ_CHAT_MODEL = "openai/gpt-oss-120b";
 export const GROQ_FAST_MODEL = "openai/gpt-oss-20b";
+export const TOKENROUTER_CHAT_MODEL = "z-ai/glm-5.3-free";
+const TOKENROUTER_DEFAULT_BASE_URL = "https://api.tokenrouter.com/v1";
 
 function getOpenAIClient(): OpenAI {
   return new OpenAI({
@@ -27,6 +29,15 @@ function getGroqClient(): OpenAI {
   return new OpenAI({
     apiKey: process.env.GROQ_API_KEY,
     baseURL: "https://api.groq.com/openai/v1",
+    timeout: REQUEST_TIMEOUT_MS,
+    maxRetries: 1,
+  });
+}
+
+function getTokenRouterClient(): OpenAI {
+  return new OpenAI({
+    apiKey: process.env.TOKENROUTER_API_KEY,
+    baseURL: process.env.TOKENROUTER_BASE_URL || TOKENROUTER_DEFAULT_BASE_URL,
     timeout: REQUEST_TIMEOUT_MS,
     maxRetries: 1,
   });
@@ -98,11 +109,11 @@ export async function getAiOutage(): Promise<AiOutageRecord | null> {
   return readCachedValue<AiOutageRecord>(AI_OUTAGE_CACHE_KEY);
 }
 
-// ─── Standard generation (Groq → OpenAI fallback) ────────────────────────────
+// ─── Standard generation (Groq → TokenRouter → OpenAI) ───────────────────────
 //
 // Used for: job fit analysis, cover letters, skill extraction, interview
 // questions, CV analysis. Groq GPT-OSS is the free/cheap primary path.
-// Falls back to OpenAI gpt-4o-mini (JSON mode) if Groq is unavailable.
+// Falls back to TokenRouter GLM, then OpenAI gpt-4o-mini (JSON mode).
 
 export async function generateWithFallback(
   prompt: string,
@@ -137,11 +148,34 @@ export async function generateWithFallback(
     } catch (err) {
       const reason = describeProviderError("groq", err);
       reasons.push(reason);
-      console.warn("Groq failed, falling back to OpenAI:", reason);
+      console.warn("Groq failed, falling back to TokenRouter:", reason);
     }
   }
 
-  // ── Tier 2: OpenAI GPT-4o-mini ──────────────────────────────────────────
+  // ── Tier 2: TokenRouter GLM ─────────────────────────────────────────────
+  if (process.env.TOKENROUTER_API_KEY) {
+    try {
+      const client = getTokenRouterClient();
+      const completion = await client.chat.completions.create({
+        model: TOKENROUTER_CHAT_MODEL,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: prompt },
+        ],
+        max_tokens: maxTokens,
+        temperature,
+      });
+      const text = completion.choices[0]?.message?.content || "";
+      recordSuccess();
+      return { text, model: `tokenrouter-${TOKENROUTER_CHAT_MODEL}` };
+    } catch (err) {
+      const reason = describeProviderError("tokenrouter", err);
+      reasons.push(reason);
+      console.warn("TokenRouter failed, falling back to OpenAI:", reason);
+    }
+  }
+
+  // ── Tier 3: OpenAI GPT-4o-mini ──────────────────────────────────────────
   if (process.env.OPENAI_API_KEY) {
     try {
       const client = getOpenAIClient();

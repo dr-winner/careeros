@@ -51,7 +51,8 @@ export function hasAiProviderConfigured(): boolean {
   return Boolean(
     readEnv("OPENAI_API_KEY") ||
     readEnv("ANTHROPIC_API_KEY") ||
-    readEnv("GROQ_API_KEY"),
+    readEnv("GROQ_API_KEY") ||
+    readEnv("TOKENROUTER_API_KEY"),
   );
 }
 

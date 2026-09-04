@@ -26,8 +26,10 @@ describe("env helpers", () => {
     delete process.env.CRON_SECRET;
     delete process.env.RESEND_AUDIENCE_ID;
     delete process.env.OPENAI_API_KEY;
+    delete process.env.ANTHROPIC_API_KEY;
     delete process.env.DEEPSEEK_API_KEY;
     delete process.env.GROQ_API_KEY;
+    delete process.env.TOKENROUTER_API_KEY;
     delete process.env.GEMINI_API_KEY;
     delete process.env.TEST_ENV_VALUE;
     delete process.env.EMPTY_ENV_VALUE;
@@ -164,7 +166,13 @@ describe("env helpers", () => {
       expect(hasAiProviderConfigured()).toBe(true);
     });
 
-    it("returns false when GROQ_API_KEY is not configured", () => {
+    it("returns true when TOKENROUTER_API_KEY is configured", () => {
+      process.env.TOKENROUTER_API_KEY = "tokenrouter-key";
+
+      expect(hasAiProviderConfigured()).toBe(true);
+    });
+
+    it("returns false when no AI provider key is configured", () => {
       expect(hasAiProviderConfigured()).toBe(false);
     });
   });

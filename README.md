@@ -178,6 +178,7 @@ At least one of these is needed for AI features:
 - `OPENAI_API_KEY`
 - `DEEPSEEK_API_KEY`
 - `GROQ_API_KEY`
+- `TOKENROUTER_API_KEY`
 - `GEMINI_API_KEY`
 
 ### Optional job source integrations
