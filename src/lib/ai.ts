@@ -11,6 +11,10 @@ import { clearCachedValue, readCachedValue, setCachedValue } from "./job-cache";
 
 const REQUEST_TIMEOUT_MS = 25_000;
 
+/** Groq production IDs. llama-3.3-70b-versatile and llama-3.1-8b-instant shut down 2026-08-16. */
+export const GROQ_CHAT_MODEL = "openai/gpt-oss-120b";
+export const GROQ_FAST_MODEL = "openai/gpt-oss-20b";
+
 function getOpenAIClient(): OpenAI {
   return new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
@@ -98,7 +102,7 @@ export async function getAiOutage(): Promise<AiOutageRecord | null> {
 //
 // Used for: job fit analysis, CV advice, skill extraction, interview questions.
 // GPT-4o-mini with native JSON mode eliminates all parsing fragility.
-// Falls back to Groq (Llama 3.3 70B) if OpenAI is unavailable.
+// Falls back to Groq (GPT-OSS 120B) if OpenAI is unavailable.
 
 export async function generateWithFallback(
   prompt: string,
@@ -138,12 +142,12 @@ export async function generateWithFallback(
     }
   }
 
-  // ── Tier 2: Groq Llama 3.3 70B ──────────────────────────────────────────
+  // ── Tier 2: Groq GPT-OSS 120B ──────────────────────────────────────────
   if (process.env.GROQ_API_KEY) {
     try {
       const client = getGroqClient();
       const completion = await client.chat.completions.create({
-        model: "llama-3.3-70b-versatile",
+        model: GROQ_CHAT_MODEL,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: prompt },
@@ -153,7 +157,7 @@ export async function generateWithFallback(
       });
       const text = completion.choices[0]?.message?.content || "";
       recordSuccess();
-      return { text, model: "groq-llama-3.3-70b" };
+      return { text, model: `groq-${GROQ_CHAT_MODEL}` };
     } catch (err) {
       const reason = describeProviderError("groq", err);
       reasons.push(reason);

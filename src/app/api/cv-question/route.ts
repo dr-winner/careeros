@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import Groq from "groq-sdk";
+import { GROQ_FAST_MODEL } from "@/lib/ai";
 import { readEnv } from "@/lib/env";
 import { checkRateLimit, getRateLimitHeaders, RATE_LIMITS } from "@/lib/ratelimit";
 
@@ -102,7 +103,7 @@ Keep your response concise but informative (2-4 sentences).`;
           content: prompt,
         },
       ],
-      model: "llama-3.1-8b-instant",
+      model: GROQ_FAST_MODEL,
       temperature: 0.7,
       max_tokens: 512,
     });

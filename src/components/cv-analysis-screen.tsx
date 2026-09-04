@@ -13,7 +13,7 @@ interface CVAnalysisResult {
 const AGENT_LOGS = [
   { delay: 0,    text: "▸ initializing cv_analysis_agent v2.1.0...", color: "text-cyan-400" },
   { delay: 400,  text: "▸ loading nlp_pipeline... OK", color: "text-green-400" },
-  { delay: 800,  text: "▸ connecting to groq/llama-3.3-70b... OK", color: "text-green-400" },
+  { delay: 800,  text: "▸ connecting to groq/gpt-oss-120b... OK", color: "text-green-400" },
   { delay: 1300, text: "▸ fetching resume from storage...", color: "text-zinc-400" },
   { delay: 1800, text: "  → file retrieved: resume.pdf (5.2 KB)", color: "text-zinc-500" },
   { delay: 2200, text: "▸ extracting raw text... 847 tokens", color: "text-zinc-400" },
@@ -51,7 +51,7 @@ const TASKS = [
   { id: "ats",     label: "ATS simulation",       sub: "Keyword density · parsing",  completeAt: 50 },
   { id: "content", label: "Content analysis",     sub: "Quality · impact · clarity", completeAt: 65 },
   { id: "format",  label: "Format evaluation",    sub: "Structure · consistency",    completeAt: 78 },
-  { id: "llm",     label: "LLM deep analysis",    sub: "llama-3.3-70b · 1.2k tok",  completeAt: 90 },
+  { id: "llm",     label: "LLM deep analysis",    sub: "gpt-oss-120b · 1.2k tok",  completeAt: 90 },
   { id: "report",  label: "Generate report",      sub: "Scoring · recommendations",  completeAt: 100 },
 ];
 
@@ -297,7 +297,7 @@ function AnalyzingPhase({ progress, lines }: { progress: number; lines: typeof A
                   {progress < 100 ? "Processing..." : "Complete"}
                 </div>
                 <div className="text-xs text-zinc-600 mt-0.5">
-                  model: llama-3.3-70b-versatile
+                  model: openai/gpt-oss-120b
                 </div>
               </div>
             </div>
