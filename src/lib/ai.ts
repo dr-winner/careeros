@@ -98,11 +98,11 @@ export async function getAiOutage(): Promise<AiOutageRecord | null> {
   return readCachedValue<AiOutageRecord>(AI_OUTAGE_CACHE_KEY);
 }
 
-// ─── Standard generation (OpenAI → Groq fallback) ────────────────────────────
+// ─── Standard generation (Groq → OpenAI fallback) ────────────────────────────
 //
-// Used for: job fit analysis, CV advice, skill extraction, interview questions.
-// GPT-4o-mini with native JSON mode eliminates all parsing fragility.
-// Falls back to Groq (GPT-OSS 120B) if OpenAI is unavailable.
+// Used for: job fit analysis, cover letters, skill extraction, interview
+// questions, CV analysis. Groq GPT-OSS is the free/cheap primary path.
+// Falls back to OpenAI gpt-4o-mini (JSON mode) if Groq is unavailable.
 
 export async function generateWithFallback(
   prompt: string,
@@ -118,7 +118,30 @@ export async function generateWithFallback(
   const temperature = options.temperature ?? 0.3;
   const reasons: string[] = [];
 
-  // ── Tier 1: OpenAI GPT-4o-mini ──────────────────────────────────────────
+  // ── Tier 1: Groq GPT-OSS 120B ──────────────────────────────────────────
+  if (process.env.GROQ_API_KEY) {
+    try {
+      const client = getGroqClient();
+      const completion = await client.chat.completions.create({
+        model: GROQ_CHAT_MODEL,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: prompt },
+        ],
+        max_tokens: maxTokens,
+        temperature,
+      });
+      const text = completion.choices[0]?.message?.content || "";
+      recordSuccess();
+      return { text, model: `groq-${GROQ_CHAT_MODEL}` };
+    } catch (err) {
+      const reason = describeProviderError("groq", err);
+      reasons.push(reason);
+      console.warn("Groq failed, falling back to OpenAI:", reason);
+    }
+  }
+
+  // ── Tier 2: OpenAI GPT-4o-mini ──────────────────────────────────────────
   if (process.env.OPENAI_API_KEY) {
     try {
       const client = getOpenAIClient();
@@ -138,30 +161,7 @@ export async function generateWithFallback(
     } catch (err) {
       const reason = describeProviderError("openai", err);
       reasons.push(reason);
-      console.warn("OpenAI failed, falling back to Groq:", reason);
-    }
-  }
-
-  // ── Tier 2: Groq GPT-OSS 120B ──────────────────────────────────────────
-  if (process.env.GROQ_API_KEY) {
-    try {
-      const client = getGroqClient();
-      const completion = await client.chat.completions.create({
-        model: GROQ_CHAT_MODEL,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: prompt },
-        ],
-        max_tokens: maxTokens,
-        temperature,
-      });
-      const text = completion.choices[0]?.message?.content || "";
-      recordSuccess();
-      return { text, model: `groq-${GROQ_CHAT_MODEL}` };
-    } catch (err) {
-      const reason = describeProviderError("groq", err);
-      reasons.push(reason);
-      console.warn("Groq failed:", reason);
+      console.warn("OpenAI failed:", reason);
     }
   }
 
@@ -230,6 +230,6 @@ export async function generatePremium(
     }
   }
 
-  // ── Tier 3: Groq (last resort for premium) ───────────────────────────────
+  // ── Tier 3: Groq, then gpt-4o-mini (last resort — keep quality tiers above)
   return generateWithFallback(prompt, systemPrompt, { maxTokens, temperature, json });
 }
