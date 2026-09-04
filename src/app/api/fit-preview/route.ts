@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { generateWithFallback } from "@/lib/ai";
+import { AiUnavailableError, extractJsonObject, generateWithFallback } from "@/lib/ai";
 import { hasAiProviderConfigured } from "@/lib/env";
 import { checkRateLimit, getRateLimitHeaders, RATE_LIMITS } from "@/lib/ratelimit";
 import { getZodErrorMessage } from "@/lib/validation";
+
+export const maxDuration = 60;
 
 // Anonymous instant fit check for the landing page — the ungated "aha
 // moment". Real AI scoring, no account, no storage. The full gap
@@ -66,37 +68,38 @@ Return ONLY JSON:
   "teaser": "<one sentence naming the SINGLE biggest gap, phrased to be useful but incomplete, e.g. 'Your biggest gap is hands-on experience with paid ad campaigns.'>"
 }`,
       "You are a precise career-fit scoring engine. Return ONLY valid JSON. Be honest — do not inflate scores.",
-      { maxTokens: 350, temperature: 0.2, json: true },
+      { maxTokens: 600, temperature: 0.2, json: true },
     );
 
-    let result: {
-      fitScore?: number;
-      verdict?: string;
-      matchedSkills?: string[];
-      missingCount?: number;
-      teaser?: string;
-    };
-    try {
-      result = JSON.parse(text);
-    } catch {
-      const match = text.match(/\{[\s\S]*\}/);
-      if (!match) throw new Error("Unparseable preview response");
-      result = JSON.parse(match[0]);
-    }
+    const result = extractJsonObject(text);
+    if (!result) throw new Error("Unparseable preview response");
+
+    const matchedRaw = result.matchedSkills;
+    const matchedSkills = (
+      Array.isArray(matchedRaw)
+        ? matchedRaw.filter((s): s is string => typeof s === "string")
+        : typeof matchedRaw === "string" && matchedRaw.trim()
+          ? [matchedRaw.trim()]
+          : []
+    ).slice(0, 4);
 
     const fitScore = Math.min(100, Math.max(0, Math.round(Number(result.fitScore) || 0)));
 
     return NextResponse.json({
       fitScore,
       verdict: String(result.verdict || "Assessment Ready").slice(0, 40),
-      matchedSkills: (result.matchedSkills || [])
-        .filter((s): s is string => typeof s === "string")
-        .slice(0, 4),
+      matchedSkills,
       missingCount: Math.min(15, Math.max(0, Math.round(Number(result.missingCount) || 0))),
       teaser: String(result.teaser || "").slice(0, 200),
     });
   } catch (error) {
     console.error("Fit preview error:", error);
+    if (error instanceof AiUnavailableError) {
+      return NextResponse.json(
+        { error: "The instant preview is briefly unavailable — sign up free to run a full analysis." },
+        { status: 503 },
+      );
+    }
     return NextResponse.json(
       { error: "Preview failed — try again, or sign up free for the full analysis." },
       { status: 500 },

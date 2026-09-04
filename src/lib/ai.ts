@@ -17,6 +17,53 @@ export const GROQ_FAST_MODEL = "openai/gpt-oss-20b";
 export const TOKENROUTER_CHAT_MODEL = "z-ai/glm-5.3-free";
 const TOKENROUTER_DEFAULT_BASE_URL = "https://api.tokenrouter.com/v1";
 
+/** GPT-OSS spends completion tokens on hidden reasoning before any content. */
+export const GROQ_REASONING_TOKEN_FLOOR = 1024;
+
+export function groqMaxCompletionTokens(requested: number): number {
+  return GROQ_CHAT_MODEL.includes("gpt-oss")
+    ? Math.max(requested, GROQ_REASONING_TOKEN_FLOOR)
+    : requested;
+}
+
+export function extractJsonObject(text: string): Record<string, unknown> | null {
+  if (!text?.trim()) return null;
+  const stripped = text
+    .replace(/<think>[\s\S]*?<\/think>/gi, "")
+    .replace(/```(?:json)?/gi, "")
+    .trim();
+  const candidates = [stripped];
+  const match = stripped.match(/\{[\s\S]*\}/);
+  if (match && match[0] !== stripped) candidates.push(match[0]);
+  for (const candidate of candidates) {
+    try {
+      const parsed = JSON.parse(candidate);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        return parsed as Record<string, unknown>;
+      }
+    } catch {
+      // try the next candidate
+    }
+  }
+  return null;
+}
+
+function requireUsableText(
+  completion: { choices?: Array<{ finish_reason?: string | null; message?: { content?: string | null } | null }> },
+  provider: string,
+  wantJson: boolean,
+): string {
+  const choice = completion.choices?.[0];
+  const text = choice?.message?.content?.trim() ?? "";
+  if (!text) {
+    throw new Error(`${provider} returned empty content (finish_reason=${choice?.finish_reason || "unknown"})`);
+  }
+  if (wantJson && !extractJsonObject(text)) {
+    throw new Error(`${provider} returned unparseable JSON (finish_reason=${choice?.finish_reason || "unknown"})`);
+  }
+  return text;
+}
+
 function getOpenAIClient(): OpenAI {
   return new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
@@ -133,16 +180,23 @@ export async function generateWithFallback(
   if (process.env.GROQ_API_KEY) {
     try {
       const client = getGroqClient();
+      const groqMaxTokens = groqMaxCompletionTokens(maxTokens);
+      // GPT-OSS fields (reasoning_effort, include_reasoning, max_completion_tokens)
+      // are Groq extensions on top of the OpenAI chat schema.
       const completion = await client.chat.completions.create({
         model: GROQ_CHAT_MODEL,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: prompt },
         ],
-        max_tokens: maxTokens,
+        max_tokens: groqMaxTokens,
+        max_completion_tokens: groqMaxTokens,
         temperature,
-      });
-      const text = completion.choices[0]?.message?.content || "";
+        reasoning_effort: "low",
+        include_reasoning: false,
+        ...(wantJson ? { response_format: { type: "json_object" as const } } : {}),
+      } as OpenAI.Chat.ChatCompletionCreateParamsNonStreaming);
+      const text = requireUsableText(completion, "groq", wantJson);
       recordSuccess();
       return { text, model: `groq-${GROQ_CHAT_MODEL}` };
     } catch (err) {
@@ -165,7 +219,7 @@ export async function generateWithFallback(
         max_tokens: maxTokens,
         temperature,
       });
-      const text = completion.choices[0]?.message?.content || "";
+      const text = requireUsableText(completion, "tokenrouter", wantJson);
       recordSuccess();
       return { text, model: `tokenrouter-${TOKENROUTER_CHAT_MODEL}` };
     } catch (err) {
@@ -189,7 +243,7 @@ export async function generateWithFallback(
         temperature,
         ...(wantJson && { response_format: { type: "json_object" } }),
       });
-      const text = completion.choices[0]?.message?.content || "";
+      const text = requireUsableText(completion, "openai", wantJson);
       recordSuccess();
       return { text, model: "gpt-4o-mini" };
     } catch (err) {
