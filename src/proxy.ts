@@ -24,6 +24,9 @@ const isPublicRoute = createRouteMatcher([
   "/api/fit-preview(.*)",
   // Token-free health flag so the landing page can say "AI is busy" honestly.
   "/api/ai/status",
+  // Live interview rooms: guests join with the room code (create stays auth'd).
+  "/interview/room(.*)",
+  "/api/interview-rooms/(.*)",
 ]);
 
 const isLandingPage = createRouteMatcher(["/"]);

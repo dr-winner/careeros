@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const payload = mockInterviewSchema.parse(body);
 
-    const { action, role, experienceLevel, history, currentQuestion, userResponse } = payload;
+    const { action, role, experienceLevel, history, currentQuestion, userResponse, voice } = payload;
 
     // Mock interviews are sold as a Premium feature. Free users spend one
     // monthly AI credit per session (claimed at "start"); follow-up turns
@@ -73,18 +73,17 @@ export async function POST(request: NextRequest) {
     let userPrompt = "";
 
     if (action === "start") {
-      systemPrompt = `You are an expert interviewer for a ${role} position (${experienceLevel || "Mid-level"}). 
-      Your goal is to conduct a realistic, professional, and challenging mock interview.
-      Start by welcoming the candidate and asking a first, common opening question for this role.
-      Keep your response concise and professional.`;
-      userPrompt = `I am ready for my mock interview for the ${role} position. Please start.`;
+      systemPrompt = `You are an expert interviewer for a ${role} position (${experienceLevel || "Mid-level"}).
+      Conduct a realistic live interview.
+      ${voice ? "You are on a video call. Speak in short spoken sentences. One question only. No markdown, no bullets, no lists." : "Start by welcoming the candidate and asking a first, common opening question for this role. Keep your response concise and professional."}`;
+      userPrompt = `I am ready for my ${voice ? "live video" : "mock"} interview for the ${role} position. Please start.`;
     } else if (action === "respond") {
-      systemPrompt = `You are an expert interviewer for a ${role} position. 
-      You are in the middle of a mock interview. 
+      systemPrompt = `You are an expert interviewer for a ${role} position.
+      You are in the middle of a ${voice ? "live video" : "mock"} interview.
       Review the conversation history and the candidate's last response.
       Acknowledge their answer briefly and ask the NEXT logical interview question.
       Mix behavioral, technical, and situational questions.
-      Keep your response concise and professional.`;
+      ${voice ? "Keep it speakable: 2-4 short sentences. No markdown." : "Keep your response concise and professional."}`;
       userPrompt = `History: ${JSON.stringify(history)}`;
     } else if (action === "feedback") {
       systemPrompt = `You are an expert interview coach for ${role} positions. Return ONLY valid JSON — no markdown, no explanation.`;
@@ -106,6 +105,7 @@ Return this JSON:
       ({ text } = await generateWithFallback(userPrompt, systemPrompt, {
         temperature: action === "feedback" ? 0.3 : 0.7,
         json: action === "feedback",
+        maxTokens: voice && action !== "feedback" ? 400 : undefined,
       }));
     } catch (aiError) {
       if (refund) await refund().catch(() => {});

@@ -6,6 +6,8 @@ import { toast } from "sonner";
 import { usePostHog } from "posthog-js/react";
 import PaywallModal from "@/components/paywall-modal";
 import { AiOutageNotice, useAiStatus } from "@/components/ai-status";
+import LiveAiInterview from "@/components/live-ai-interview";
+import { acquireInterviewMedia, mediaErrorMessage, stopInterviewMedia, type InterviewMedia } from "@/lib/interview-media";
 
 const ALL_QUESTIONS = [...INTERVIEW_QUESTIONS, ...ROLE_SPECIFIC_QUESTIONS];
 
@@ -51,6 +53,10 @@ export default function InterviewPrepPage() {
   const [experienceLevel, setExperienceLevel] = useState("Mid-level");
   const [isSaving, setIsSaving] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
+  const [liveMode, setLiveMode] = useState(false);
+  const [liveMedia, setLiveMedia] = useState<InterviewMedia | null>(null);
+  const liveMediaRef = useRef<InterviewMedia | null>(null);
+  liveMediaRef.current = liveMedia;
 
   // Past Sessions
   const [pastSessions, setPastSessions] = useState<PastSession[]>([]);
@@ -89,6 +95,10 @@ export default function InterviewPrepPage() {
   }, [fetchSessions]);
 
   useEffect(() => {
+    return () => stopInterviewMedia(liveMediaRef.current?.stream);
+  }, []);
+
+  useEffect(() => {
     fetch("/api/user/profile")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
@@ -116,10 +126,20 @@ export default function InterviewPrepPage() {
     setExpandedId(null);
   };
 
-  const startInterview = async () => {
+  const startInterview = async (voice = false) => {
     if (aiStatus.status === "degraded" || aiStatus.status === "unconfigured") {
       toast.error("Our AI interviewer is unavailable right now. Try the Question Bank meanwhile.");
       return;
+    }
+
+    let media: InterviewMedia | null = null;
+    if (voice) {
+      try {
+        media = await acquireInterviewMedia();
+      } catch (err) {
+        toast.error(mediaErrorMessage(err));
+        return;
+      }
     }
 
     setIsLoading(true);
@@ -129,10 +149,11 @@ export default function InterviewPrepPage() {
       const response = await fetch("/api/ai/interview", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "start", role: selectedRole, experienceLevel }),
+        body: JSON.stringify({ action: "start", role: selectedRole, experienceLevel, voice }),
       });
 
       if (response.status === 402) {
+        stopInterviewMedia(media?.stream);
         setShowPaywall(true);
         posthog?.capture("paywall_shown", { feature: "mock_interview" });
         return;
@@ -140,6 +161,7 @@ export default function InterviewPrepPage() {
 
       const data = await response.json().catch(() => ({}));
       if (!response.ok || !data.text) {
+        stopInterviewMedia(media?.stream);
         toast.error(
           data.message ||
             "Our AI interviewer is unavailable right now. No credit was used — try the Question Bank meanwhile.",
@@ -147,32 +169,42 @@ export default function InterviewPrepPage() {
         return;
       }
 
+      setLiveMedia(media);
       setMessages([{ role: "assistant", content: data.text }]);
+      setLiveMode(voice);
       setIsInterviewing(true);
       posthog?.capture("interview_started", {
         role: selectedRole,
         experience_level: experienceLevel,
+        live: voice,
       });
     } catch {
+      stopInterviewMedia(media?.stream);
       toast.error("Our AI interviewer is unavailable right now. No credit was used — try the Question Bank meanwhile.");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleSendMessage = async () => {
-    if (!userInput.trim() || isLoading) return;
+  const handleSendMessage = async (overrideText?: string) => {
+    const content = (overrideText ?? userInput).trim();
+    if (!content || isLoading) return;
 
-    const newMessages: Message[] = [...messages, { role: "user", content: userInput }];
+    const newMessages: Message[] = [...messages, { role: "user", content }];
     setMessages(newMessages);
-    setUserInput("");
+    if (!overrideText) setUserInput("");
     setIsLoading(true);
 
     try {
       const response = await fetch("/api/ai/interview", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "respond", role: selectedRole, history: newMessages }),
+        body: JSON.stringify({
+          action: "respond",
+          role: selectedRole,
+          history: newMessages,
+          voice: liveMode,
+        }),
       });
 
       const data = await response.json().catch(() => ({}));
@@ -270,6 +302,9 @@ export default function InterviewPrepPage() {
     } finally {
       setIsSaving(false);
       setIsInterviewing(false);
+      setLiveMode(false);
+      stopInterviewMedia(liveMedia?.stream);
+      setLiveMedia(null);
       setMessages([]);
       setFeedback(null);
     }
@@ -319,7 +354,7 @@ export default function InterviewPrepPage() {
       <div className="animate-fade-up flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold gradient-text">Interview Mastery</h1>
-          <p className="mono text-xs text-zinc-500 mt-0.5">AI-powered prep and real-time simulation</p>
+          <p className="mono text-xs text-zinc-500 mt-0.5">Live AI interviews and 1:1 rooms</p>
         </div>
 
         {/* Tab pills */}
@@ -334,7 +369,7 @@ export default function InterviewPrepPage() {
             onClick={() => setActiveTab("mock")}
             className={`tab-pill ${activeTab === "mock" ? "tab-pill-active" : ""}`}
           >
-            AI Mock
+            AI Interview
           </button>
           <button
             onClick={() => setActiveTab("live")}
@@ -466,7 +501,7 @@ export default function InterviewPrepPage() {
         </div>
       )}
 
-      {/* AI Mock Interview */}
+      {/* AI Interview */}
       {activeTab === "mock" && (
         <div className="animate-fade-up">
           {!isInterviewing ? (
@@ -484,9 +519,9 @@ export default function InterviewPrepPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
                   </svg>
                 </div>
-                <h2 className="text-xl font-bold text-white mb-2">AI Mock Interview</h2>
+                <h2 className="text-xl font-bold text-white mb-2">Live AI interview</h2>
                 <p className="text-sm text-zinc-400 mb-2 max-w-md mx-auto leading-relaxed">
-                  Practice with our AI interviewer. Get real questions, give your answers, and receive detailed feedback.
+                  Your browser will ask for camera and microphone first. Then you&apos;re on a live call: questions spoken aloud, mic open when it&apos;s your turn.
                 </p>
                 <p className="mono text-[10px] text-zinc-600 mb-7">
                   Free plan: one session uses 1 of your monthly AI credits · unlimited on Premium
@@ -520,18 +555,25 @@ export default function InterviewPrepPage() {
                 </div>
 
                 <button
-                  onClick={startInterview}
+                  onClick={() => startInterview(true)}
                   disabled={isLoading || aiStatus.status === "degraded" || aiStatus.status === "unconfigured"}
                   className="agent-button-primary w-full py-3.5 text-sm font-bold press-scale disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isLoading ? (
                     <>
                       <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Initializing Agent...
+                      Connecting interviewer…
                     </>
                   ) : aiStatus.status === "degraded" || aiStatus.status === "unconfigured" ? (
                     "AI unavailable"
-                  ) : "Start Practice Session"}
+                  ) : "Start live interview"}
+                </button>
+                <button
+                  onClick={() => startInterview(false)}
+                  disabled={isLoading || aiStatus.status === "degraded" || aiStatus.status === "unconfigured"}
+                  className="mt-3 w-full py-2.5 rounded-xl border border-white/[0.08] text-xs text-zinc-400 hover:text-white hover:border-white/20 disabled:opacity-50"
+                >
+                  Type a practice round instead
                 </button>
               </div>
 
@@ -601,6 +643,19 @@ export default function InterviewPrepPage() {
                 </div>
               )}
             </div>
+          ) : liveMode && liveMedia ? (
+            <LiveAiInterview
+              role={selectedRole}
+              experienceLevel={experienceLevel}
+              media={liveMedia}
+              messages={messages}
+              isLoading={isLoading}
+              feedback={feedback}
+              onSend={(text) => handleSendMessage(text)}
+              onFeedback={getFeedback}
+              onEnd={endSession}
+              saving={isSaving}
+            />
           ) : (
             <div className="grid lg:grid-cols-[1fr_300px] gap-5">
               {/* Chat window */}
@@ -784,8 +839,8 @@ export default function InterviewPrepPage() {
                   </svg>
                 </div>
                 <div>
-                  <h2 className="text-base font-bold text-white">Start a Live Interview</h2>
-                  <p className="text-xs text-zinc-500 mt-0.5">Create a room and share the link with your interviewer or candidate</p>
+                  <h2 className="text-base font-bold text-white">Live interview with a person</h2>
+                  <p className="text-xs text-zinc-500 mt-0.5">Create a room, share the link — camera and mic, in real time. No account needed to join.</p>
                 </div>
               </div>
 
@@ -930,9 +985,9 @@ export default function InterviewPrepPage() {
             <ul className="space-y-2.5">
               {[
                 "Create a room and share the link — no account needed to join",
-                "Both parties join a private video call via Jitsi Meet",
-                "Audio and video are peer-to-peer — CareerOS never sees the call",
-                "Use the Question Bank to prepare questions as the interviewer",
+                "Both of you join a live 1:1 video call in the browser",
+                "Camera and audio stay on your devices — CareerOS only relays the handshake",
+                "Use the Question Bank if you are sitting as the interviewer",
               ].map((tip, i) => (
                 <li key={i} className="flex items-start gap-2 text-xs text-zinc-500">
                   <span className="text-green-500 mt-0.5 flex-shrink-0">→</span>

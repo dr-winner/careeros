@@ -130,6 +130,7 @@ export const mockInterviewSchema = z.object({
   action: z.enum(["start", "respond", "feedback"]),
   role: z.string().trim().min(1, "Role required").max(200),
   experienceLevel: z.string().trim().optional(),
+  voice: z.boolean().optional(),
   history: z.array(z.object({
     role: z.enum(["user", "assistant"]),
     content: z.string(),
