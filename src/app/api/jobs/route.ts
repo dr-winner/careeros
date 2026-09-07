@@ -20,6 +20,9 @@ import {
   parseSalary,
   countryNameToCode,
   roleRelevanceBoost,
+  asPlainText,
+  asFiniteNumber,
+  decodeHtmlEntities,
 } from "@/lib/jobs-utils";
 import { checkRateLimit, getRateLimitHeaders, RATE_LIMITS } from "@/lib/ratelimit";
 
@@ -131,52 +134,56 @@ function formatJob(
   source: JobSourceName,
   savedJobIds: string[],
 ): Job {
-  const companyName =
-    raw.company_name ||
-    raw.company?.display_name ||
-    raw.owner?.companyName ||
-    "Unknown Company";
+  const companyName = decodeHtmlEntities(
+    asPlainText(
+      raw.company_name ||
+        raw.company?.display_name ||
+        raw.owner?.companyName,
+      "Unknown Company",
+    ),
+  );
 
-  const location = extractLocation(raw);
-  const appUrl = raw.url || raw.redirect_url || "#";
+  const location = asPlainText(extractLocation(raw), "Not specified");
+  const appUrl = asPlainText(raw.url || raw.redirect_url, "#");
   const postedAt =
-    raw.created ||
+    asPlainText(raw.created) ||
     (raw.created_at
       ? new Date(raw.created_at * 1000).toISOString()
       : new Date().toISOString());
 
   const description =
-    (raw.description ? cleanDescription(raw.description) : "") ||
-    raw.descriptionBreakdown?.oneSentenceJobSummary ||
-    "";
+    (raw.description ? cleanDescription(asPlainText(raw.description)) : "") ||
+    asPlainText(raw.descriptionBreakdown?.oneSentenceJobSummary);
 
-  let salaryMin = raw.salary_min;
-  let salaryMax = raw.salary_max;
+  let salaryMin = asFiniteNumber(raw.salary_min);
+  let salaryMax = asFiniteNumber(raw.salary_max);
 
-  if (!salaryMin && raw.salary) {
+  if (salaryMin == null && raw.salary) {
     const parsed = parseSalary(raw.salary);
     salaryMin = parsed.min;
     salaryMax = parsed.max;
   }
 
   const id = `${source}-${sourceId}`;
+  const title = asPlainText(raw.title, "Unknown Position");
 
   return {
     id,
-    title: raw.title,
+    title,
     companyName,
     location,
     country: getCountry(source, location),
     workMode: raw.remote
       ? "Remote"
-      : getWorkMode(raw.remote, raw.job_type || raw.type || raw.contract_time),
-    seniorityLevel: detectSeniority(raw.title),
-    employmentType:
+      : getWorkMode(raw.remote, asPlainText(raw.job_type || raw.type || raw.contract_time)),
+    seniorityLevel: detectSeniority(title),
+    employmentType: asPlainText(
       raw.job_type ||
-      raw.type ||
-      raw.contract_time ||
-      raw.contract_type ||
+        raw.type ||
+        raw.contract_time ||
+        raw.contract_type,
       "Full-time",
+    ),
     description,
     requirements: raw.tags?.join(", ") || "See job posting for details",
     postedAt,
@@ -389,10 +396,10 @@ async function fetchFromJooble(
         companyName: job.company || "Unknown Company",
         location: jobLocation,
         country: detectedCountry,
-        workMode: job.type?.toLowerCase().includes("remote") ? "Remote" : "Not specified",
+        workMode: asPlainText(job.type).toLowerCase().includes("remote") ? "Remote" : "Not specified",
         seniorityLevel: detectSeniority(job.title || ""),
-        employmentType: job.type || "Full-time",
-        description: job.snippet?.replace(/<[^>]*>/g, "").substring(0, 8000) || "",
+        employmentType: asPlainText(job.type, "Full-time"),
+        description: asPlainText(job.snippet).replace(/<[^>]*>/g, "").substring(0, 8000),
         requirements: "See job posting for details",
         postedAt: job.updated ? new Date(job.updated).toISOString() : new Date().toISOString(),
         salaryMin: undefined,
@@ -485,12 +492,14 @@ async function fetchFromJobicy(
         url: string;
         jobTitle: string;
         companyName: string;
-        jobGeo: string;
+        jobGeo?: string | string[];
         jobLevel?: string;
-        jobType?: string;
+        jobType?: string | string[];
         pubDate: string;
-        annualSalaryMin?: number;
-        annualSalaryMax?: number;
+        annualSalaryMin?: number | string;
+        annualSalaryMax?: number | string;
+        salaryMin?: number | string;
+        salaryMax?: number | string;
         jobExcerpt?: string;
         jobDescription?: string;
       }>;
@@ -498,30 +507,35 @@ async function fetchFromJobicy(
 
     if (!Array.isArray(data.jobs)) return [];
 
-    return data.jobs.map((job): Job => {
-      const id = `jobicy-${job.id}`;
-      const geoRaw = job.jobGeo?.trim() || "Worldwide";
-      const location = geoRaw.split(",")[0].trim() || "Worldwide";
-      return {
-        id,
-        title: job.jobTitle,
-        companyName: job.companyName,
-        location,
-        country: "GLOBAL",
-        workMode: "Remote",
-        seniorityLevel: detectSeniority(job.jobTitle),
-        employmentType: job.jobType || "Full-time",
-        description: (job.jobDescription || job.jobExcerpt || "")
-          .replace(/<[^>]*>/g, "")
-          .substring(0, 8000),
-        requirements: "See job posting for details",
-        postedAt: job.pubDate || new Date().toISOString(),
-        salaryMin: job.annualSalaryMin,
-        salaryMax: job.annualSalaryMax,
-        isSaved: savedJobIds.includes(id),
-        applicationUrl: job.url,
-        source: "jobicy",
-      };
+    return data.jobs.flatMap((job): Job[] => {
+      try {
+        const id = `jobicy-${job.id}`;
+        const title = asPlainText(job.jobTitle, "Untitled role");
+        const geoRaw = asPlainText(job.jobGeo, "Worldwide");
+        const location = geoRaw.split(",")[0].trim() || "Worldwide";
+        const descriptionHtml = asPlainText(job.jobDescription || job.jobExcerpt);
+        return [{
+          id,
+          title,
+          companyName: decodeHtmlEntities(asPlainText(job.companyName, "Unknown Company")),
+          location,
+          country: "GLOBAL",
+          workMode: "Remote",
+          seniorityLevel: detectSeniority(title),
+          employmentType: asPlainText(job.jobType, "Full-time"),
+          description: descriptionHtml.replace(/<[^>]*>/g, "").substring(0, 8000),
+          requirements: "See job posting for details",
+          postedAt: asPlainText(job.pubDate) || new Date().toISOString(),
+          salaryMin: asFiniteNumber(job.salaryMin ?? job.annualSalaryMin),
+          salaryMax: asFiniteNumber(job.salaryMax ?? job.annualSalaryMax),
+          isSaved: savedJobIds.includes(id),
+          applicationUrl: asPlainText(job.url, "#"),
+          source: "jobicy",
+        }];
+      } catch (error) {
+        console.error("Jobicy job skipped:", job?.id, error);
+        return [];
+      }
     });
   } catch (error) {
     console.error("Jobicy error:", error);
@@ -695,7 +709,7 @@ async function fetchFromAshby(savedJobIds: string[]): Promise<Job[]> {
           country,
           workMode: job.locationIsRemote ? "Remote" : "On-site",
           seniorityLevel: detectSeniority(job.title),
-          employmentType: job.employmentType || "Full-time",
+          employmentType: asPlainText(job.employmentType, "Full-time"),
           description: (job.descriptionPlain || job.descriptionHtml || "")
             .replace(/<[^>]*>/g, "")
             .substring(0, 8000),
@@ -751,9 +765,9 @@ async function fetchFromWorkable(query: string, savedJobIds: string[]): Promise<
           companyName: job.company || "Unknown Company",
           location: jobLocation,
           country: detectedCountry === "GLOBAL" ? countryCode : detectedCountry,
-          workMode: job.type?.toLowerCase().includes("remote") ? "Remote" : "On-site",
+          workMode: asPlainText(job.type).toLowerCase().includes("remote") ? "Remote" : "On-site",
           seniorityLevel: detectSeniority(job.title || ""),
-          employmentType: job.type || "Full-time",
+          employmentType: asPlainText(job.type, "Full-time"),
           description: "",
           requirements: "See job posting for details",
           postedAt: job.created || new Date().toISOString(),
@@ -806,7 +820,7 @@ async function fetchFromWorkable(query: string, savedJobIds: string[]): Promise<
             country: cc === "GLOBAL" ? comp.defaultCountry : cc,
             workMode: job.remote ? "Remote" : "On-site",
             seniorityLevel: detectSeniority(job.title || ""),
-            employmentType: job.type || "Full-time",
+            employmentType: asPlainText(job.type, "Full-time"),
             description: "",
             requirements: job.department || "See job posting for details",
             postedAt: job.created_at || job.created || new Date().toISOString(),
@@ -874,7 +888,7 @@ async function fetchFromSmartRecruiters(savedJobIds: string[]): Promise<Job[]> {
           country: cc || "GH",
           workMode: job.location?.remote ? "Remote" : "On-site",
           seniorityLevel: job.experienceLevel?.label || detectSeniority(job.name),
-          employmentType: job.typeOfEmployment?.label || "Full-time",
+          employmentType: asPlainText(job.typeOfEmployment?.label, "Full-time"),
           description: "",
           requirements: job.function?.label || job.department?.label || "See job posting for details",
           postedAt: job.releasedDate || new Date().toISOString(),
@@ -966,7 +980,7 @@ async function fetchFromJobberman(savedJobIds: string[]): Promise<Job[]> {
         country: "GH",
         workMode: "On-site",
         seniorityLevel,
-        employmentType: item.item_category3 || "Full-time",
+        employmentType: asPlainText(item.item_category3, "Full-time"),
         // Jobberman's listing page carries no advert text. Ship an empty
         // description so the UI and the analyser treat it as "needs the
         // full advert" instead of scoring a fabricated sentence.

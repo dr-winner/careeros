@@ -5,7 +5,7 @@ import { useAuth, useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { quickMatchScore, roleRelevanceBoost, countryNameToCode, JOBS_LIST_STORAGE_KEY } from "@/lib/jobs-utils";
+import { quickMatchScore, roleRelevanceBoost, countryNameToCode, JOBS_LIST_STORAGE_KEY, coerceFeedJob, emptyBrowseRoleHint, emptyBrowseNoOverlapCopy, asPlainText, decodeHtmlEntities } from "@/lib/jobs-utils";
 import { sanitizeSkillList } from "@/lib/skills";
 
 // Modal for analyzing a job found anywhere — WhatsApp, a company page,
@@ -99,10 +99,8 @@ function PasteJobPanel({ onClose }: { onClose: () => void }) {
   );
 }
 
-function stripHtml(html: string): string {
-  return html
-    .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, " ")
+function stripHtml(html: unknown): string {
+  return decodeHtmlEntities(asPlainText(html))
     .replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
 }
 
@@ -247,7 +245,8 @@ export default function JobsPage() {
       const existing = sessionStorage.getItem("dashboard-job-cache");
       const cache = existing ? JSON.parse(existing) : {};
       for (const job of jobList) {
-        cache[job.id] = job;
+        const coerced = coerceFeedJob(job as unknown as Record<string, unknown>);
+        if (coerced) cache[String(coerced.id)] = coerced;
       }
       sessionStorage.setItem("dashboard-job-cache", JSON.stringify(cache));
     } catch {
@@ -269,7 +268,10 @@ export default function JobsPage() {
       if (!raw) return null;
       const { jobs: j, total, ts } = JSON.parse(raw);
       if (Date.now() - ts > LIST_CACHE_TTL) return null;
-      return { jobs: j, total };
+      const jobs = (j as Job[])
+        .map((job) => coerceFeedJob(job as unknown as Record<string, unknown>) as Job | null)
+        .filter((job): job is Job => job != null);
+      return { jobs, total };
     } catch { return null; }
   }, [LIST_CACHE_KEY, LIST_CACHE_TTL]);
 
@@ -318,7 +320,9 @@ export default function JobsPage() {
 
         const response = await fetch(`/api/jobs?${params}`);
         const data = await response.json();
-        const nextJobs: Job[] = data.jobs || [];
+        const nextJobs: Job[] = ((data.jobs || []) as Job[])
+          .map((job) => coerceFeedJob(job as unknown as Record<string, unknown>) as Job | null)
+          .filter((job): job is Job => job != null);
 
         if (isNewSearch) {
           setJobs(nextJobs);
@@ -442,15 +446,15 @@ export default function JobsPage() {
 
   const roleBoostedOnPage =
     !!targetRole && jobs.some((j) => roleRelevanceBoost(j, targetRole) > 0);
-  const emptyBrowseHint = (() => {
-    if (!targetRole || search) return "";
-    if (roleBoostedOnPage) return `Browsing all roles · ${targetRole} ranked first`;
-    if (country === "GH") return `Browsing Ghana + remote · search to focus on ${targetRole}`;
-    if (country === "NG") return `Browsing Nigeria + remote · search to focus on ${targetRole}`;
-    if (country === "KE") return `Browsing Kenya + remote · search to focus on ${targetRole}`;
-    if (country === "ZA") return `Browsing South Africa + remote · search to focus on ${targetRole}`;
-    return `Browsing all roles · search to focus on ${targetRole}`;
-  })();
+  const emptyBrowseHint = emptyBrowseRoleHint({
+    targetRole,
+    search,
+    country,
+    hasRoleMatch: roleBoostedOnPage,
+  });
+  const noOverlapCopy = emptyBrowseHint.showNoOverlapCta
+    ? emptyBrowseNoOverlapCopy(targetRole)
+    : null;
 
   const handleSearch = () => {
     const q = search.trim();
@@ -458,6 +462,16 @@ export default function JobsPage() {
     setCursor(null);
     syncJobsUrl(q, country);
     fetchJobs(true, { search: q });
+  };
+
+  const focusOnTargetRole = () => {
+    const q = targetRole.trim();
+    if (!q) return;
+    setSearch(q);
+    setCursor(null);
+    syncJobsUrl(q, country);
+    fetchJobs(true, { search: q });
+    searchInputRef.current?.focus();
   };
 
   const clearSearch = () => {
@@ -631,9 +645,9 @@ export default function JobsPage() {
             Search
           </button>
         </div>
-        {emptyBrowseHint && (
-          <p className="px-4 pb-2 mono text-[10px] text-zinc-600">
-            {emptyBrowseHint}
+        {emptyBrowseHint.line && (
+          <p className={`px-4 pb-2 mono ${emptyBrowseHint.showNoOverlapCta ? "text-xs text-zinc-400" : "text-[10px] text-zinc-600"}`}>
+            {emptyBrowseHint.line}
           </p>
         )}
       </div>
@@ -738,12 +752,24 @@ export default function JobsPage() {
               ? `Local Ghana boards rarely list “${search}” as a title. Clear the search to browse Ghana roles and worldwide remote.`
               : search
                 ? `No titles matched “${search}”. Clear the search to browse, or try a broader term like “security” or “engineer”.`
-                : "Try All Countries, or paste a job you found on WhatsApp / a company site."}
+                : noOverlapCopy
+                  ? noOverlapCopy.body
+                  : "Try All Countries, or paste a job you found on WhatsApp / a company site."}
           </p>
           {activeFilterCount > 0 && (
             <button onClick={clearAllFilters} className="text-sm text-purple-400 hover:text-purple-300 transition-colors">
               Clear all filters
             </button>
+          )}
+          {noOverlapCopy && (
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+              <button type="button" onClick={focusOnTargetRole} className="agent-button-primary text-xs">
+                Search “{targetRole}”
+              </button>
+              <button type="button" onClick={() => setShowPaste(true)} className="agent-button text-xs">
+                Paste a job
+              </button>
+            </div>
           )}
         </div>
       ) : (
@@ -759,12 +785,27 @@ export default function JobsPage() {
             </div>
           </div>
 
+          {noOverlapCopy && (
+            <div className="agent-card p-4 mb-3 border-cyan-500/20">
+              <p className="text-sm font-medium text-white">{noOverlapCopy.title}</p>
+              <p className="mono text-xs text-zinc-500 mt-1 leading-relaxed">{noOverlapCopy.body}</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button type="button" onClick={focusOnTargetRole} className="agent-button-primary text-xs">
+                  Search “{targetRole}”
+                </button>
+                <button type="button" onClick={() => setShowPaste(true)} className="agent-button text-xs">
+                  Paste a job
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="space-y-3">
             {(userSkills.length > 0 || targetRole) && (
               <div className="flex items-center justify-between gap-3 px-1">
                 <p className="mono text-[10px] text-zinc-600">
                   {emptyBrowse
-                    ? `Feed order from the server${targetRole ? ` · ${emptyBrowseHint || `target ${targetRole}`}` : ""}`
+                    ? `Feed order from the server${targetRole ? ` · ${emptyBrowseHint.line || `target ${targetRole}`}` : ""}`
                     : userSkills.length > 0
                       ? `Quick match: your ${userSkills.length} extracted skills vs each advert · full AI analysis on the job page`
                       : roleBoostedOnPage
@@ -812,7 +853,7 @@ export default function JobsPage() {
                             </span>
                           );
                         })()}
-                        <h3 className="text-sm font-bold text-white">{job.title}</h3>
+                        <h3 className="text-sm font-bold text-white">{asPlainText(job.title, "Untitled role")}</h3>
                         {userId && (
                           <button
                             onClick={() => toggleSave(job.id)}
@@ -827,7 +868,7 @@ export default function JobsPage() {
                           </button>
                         )}
                       </div>
-                      <p className="text-xs text-cyan-400 mt-0.5 font-medium">{job.companyName}</p>
+                      <p className="text-xs text-cyan-400 mt-0.5 font-medium">{asPlainText(job.companyName, "Unknown Company")}</p>
 
                       <div className="flex flex-wrap items-center gap-2 mt-2">
                         {job.location && (

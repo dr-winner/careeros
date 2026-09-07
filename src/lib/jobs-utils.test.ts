@@ -11,6 +11,12 @@ import {
   quickMatchScore,
   roleRelevanceBoost,
   jobsListHref,
+  asPlainText,
+  asFiniteNumber,
+  decodeHtmlEntities,
+  coerceFeedJob,
+  emptyBrowseRoleHint,
+  emptyBrowseNoOverlapCopy,
   type FilterableJob,
 } from "./jobs-utils";
 
@@ -733,5 +739,105 @@ describe("interleaveHomeAndRemote", () => {
     expect(ordered.indexOf("Sales Executive")).toBeGreaterThan(
       ordered.indexOf("Staff Platform Engineer"),
     );
+  });
+});
+
+describe("asPlainText / coerceFeedJob", () => {
+  it("joins Jobicy jobType arrays instead of leaving them as arrays", () => {
+    expect(asPlainText(["Full-Time"])).toBe("Full-Time");
+    expect(asPlainText(["Full-Time", "Contract"])).toBe("Full-Time, Contract");
+    expect(asPlainText(undefined, "Full-time")).toBe("Full-time");
+    expect(asPlainText({}, "Unknown Company")).toBe("Unknown Company");
+  });
+
+  it("parses salary numbers and ignores junk", () => {
+    expect(asFiniteNumber(120000)).toBe(120000);
+    expect(asFiniteNumber("90,000")).toBe(90000);
+    expect(asFiniteNumber("Competitive")).toBeUndefined();
+  });
+
+  it("decodes HTML entities in company names", () => {
+    expect(decodeHtmlEntities("hims &#038; hers")).toBe("hims & hers");
+  });
+
+  it("coerces a malformed Jobicy-style job so React can render it", () => {
+    const coerced = coerceFeedJob({
+      id: "jobicy-150137",
+      title: "Hypervisor Engineer",
+      companyName: "hims &#038; hers",
+      location: ["USA", "Canada"],
+      country: "GLOBAL",
+      workMode: "Remote",
+      seniorityLevel: "Mid-Level",
+      employmentType: ["Full-Time"],
+      description: "<p>Build hypervisors</p>",
+      salaryMin: "120000",
+      salaryMax: "180000",
+    });
+    expect(coerced).not.toBeNull();
+    expect(typeof coerced!.employmentType).toBe("string");
+    expect(coerced!.employmentType).toBe("Full-Time");
+    expect(coerced!.companyName).toBe("hims & hers");
+    expect(coerced!.location).toBe("USA, Canada");
+    expect(coerced!.salaryMin).toBe(120000);
+    expect(typeof coerced!.title).toBe("string");
+  });
+
+  it("lets filterJobs run when employmentType is an array", () => {
+    const jobs = [
+      {
+        title: "Hypervisor Engineer",
+        companyName: "Acme",
+        location: "Remote",
+        country: "GLOBAL",
+        workMode: "Remote",
+        seniorityLevel: "Mid-Level",
+        employmentType: ["Full-Time"] as unknown as string,
+      },
+    ];
+    expect(() => filterJobs(jobs, { employmentType: "full-time" })).not.toThrow();
+    expect(filterJobs(jobs, { employmentType: "full-time" })).toHaveLength(1);
+  });
+});
+
+describe("emptyBrowseRoleHint", () => {
+  it("does not pretend Ghana browse is ranked as Cloud Security when nothing matches", () => {
+    const hint = emptyBrowseRoleHint({
+      targetRole: "Cloud Security",
+      search: "",
+      country: "GH",
+      hasRoleMatch: false,
+    });
+    expect(hint.showNoOverlapCta).toBe(true);
+    expect(hint.line).toContain("nothing here matches Cloud Security");
+    expect(hint.line).toContain("Ghana + remote");
+    expect(hint.line).not.toContain("ranked first");
+
+    const copy = emptyBrowseNoOverlapCopy("Cloud Security");
+    expect(copy.title).toBe("None of these listings match Cloud Security");
+    expect(copy.body).toContain("Search to focus on Cloud Security");
+    expect(copy.body).toContain("paste a job");
+  });
+
+  it("keeps ranked-first copy when at least one listing was role-boosted", () => {
+    const hint = emptyBrowseRoleHint({
+      targetRole: "Cloud Security",
+      search: "",
+      country: "GH",
+      hasRoleMatch: true,
+    });
+    expect(hint.showNoOverlapCta).toBe(false);
+    expect(hint.line).toBe("Browsing all roles · Cloud Security ranked first");
+  });
+
+  it("hides the hint once the user is searching", () => {
+    const hint = emptyBrowseRoleHint({
+      targetRole: "Cloud Security",
+      search: "Cloud Security",
+      country: "GH",
+      hasRoleMatch: false,
+    });
+    expect(hint.line).toBe("");
+    expect(hint.showNoOverlapCta).toBe(false);
   });
 });

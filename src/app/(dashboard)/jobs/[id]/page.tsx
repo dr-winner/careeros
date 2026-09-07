@@ -7,20 +7,10 @@ import Link from "next/link";
 import { toast } from "sonner";
 import PaywallModal from "@/components/paywall-modal";
 import { useAnalytics } from "@/lib/analytics";
-import { JOBS_LIST_STORAGE_KEY } from "@/lib/jobs-utils";
+import { JOBS_LIST_STORAGE_KEY, coerceFeedJob, asPlainText, asFiniteNumber, decodeHtmlEntities } from "@/lib/jobs-utils";
 
-function decodeHtmlEntities(html: string): string {
-  return html
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&nbsp;/g, " ");
-}
-
-function stripHtml(html: string): string {
-  return decodeHtmlEntities(html).replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+function stripHtml(html: unknown): string {
+  return decodeHtmlEntities(asPlainText(html)).replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
 }
 
 interface Job {
@@ -218,9 +208,11 @@ export default function JobDetailPage() {
       );
       const data = await response.json();
       if (data.job) {
-        setJob(data.job);
-        checkApplication(data.job.id);
-        analyzeFit(data.job);
+        const next = coerceFeedJob(data.job as Record<string, unknown>) as Job | null;
+        if (!next) return;
+        setJob(next);
+        checkApplication(next.id);
+        analyzeFit(next);
       }
     } catch (error) {
       console.error("Error fetching job:", error);
@@ -241,7 +233,8 @@ export default function JobDetailPage() {
       try {
         const existing = sessionStorage.getItem("dashboard-job-cache");
         const cache = existing ? JSON.parse(existing) : {};
-        cachedJob = cache[jobId] ?? null;
+        const raw = cache[jobId] ?? null;
+        cachedJob = raw ? (coerceFeedJob(raw as Record<string, unknown>) as Job | null) : null;
       } catch (error) {
         console.error("Error reading cached job:", error);
       }
@@ -333,8 +326,10 @@ export default function JobDetailPage() {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
+  const formatDate = (dateString: unknown) => {
+    const d = new Date(asPlainText(dateString));
+    if (Number.isNaN(d.getTime())) return "";
+    return d.toLocaleDateString("en-US", {
       year: "numeric",
       month: "short",
       day: "numeric",
@@ -343,16 +338,19 @@ export default function JobDetailPage() {
 
   // Job sources send raw enums like "part_time" / "FULL_TIME" — humanize
   // before display so internals never leak into the UI.
-  const formatLabel = (value?: string | null) => {
-    if (!value) return value;
-    return value
+  const formatLabel = (value?: unknown) => {
+    const text = asPlainText(value);
+    if (!text) return "";
+    return text
       .replace(/[_-]+/g, " ")
       .toLowerCase()
       .replace(/\b\w/g, (c) => c.toUpperCase());
   };
 
-  const formatSalary = (min?: number, max?: number, country?: string) => {
-    if (!min && !max) return null;
+  const formatSalary = (min?: unknown, max?: unknown, country?: string) => {
+    const minN = asFiniteNumber(min);
+    const maxN = asFiniteNumber(max);
+    if (minN == null && maxN == null) return null;
 
     const currencyMap: Record<string, string> = {
       ZA: "R",
@@ -371,9 +369,9 @@ export default function JobDetailPage() {
     const format = (n: number) =>
       currency + (n >= 1000 ? `${(n / 1000).toFixed(0)}K` : n.toString());
 
-    if (min && max) return `${format(min)} - ${format(max)}`;
-    if (min) return `From ${format(min)}`;
-    if (max) return `Up to ${format(max)}`;
+    if (minN != null && maxN != null) return `${format(minN)} - ${format(maxN)}`;
+    if (minN != null) return `From ${format(minN)}`;
+    if (maxN != null) return `Up to ${format(maxN)}`;
     return null;
   };
 
@@ -447,7 +445,7 @@ export default function JobDetailPage() {
           <div className="flex-1 min-w-0">
             <h1 className="text-2xl font-bold text-white truncate">{job.title}</h1>
             <p className="mono text-sm text-zinc-400 mt-1">{job.companyName}</p>
-            {job.salaryMin || job.salaryMax ? (
+            {job.salaryMin != null || job.salaryMax != null ? (
               <p className="gradient-text mt-1 font-medium">
                 {formatSalary(job.salaryMin, job.salaryMax, job.country)}
               </p>
@@ -468,10 +466,10 @@ export default function JobDetailPage() {
 
         <div className="mt-5 flex flex-wrap gap-2">
           {[
-            { icon: "M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z M15 11a3 3 0 11-6 0 3 3 0 016 0z", label: job.location },
+            { icon: "M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z M15 11a3 3 0 11-6 0 3 3 0 016 0z", label: asPlainText(job.location) },
             { icon: "M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z", label: formatLabel(job.workMode) },
             { icon: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z", label: formatLabel(job.seniorityLevel) },
-          ].map((item, i) => (
+          ].filter((item) => item.label).map((item, i) => (
             <div key={i} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.06]">
               <svg className="h-3.5 w-3.5 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d={item.icon} />
@@ -482,7 +480,7 @@ export default function JobDetailPage() {
         </div>
 
         <div className="mt-4 mono text-xs text-zinc-600">
-          {formatDate(job.postedAt)} · {formatLabel(job.employmentType)}
+          {[formatDate(job.postedAt), formatLabel(job.employmentType)].filter(Boolean).join(" · ")}
         </div>
       </div>
 

@@ -23,8 +23,83 @@ export interface FilterableJob {
   requirements?: string;
 }
 
+/**
+ * Feed providers (Jobicy especially) send arrays/objects where the UI
+ * expects a string. Join arrays; never return a value React cannot render.
+ */
+export function asPlainText(value: unknown, fallback = ""): string {
+  if (value == null) return fallback;
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed || fallback;
+  }
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  if (typeof value === "boolean") return value ? "true" : "false";
+  if (Array.isArray(value)) {
+    const parts = value.map((item) => asPlainText(item)).filter(Boolean);
+    return parts.join(", ") || fallback;
+  }
+  return fallback;
+}
+
+export function asFiniteNumber(value: unknown): number | undefined {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const trimmed = value.trim().replace(/,/g, "");
+    if (!trimmed) return undefined;
+    const n = Number.parseFloat(trimmed);
+    return Number.isFinite(n) ? n : undefined;
+  }
+  return undefined;
+}
+
+export function decodeHtmlEntities(html: string): string {
+  return html
+    .replace(/&#x([0-9a-f]+);/gi, (_, hex: string) => {
+      const code = Number.parseInt(hex, 16);
+      return Number.isFinite(code) ? String.fromCharCode(code) : "";
+    })
+    .replace(/&#(\d+);/g, (_, dec: string) => {
+      const code = Number.parseInt(dec, 10);
+      return Number.isFinite(code) ? String.fromCharCode(code) : "";
+    })
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, " ");
+}
+
+/** Normalize a cached/API job so detail/list rendering cannot crash. */
+export function coerceFeedJob<T extends Record<string, unknown>>(
+  raw: T | null | undefined,
+): T | null {
+  if (!raw || typeof raw !== "object") return null;
+  const id = asPlainText(raw.id);
+  if (!id) return null;
+  return {
+    ...raw,
+    id,
+    title: asPlainText(raw.title, "Untitled role"),
+    companyName: decodeHtmlEntities(asPlainText(raw.companyName, "Unknown Company")),
+    location: asPlainText(raw.location, "Not specified"),
+    country: asPlainText(raw.country, "GLOBAL"),
+    workMode: asPlainText(raw.workMode, "Not specified"),
+    seniorityLevel: asPlainText(raw.seniorityLevel),
+    employmentType: asPlainText(raw.employmentType, "Full-time"),
+    description: asPlainText(raw.description),
+    requirements: asPlainText(raw.requirements),
+    postedAt: asPlainText(raw.postedAt) || new Date(0).toISOString(),
+    applicationUrl: asPlainText(raw.applicationUrl, "#"),
+    source: asPlainText(raw.source),
+    salaryMin: asFiniteNumber(raw.salaryMin),
+    salaryMax: asFiniteNumber(raw.salaryMax),
+  } as T;
+}
+
 export function detectSeniority(title: string): string {
-  const lower = title.toLowerCase();
+  const lower = asPlainText(title).toLowerCase();
 
   if (
     lower.includes("junior") ||
@@ -57,7 +132,7 @@ export function detectSeniority(title: string): string {
 }
 
 export function getWorkMode(remote?: boolean, jobType?: string): string {
-  const normalizedJobType = jobType?.toLowerCase();
+  const normalizedJobType = asPlainText(jobType).toLowerCase();
 
   if (remote || normalizedJobType === "remote") return "Remote";
   if (normalizedJobType?.includes("contract")) return "Contract";
@@ -341,11 +416,11 @@ export function tokenizeSearch(query: string): string[] {
 
 function jobHaystack(job: FilterableJob): string {
   return [
-    job.title,
-    job.companyName,
-    job.location,
-    job.description || "",
-    job.requirements || "",
+    asPlainText(job.title),
+    asPlainText(job.companyName),
+    asPlainText(job.location),
+    asPlainText(job.description),
+    asPlainText(job.requirements),
   ]
     .join(" ")
     .toLowerCase();
@@ -361,19 +436,19 @@ export function jobMatchesSearch(job: FilterableJob, rawQuery: string): boolean 
   const query = rawQuery.trim().toLowerCase();
   if (!query) return true;
 
-  const title = job.title.toLowerCase();
-  const company = job.companyName.toLowerCase();
+  const title = asPlainText(job.title).toLowerCase();
+  const company = asPlainText(job.companyName).toLowerCase();
   const hay = jobHaystack(job);
 
   if (title.includes(query) || company.includes(query) || hay.includes(query)) {
-    return !NOISE_ROLE_TITLE.test(job.title);
+    return !NOISE_ROLE_TITLE.test(title);
   }
 
   const tokens = tokenizeSearch(query);
   if (tokens.length === 0) return false;
 
   if (tokens.some((t) => title.includes(t) || company.includes(t))) {
-    return !NOISE_ROLE_TITLE.test(job.title);
+    return !NOISE_ROLE_TITLE.test(title);
   }
 
   return tokens.every((t) => hay.includes(t));
@@ -386,7 +461,7 @@ function locCountryOf(job: FilterableJob): string {
 }
 
 function isRemoteWork(job: FilterableJob): boolean {
-  return job.workMode.toLowerCase().includes("remote");
+  return asPlainText(job.workMode).toLowerCase().includes("remote");
 }
 
 /**
@@ -555,9 +630,9 @@ export type RoleBoostJob = {
 export function roleRelevanceBoost(job: RoleBoostJob, desiredRole: string): number {
   const role = desiredRole.trim().toLowerCase();
   if (!role) return 0;
-  if (NOISE_ROLE_TITLE.test(job.title)) return 0;
+  if (NOISE_ROLE_TITLE.test(asPlainText(job.title))) return 0;
 
-  const title = job.title.toLowerCase();
+  const title = asPlainText(job.title).toLowerCase();
   const tokens = tokenizeSearch(role);
 
   let titleScore = 0;
@@ -581,6 +656,46 @@ export function roleRelevanceBoost(job: RoleBoostJob, desiredRole: string): numb
   return titleScore + bodyScore;
 }
 
+const HOME_BROWSE_LABEL: Record<string, string> = {
+  GH: "Ghana + remote",
+  NG: "Nigeria + remote",
+  KE: "Kenya + remote",
+  ZA: "South Africa + remote",
+};
+
+/**
+ * Empty browse (no search box query) with a target role. When nothing on
+ * the page was role-boosted, be honest — do not imply the feed is ranked
+ * as that role. Search / paste is the CTA.
+ */
+export function emptyBrowseRoleHint(opts: {
+  targetRole: string;
+  search?: string;
+  country?: string;
+  hasRoleMatch: boolean;
+}): { line: string; showNoOverlapCta: boolean } {
+  const role = opts.targetRole.trim();
+  if (!role || (opts.search || "").trim()) {
+    return { line: "", showNoOverlapCta: false };
+  }
+  if (opts.hasRoleMatch) {
+    return { line: `Browsing all roles · ${role} ranked first`, showNoOverlapCta: false };
+  }
+  const region = HOME_BROWSE_LABEL[opts.country || ""] || "all roles";
+  return {
+    line: `Browsing ${region} · nothing here matches ${role}`,
+    showNoOverlapCta: true,
+  };
+}
+
+export function emptyBrowseNoOverlapCopy(targetRole: string): { title: string; body: string } {
+  const role = targetRole.trim() || "your target role";
+  return {
+    title: `None of these listings match ${role}`,
+    body: `Search to focus on ${role}, or paste a job you found on WhatsApp / a company site.`,
+  };
+}
+
 export function filterJobs<T extends FilterableJob>(
   jobs: T[],
   filters: JobFilters,
@@ -589,19 +704,20 @@ export function filterJobs<T extends FilterableJob>(
 
   return jobs.filter((job) => {
     if (filters.workMode && filters.workMode !== "") {
-      if (filters.workMode === "Remote" && !job.workMode.includes("Remote")) {
+      const workMode = asPlainText(job.workMode);
+      if (filters.workMode === "Remote" && !workMode.includes("Remote")) {
         return false;
       }
 
-      if (filters.workMode === "Full-time" && job.workMode === "Part-time") {
+      if (filters.workMode === "Full-time" && workMode === "Part-time") {
         return false;
       }
 
       if (
         filters.workMode !== "Remote" &&
         filters.workMode !== "Full-time" &&
-        job.workMode !== filters.workMode &&
-        job.workMode !== "Not specified"
+        workMode !== filters.workMode &&
+        workMode !== "Not specified"
       ) {
         return false;
       }
@@ -619,8 +735,8 @@ export function filterJobs<T extends FilterableJob>(
       const loc = filters.location.toLowerCase();
 
       if (
-        !job.location.toLowerCase().includes(loc) &&
-        !job.country.toLowerCase().includes(loc)
+        !asPlainText(job.location).toLowerCase().includes(loc) &&
+        !asPlainText(job.country).toLowerCase().includes(loc)
       ) {
         return false;
       }
@@ -635,7 +751,7 @@ export function filterJobs<T extends FilterableJob>(
     }
 
     if (filters.employmentType && filters.employmentType !== "") {
-      const jobType = (job.employmentType || "Full-time").toLowerCase();
+      const jobType = asPlainText(job.employmentType, "Full-time").toLowerCase();
       const filterType = filters.employmentType.toLowerCase();
       if (!jobType.includes(filterType) && jobType !== "not specified") return false;
     }
@@ -658,7 +774,7 @@ export function dedupeJobsByTitleAndCompany<T extends FilterableJob>(jobs: T[]):
   const seen = new Set<string>();
 
   return jobs.filter((job) => {
-    const key = `${job.title.trim().toLowerCase()}::${job.companyName.trim().toLowerCase()}`;
+    const key = `${asPlainText(job.title).toLowerCase()}::${asPlainText(job.companyName).toLowerCase()}`;
 
     if (seen.has(key)) {
       return false;
