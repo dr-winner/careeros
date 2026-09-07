@@ -38,7 +38,6 @@ export default function LiveRoomCall({
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const makingOfferRef = useRef(false);
-  const otherPeerRef = useRef<string | null>(null);
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
@@ -47,7 +46,7 @@ export default function LiveRoomCall({
   const [elapsed, setElapsed] = useState(0);
   const [micOn, setMicOn] = useState(media.hasAudio);
   const [camOn, setCamOn] = useState(media.hasVideo);
-  const [error, setError] = useState(
+  const [error] = useState(
     media.hasAudio && media.hasVideo ? "" : "One of camera or microphone is unavailable — continuing with what we have.",
   );
   const [remoteName, setRemoteName] = useState("Waiting…");
@@ -125,7 +124,6 @@ export default function LiveRoomCall({
             ? String((signal.payload as { name?: string }).name || "")
             : "";
         if (name) setRemoteName(name);
-        otherPeerRef.current = signal.peerId;
         if (shouldCreateOffer(peerIdRef.current, signal.peerId) && !makingOfferRef.current) {
           makingOfferRef.current = true;
           setStatus("connecting");
@@ -163,7 +161,6 @@ export default function LiveRoomCall({
       }
       if (signal.type === "bye") {
         makingOfferRef.current = false;
-        otherPeerRef.current = null;
         pcRef.current?.close();
         pcRef.current = null;
         setStatus("waiting");

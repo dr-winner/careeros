@@ -113,7 +113,7 @@ export default function LiveAiInterview({
       analyser.fftSize = 256;
       source.connect(analyser);
       levelRef.current = analyser;
-      const data = new Uint8Array(analyser.frequencyBinCount);
+      const data = new Uint8Array(new ArrayBuffer(analyser.frequencyBinCount));
       const loop = () => {
         analyser.getByteFrequencyData(data);
         const avg = data.reduce((a, b) => a + b, 0) / data.length;

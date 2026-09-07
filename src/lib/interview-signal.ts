@@ -58,7 +58,7 @@ export function parseIncomingSignal(body: unknown): { peerId: string; type: Sign
   const type = typeof rec.type === "string" ? rec.type.trim() : "";
   if (!peerId || peerId.length > 80) return null;
   if (!isSignalType(type)) return null;
-  let payload: unknown = rec.payload ?? null;
+  const payload: unknown = rec.payload ?? null;
   try {
     const encoded = JSON.stringify(payload);
     if (encoded.length > PAYLOAD_MAX_CHARS) return null;
@@ -77,58 +77,32 @@ export async function appendInterviewSignal(
   input: { peerId: string; type: SignalType; payload: unknown },
 ): Promise<InterviewSignal> {
   const code = roomCode.toUpperCase();
-  const redis = getRedis();
-  if (redis) {
-    try {
-      const key = redisKey(code);
-      const lastRaw = await redis.lindex<string>(key, -1);
-      const last =
-        typeof lastRaw === "string" ? safeParseSignal(lastRaw) : asSignal(lastRaw);
-      const next: InterviewSignal = {
-        seq: nextSeq(last ? [last] : []),
-        peerId: input.peerId,
-        type: input.type,
-        payload: input.payload,
-        ts: Date.now(),
-      };
-      await redis.rpush(key, JSON.stringify(next));
-      await redis.expire(key, SIGNAL_TTL_SEC);
-      const len = await redis.llen(key);
-      if (typeof len === "number" && len > SIGNAL_MAX) {
-        await redis.ltrim(key, len - SIGNAL_MAX, -1);
-      }
-      return next;
-    } catch (error) {
-      console.error("Interview signal Redis append failed:", error);
-    }
-  }
-
-  const store = memoryStore();
-  const bucket = store.get(code);
-  const signals = bucket && bucket.expiresAt > Date.now() ? bucket.signals.slice() : [];
+  const existing = await readSignalList(code);
   const next: InterviewSignal = {
-    seq: nextSeq(signals),
+    seq: nextSeq(existing),
     peerId: input.peerId,
     type: input.type,
     payload: input.payload,
     ts: Date.now(),
   };
-  signals.push(next);
+  const signals = [...existing, next];
   while (signals.length > SIGNAL_MAX) signals.shift();
-  store.set(code, { signals, expiresAt: Date.now() + SIGNAL_TTL_SEC * 1000 });
+  await writeSignalList(code, signals);
   return next;
 }
 
 export async function listInterviewSignals(roomCode: string, afterSeq = 0): Promise<InterviewSignal[]> {
-  const code = roomCode.toUpperCase();
+  const signals = await readSignalList(roomCode.toUpperCase());
+  return signals.filter((item) => item.seq > afterSeq);
+}
+
+async function readSignalList(code: string): Promise<InterviewSignal[]> {
   const redis = getRedis();
   if (redis) {
     try {
-      const raw = await redis.lrange<string>(redisKey(code), 0, -1);
-      const parsed = (raw || [])
-        .map((item) => (typeof item === "string" ? safeParseSignal(item) : asSignal(item)))
-        .filter((item): item is InterviewSignal => item != null);
-      return parsed.filter((item) => item.seq > afterSeq);
+      const raw = await redis.get<InterviewSignal[] | string>(redisKey(code));
+      const parsed = parseSignalList(raw);
+      if (parsed) return parsed;
     } catch (error) {
       console.error("Interview signal Redis read failed:", error);
     }
@@ -136,15 +110,33 @@ export async function listInterviewSignals(roomCode: string, afterSeq = 0): Prom
 
   const bucket = memoryStore().get(code);
   if (!bucket || bucket.expiresAt <= Date.now()) return [];
-  return bucket.signals.filter((item) => item.seq > afterSeq);
+  return bucket.signals.slice();
 }
 
-function safeParseSignal(raw: string): InterviewSignal | null {
-  try {
-    return asSignal(JSON.parse(raw));
-  } catch {
-    return null;
+async function writeSignalList(code: string, signals: InterviewSignal[]): Promise<void> {
+  const redis = getRedis();
+  if (redis) {
+    try {
+      await redis.set(redisKey(code), signals, { ex: SIGNAL_TTL_SEC });
+      return;
+    } catch (error) {
+      console.error("Interview signal Redis write failed:", error);
+    }
   }
+  memoryStore().set(code, { signals, expiresAt: Date.now() + SIGNAL_TTL_SEC * 1000 });
+}
+
+function parseSignalList(raw: unknown): InterviewSignal[] | null {
+  if (raw == null) return null;
+  if (typeof raw === "string") {
+    try {
+      return parseSignalList(JSON.parse(raw));
+    } catch {
+      return null;
+    }
+  }
+  if (!Array.isArray(raw)) return null;
+  return raw.map(asSignal).filter((item): item is InterviewSignal => item != null);
 }
 
 function asSignal(value: unknown): InterviewSignal | null {
